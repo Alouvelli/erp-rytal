@@ -338,31 +338,38 @@ docker compose exec web python manage.py collectstatic --noinput
 
 ---
 
-## 11. Sécurité — à traiter avant la mise en production réelle
+## 11. Sécurité — historique et données exposées
 
-L'historique git (déjà poussé sur GitHub) contient des éléments qui **ne
-devraient pas y être** et qui restent présents même après leur retrait du
-suivi :
+L'historique git contenait des éléments qui n'auraient pas dû s'y trouver :
 
 - **`bd/*`** — dumps PostgreSQL contenant des **données réelles**
-  (étudiants, finances). Fuite de données personnelles.
-- **`ssl/cert.key`** — une clé privée TLS (certificat de test auto-signé
-  `localhost`, à faible risque, mais une clé privée n'a rien à faire dans un
-  dépôt).
+  (étudiants, finances).
+- **`erp_gestion_ecole/ssl/cert.crt` / `cert.key`** — un certificat de test
+  auto-signé `localhost` et sa clé privée.
 
-Actions recommandées :
+**Historique purgé** : ces fichiers ont été retirés de tout l'historique
+(`git filter-branch`) et les branches `main` et
+`claude/elegant-johnson-8xwmif` ont été **réécrites puis force-pushées**. Les
+dumps restent présents **sur le disque** (dossier `bd/`, ignoré par git) pour
+la restauration en production (§6.2).
 
-1. **Purger l'historique** de ces fichiers avec
-   [`git filter-repo`](https://github.com/newren/git-filter-repo) ou
-   [BFG](https://rtfd.io/bfg), puis forcer la réécriture du dépôt distant.
-   Prévenez toute personne ayant un clone.
-2. **Considérer les données des dumps comme compromises** : elles ont été
-   exposées publiquement le temps où le dépôt était accessible. Évaluez vos
-   obligations RGPD/notification selon la sensibilité.
-3. **Ne jamais réutiliser** le certificat de test : les certificats de
+Conséquences à connaître :
+
+1. **Re-cloner** : tout clone antérieur du dépôt contient encore les anciens
+   commits avec les données. Chaque personne concernée doit re-cloner (ou faire
+   `git fetch && git reset --hard origin/<branche>`) — un `git pull` classique
+   échouera ou réintroduira l'ancien historique.
+2. **GitHub peut conserver temporairement** les anciens commits (accessibles
+   par leur SHA, via le cache, les forks ou d'anciennes PR). Pour une purge
+   garantie côté GitHub, ouvrez un ticket au support GitHub. Les **forks**
+   éventuels conservent les données indépendamment.
+3. **Considérer les données des dumps comme compromises** : elles ont été
+   accessibles le temps où le dépôt les contenait. Évaluez vos obligations
+   RGPD/notification selon la sensibilité.
+4. **Ne jamais réutiliser** le certificat de test : les certificats de
    production sont émis par Let's Encrypt (§7) et n'entrent jamais dans le
    dépôt.
-4. Aucun `.env` n'a été commité (vérifié) : les secrets applicatifs
+5. Aucun `.env` n'a été commité (vérifié) : les secrets applicatifs
    (`DJANGO_SECRET_KEY`, `PLATFORM_MASTER_KEY`, mots de passe DB, SMTP) sont à
    générer directement sur le serveur (§3) et n'existent que dans le `.env`
    local au serveur.
