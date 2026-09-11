@@ -1,0 +1,89 @@
+{% extends 'base/base.html' %}
+{% block title %}Candidature — {{ candidature.user.get_full_name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003d82;"><i class="bi bi-person-lines-fill"></i></span>
+    Candidature de {{ candidature.user.get_full_name }}
+  </h1>
+  <a href="{% url 'admissions:candidature_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<div class="card-section p-4" style="max-width: 700px;">
+  <p><strong>Email :</strong> {{ candidature.user.email }}</p>
+  <p><strong>Téléphone :</strong> {{ candidature.user.phone|default:"—" }}</p>
+  <p><strong>Filière souhaitée :</strong> {{ candidature.program }}</p>
+  <p><strong>Déposée le :</strong> {{ candidature.submitted_at|date:"d/m/Y H:i" }}</p>
+  {% if candidature.motivation %}
+  <p><strong>Lettre de motivation :</strong></p>
+  <p class="text-muted" style="white-space: pre-line;">{{ candidature.motivation }}</p>
+  {% endif %}
+
+  <p><strong>Pièces justificatives :</strong>
+    {% if candidature.documents_completes %}<span class="badge bg-success">Complètes</span>
+    {% else %}<span class="badge bg-warning text-dark">Incomplètes</span>{% endif %}
+  </p>
+  {% with docs=candidature.documents.all %}
+  {% if docs %}
+  <ul class="list-unstyled small">
+    {% for doc in docs %}
+    <li class="mb-1">
+      <i class="bi bi-file-earmark-fill text-muted me-1"></i>
+      {{ doc.get_document_type_display }}{% if doc.libelle %} — {{ doc.libelle }}{% endif %}
+      <a href="{{ doc.fichier.url }}" target="_blank" class="ms-2">Voir</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="text-muted small">Aucune pièce déposée pour le moment.</p>
+  {% endif %}
+  {% endwith %}
+
+  {% if candidature.status == 'PENDING' %}
+  <hr>
+  {% if user.is_responsable %}
+  <form method="post" class="d-inline">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="validate">
+    <button type="submit" class="btn btn-success">
+      <i class="bi bi-check-circle me-1"></i>Valider la candidature
+    </button>
+  </form>
+
+  <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+    <i class="bi bi-x-circle me-1"></i>Rejeter
+  </button>
+
+  <div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="reject">
+          <div class="modal-header"><h5 class="modal-title">Motif du rejet</h5></div>
+          <div class="modal-body">
+            <textarea name="motif_rejet" class="form-control" rows="3" placeholder="Motif (optionnel)"></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-danger">Confirmer le rejet</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <p class="text-muted small mb-0">
+    <i class="bi bi-eye me-1"></i>Suivi Direction Communication — la validation ou le rejet
+    relève du chef du département concerné.
+  </p>
+  {% endif %}
+  {% else %}
+  <span class="badge {% if candidature.status == 'VALIDATED' %}bg-success{% else %}bg-danger{% endif %}">
+    {{ candidature.get_status_display }}
+  </span>
+  {% endif %}
+</div>
+{% endblock %}

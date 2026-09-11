@@ -1,0 +1,131 @@
+{% extends 'base/base.html' %}
+{% block title %}Examens & Concours — {{ class_group.name }} {{ semester.label }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'grades:examens_concours_class_list' %}">Examens &amp; Concours</a></li>
+<li class="breadcrumb-item active">{{ class_group.name }} — {{ semester.label }}</li>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.ue-block { border-radius:10px; overflow:hidden; border:1px solid #e2e8f0;
+            margin-bottom:14px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+.ue-header { display:flex; align-items:center; gap:10px; padding:10px 16px;
+             border-left:4px solid #7c3aed; background:#faf5ff; flex-wrap:wrap; }
+.ec-table { width:100%; border-collapse:collapse; font-size:.82rem; }
+.ec-table th { padding:8px 12px; font-size:.71rem; color:#64748b; font-weight:700;
+               background:#f8fafc; border-top:1px solid #e2e8f0; text-align:left; }
+.ec-table td { padding:8px 12px; border-top:1px solid #f1f5f9; vertical-align:middle; }
+.count-badge { display:inline-block; min-width:44px; text-align:center; padding:2px 8px;
+               border-radius:10px; font-size:.74rem; font-weight:700; }
+.count-full  { background:#dcfce7; color:#166534; }
+.count-none  { background:#f1f5f9; color:#94a3b8; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#1e3a5f;"><i class="bi bi-patch-check-fill"></i></span>
+    Examens &amp; Concours — {{ class_group.name }} | {{ semester.label }}
+  </h1>
+</div>
+
+<!-- Sélecteur semestre -->
+<div class="d-flex gap-2 mb-4 flex-wrap">
+  {% for s in semesters %}
+  <a href="{% url 'grades:examens_concours_detail' class_group.pk s.pk %}"
+     class="btn btn-sm {% if s.pk == semester.pk %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+     style="font-size:.8rem;">
+    {{ s.label }}
+  </a>
+  {% endfor %}
+</div>
+
+{% for row in ue_rows %}
+<div class="ue-block">
+  <div class="ue-header">
+    <i class="bi bi-collection" style="color:#7c3aed;"></i>
+    <strong style="color:#1e293b;">{{ row.ue.code }} — {{ row.ue.title }}</strong>
+    <span style="font-size:.74rem;color:#64748b;">({{ row.ue.credits }} crédits · {{ row.ec_rows|length }} EC)</span>
+  </div>
+  <div class="table-responsive">
+    <table class="ec-table">
+      <thead>
+        <tr>
+          <th>EC (module)</th>
+          <th>Enseignant</th>
+          <th class="text-center">Devoir 1</th>
+          <th class="text-center">Devoir 2</th>
+          <th class="text-center">TP</th>
+          <th class="text-center">Examen</th>
+          <th>Statut</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ec in row.ec_rows %}
+        <tr>
+          <td style="font-weight:600;color:#1e293b;">{{ ec.subject.code }} — {{ ec.subject.title }}</td>
+          <td style="font-size:.78rem;color:#475569;">{{ ec.teacher }}</td>
+          {% with c=ec.counts %}
+          <td class="text-center">
+            <span class="count-badge {% if c.DEVOIR1 %}count-full{% else %}count-none{% endif %}">{{ c.DEVOIR1 }}</span>
+          </td>
+          <td class="text-center">
+            <span class="count-badge {% if c.DEVOIR2 %}count-full{% else %}count-none{% endif %}">{{ c.DEVOIR2 }}</span>
+          </td>
+          <td class="text-center">
+            <span class="count-badge {% if c.TP %}count-full{% else %}count-none{% endif %}">{{ c.TP }}</span>
+          </td>
+          <td class="text-center">
+            <span class="count-badge {% if c.EXAM %}count-full{% else %}count-none{% endif %}">{{ c.EXAM }}</span>
+          </td>
+          {% endwith %}
+          <td>
+            {% if ec.validation and ec.validation.is_validated %}
+            <span style="background:#dcfce7;color:#166534;border-radius:10px;padding:2px 10px;font-size:.72rem;font-weight:700;white-space:nowrap;">
+              <i class="bi bi-check-circle-fill me-1"></i>Validé
+            </span>
+            <div style="font-size:.68rem;color:#94a3b8;margin-top:2px;">
+              {{ ec.validation.validated_at|date:"d/m/Y H:i" }}
+              {% if ec.validation.validated_by %} · {{ ec.validation.validated_by.get_full_name }}{% endif %}
+            </div>
+            {% else %}
+            <span style="background:#f1f5f9;color:#94a3b8;border-radius:10px;padding:2px 10px;font-size:.72rem;font-weight:700;white-space:nowrap;">
+              <i class="bi bi-hourglass-split me-1"></i>Non validé
+            </span>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <div class="d-flex gap-1 justify-content-end flex-wrap">
+              <a href="{% url 'grades:examens_concours_ec_notes' class_group.pk semester.pk ec.subject.pk %}"
+                 class="btn btn-sm btn-outline-secondary" style="font-size:.72rem;padding:4px 10px;">
+                <i class="bi bi-eye me-1"></i>Voir notes
+              </a>
+              <form method="post" action="{% url 'grades:examens_concours_ec_validate' class_group.pk semester.pk ec.subject.pk %}"
+                    onsubmit="return confirm('Valider les notes de {{ ec.subject.title|escapejs }} pour {{ class_group.name|escapejs }} ?\n\nCette action importera automatiquement les notes dans la gestion des bulletins.');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="font-size:.72rem;padding:4px 10px;
+                        background:{% if ec.validation and ec.validation.is_validated %}#f0fdf4{% else %}#16a34a{% endif %};
+                        color:{% if ec.validation and ec.validation.is_validated %}#166534{% else %}#fff{% endif %};
+                        border:{% if ec.validation and ec.validation.is_validated %}1px solid #86efac{% else %}none{% endif %};">
+                  <i class="bi bi-check2-circle me-1"></i>{% if ec.validation and ec.validation.is_validated %}Revalider{% else %}Valider{% endif %}
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% empty %}
+<div class="card-section">
+  <div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+    <i class="bi bi-collection d-block mb-3" style="font-size:2.5rem;color:#cbd5e1;"></i>
+    <div style="font-size:.9rem;font-weight:600;">Aucune UE définie pour cette filière/semestre.</div>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

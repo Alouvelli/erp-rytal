@@ -1,0 +1,206 @@
+{% extends 'base/base.html' %}
+{% block title %}Détail évaluation — {{ evaluation.title }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'grades:evaluation_list' %}">Évaluations</a></li>
+<li class="breadcrumb-item active">Détail</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-eye"></i></span>
+    Résultats — {{ evaluation.title }}
+  </h1>
+  <div class="d-flex gap-2">
+    {% if not view_only and evaluation.teacher and evaluation.teacher.user == request.user and not evaluation.is_locked %}
+    <a href="{% url 'grades:grade_entry' evaluation.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-pencil-fill me-1"></i>Saisir / Modifier
+    </a>
+    {% endif %}
+    {% if not evaluation.is_locked and request.user.is_admin or not evaluation.is_locked and request.user.is_responsable %}
+    <form method="post" action="{% url 'grades:lock_evaluation' evaluation.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-warning btn-sm"
+        onclick="return confirm('Verrouiller définitivement cette évaluation ?')">
+        <i class="bi bi-lock me-1"></i>Verrouiller
+      </button>
+    </form>
+    {% endif %}
+    <a href="{% url 'grades:evaluation_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+  </div>
+</div>
+
+<!-- Info évaluation -->
+<div class="row g-3 mb-3">
+  <div class="col-md-8">
+    <div class="card-section h-100">
+      <div class="card-section-header">
+        <h6 class="card-section-title"><i class="bi bi-info-circle me-2" style="color:var(--navy);"></i>Informations</h6>
+        {% if evaluation.is_locked %}
+        <span style="font-size:.75rem;background:#f3f4f6;color:#374151;padding:3px 10px;border-radius:10px;">
+          <i class="bi bi-lock-fill me-1"></i>Verrouillée
+        </span>
+        {% elif evaluation.status == 'GRADED' %}
+        <span style="font-size:.75rem;background:#dcfce7;color:#166534;padding:3px 10px;border-radius:10px;">
+          <i class="bi bi-check-circle me-1"></i>Notes saisies
+        </span>
+        {% elif evaluation.status == 'SCHEDULED' %}
+        <span style="font-size:.75rem;background:#e0f2fe;color:#0369a1;padding:3px 10px;border-radius:10px;">
+          <i class="bi bi-calendar-check me-1"></i>Programmée
+        </span>
+        {% endif %}
+      </div>
+      <div style="padding:14px 18px;">
+        <div class="row g-2">
+          <div class="col-6">
+            <div style="font-size:.73rem;color:#94a3b8;">Intitulé</div>
+            <div style="font-size:.88rem;font-weight:600;">{{ evaluation.title }}</div>
+          </div>
+          <div class="col-6">
+            <div style="font-size:.73rem;color:#94a3b8;">Type</div>
+            <div style="font-size:.88rem;">{{ evaluation.evaluation_type }}</div>
+          </div>
+          <div class="col-6">
+            <div style="font-size:.73rem;color:#94a3b8;">Module (EC)</div>
+            <div style="font-size:.88rem;font-weight:600;color:var(--navy);">{{ evaluation.subject.code }} — {{ evaluation.subject.title }}</div>
+          </div>
+          <div class="col-6">
+            <div style="font-size:.73rem;color:#94a3b8;">Classe</div>
+            <div style="font-size:.88rem;">{{ evaluation.class_group.name|default:"—" }}</div>
+          </div>
+          <div class="col-6">
+            <div style="font-size:.73rem;color:#94a3b8;">Date</div>
+            <div style="font-size:.88rem;">{{ evaluation.date|date:"d/m/Y" }}{% if evaluation.duration_minutes %} ({{ evaluation.duration_minutes }} min){% endif %}</div>
+          </div>
+          <div class="col-6">
+            <div style="font-size:.73rem;color:#94a3b8;">Enseignant</div>
+            <div style="font-size:.88rem;">{{ evaluation.teacher.full_name|default:"—" }}</div>
+          </div>
+          {% if evaluation.room %}
+          <div class="col-6">
+            <div style="font-size:.73rem;color:#94a3b8;">Lieu</div>
+            <div style="font-size:.88rem;">{{ evaluation.room }}</div>
+          </div>
+          {% endif %}
+          {% if evaluation.instructions %}
+          <div class="col-12 mt-1">
+            <div style="font-size:.73rem;color:#94a3b8;">Consignes</div>
+            <div style="font-size:.82rem;background:#f8fafc;padding:8px 10px;border-radius:6px;border-left:3px solid var(--navy);margin-top:4px;">{{ evaluation.instructions }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistiques -->
+  <div class="col-md-4">
+    <div class="card-section h-100">
+      <div class="card-section-header">
+        <h6 class="card-section-title"><i class="bi bi-bar-chart me-2" style="color:var(--navy);"></i>Statistiques</h6>
+      </div>
+      <div style="padding:14px 18px;">
+        <div style="text-align:center;margin-bottom:16px;">
+          <div style="font-size:2.2rem;font-weight:800;color:var(--navy);">
+            {% if average %}{{ average }}{% else %}—{% endif %}
+          </div>
+          <div style="font-size:.75rem;color:#94a3b8;">Moyenne de classe / {{ evaluation.max_score }}</div>
+        </div>
+        <div class="d-flex flex-column gap-2">
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;">
+            <span style="color:#64748b;">Étudiants notés</span>
+            <span style="font-weight:700;color:#1e293b;">{{ total_graded }} / {{ class_size }}</span>
+          </div>
+          {% if class_size > 0 %}
+          <div style="background:#e2e8f0;border-radius:4px;height:6px;">
+            <div style="height:6px;border-radius:4px;background:linear-gradient(90deg,var(--navy),#7c3aed);width:{% widthratio total_graded class_size 100 %}%;"></div>
+          </div>
+          {% endif %}
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;">
+            <span style="color:#64748b;">Coefficient</span>
+            <span style="font-weight:700;color:#1e293b;">{{ evaluation.coefficient }}</span>
+          </div>
+          {% if evaluation.locked_at %}
+          <div style="display:flex;justify-content:space-between;font-size:.78rem;">
+            <span style="color:#94a3b8;">Verrouillé le</span>
+            <span style="color:#374151;">{{ evaluation.locked_at|date:"d/m/Y H:i" }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tableau des notes -->
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <i class="bi bi-table me-2" style="color:var(--navy);"></i>
+      Notes des étudiants
+    </h6>
+    <div style="font-size:.75rem;color:#94a3b8;">Lecture seule</div>
+  </div>
+  <div style="padding:0 16px 16px;">
+    <table id="detailTable" class="table table-hover align-middle" style="width:100%;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Matricule</th>
+          <th>Étudiant</th>
+          <th style="text-align:center;">Note /{{ evaluation.max_score }}</th>
+          <th style="text-align:center;">/ 20</th>
+          <th>Commentaire</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in students_with_grades %}
+        <tr>
+          <td style="font-size:.78rem;color:#94a3b8;">{{ forloop.counter }}</td>
+          <td style="font-size:.78rem;color:#64748b;">{{ item.student.matricule }}</td>
+          <td>
+            <span style="font-size:.85rem;font-weight:600;">
+              {{ item.student.user.last_name|upper }} {{ item.student.user.first_name|title }}
+            </span>
+          </td>
+          <td style="text-align:center;">
+            {% if item.grade %}
+              {% with score=item.grade.score max=evaluation.max_score %}
+              <span style="font-size:1rem;font-weight:800;
+                color:{% if item.grade.score >= evaluation.max_score|floatformat:0|add:'0'|floatformat:"-2" %}#166534
+                     {% elif item.grade.score < evaluation.max_score|floatformat:"-2" %}#1e293b
+                     {% else %}#1e293b{% endif %};">
+                {{ item.grade.score }}
+              </span>
+              {% endwith %}
+            {% else %}
+              <span style="color:#cbd5e1;font-size:.8rem;">—</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">
+            {% if item.grade and evaluation.max_score %}
+              <span style="font-size:.8rem;color:#64748b;">
+                {% widthratio item.grade.score evaluation.max_score 20 %}
+              </span>
+            {% else %}
+              <span style="color:#cbd5e1;font-size:.8rem;">—</span>
+            {% endif %}
+          </td>
+          <td style="font-size:.78rem;color:#64748b;">{{ item.grade.comment|default:"" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(function () {
+  $('#detailTable').DataTable({ order: [[3, 'desc']] });
+});
+</script>
+{% endblock %}

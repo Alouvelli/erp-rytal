@@ -1,0 +1,293 @@
+{% extends 'base/base.html' %}
+{% block title %}Modules planifiés{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+  <!-- En-tête -->
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <h4 class="mb-0 fw-bold" style="color:var(--navy);">
+        <i class="bi bi-journal-check me-2"></i>Modules planifiés
+      </h4>
+      <span class="badge rounded-pill" style="background:#e0f2fe;color:#0369a1;font-size:.75rem;padding:4px 10px;">
+        {{ teachers_data|length }} enseignant{{ teachers_data|length|pluralize }}
+      </span>
+      <span class="badge rounded-pill" style="background:#f0fdf4;color:#166534;font-size:.75rem;padding:4px 10px;">
+        {{ grand_modules }} module{{ grand_modules|pluralize }}
+      </span>
+      {% if grand_complete %}
+      <span class="badge rounded-pill" style="background:#fee2e2;color:#dc2626;font-size:.75rem;padding:4px 10px;">
+        <i class="bi bi-lock-fill me-1"></i>{{ grand_complete }} module{{ grand_complete|pluralize }} terminé{{ grand_complete|pluralize }}
+      </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <form method="get" class="d-flex flex-wrap gap-2 mb-4 align-items-center">
+    <select name="year" class="form-select form-select-sm" style="max-width:220px;" onchange="this.form.submit()">
+      {% for y in academic_years %}
+      <option value="{{ y.pk }}" {% if selected_year_param == y.pk|stringformat:"s" or not selected_year_param and y.is_current %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+      {% endfor %}
+      <option value="all" {% if selected_year_param == 'all' %}selected{% endif %}>Toutes les années</option>
+    </select>
+    <select name="semester" class="form-select form-select-sm" style="max-width:220px;" onchange="this.form.submit()">
+      <option value="">— Tous les semestres —</option>
+      {% for sem in semesters %}
+      <option value="{{ sem.pk }}" {% if semester_id == sem.pk|stringformat:"s" %}selected{% endif %}>
+        {{ sem.name }} — {{ sem.academic_year }}
+      </option>
+      {% endfor %}
+    </select>
+    <div class="input-group input-group-sm" style="max-width:240px;">
+      <span class="input-group-text"><i class="bi bi-search"></i></span>
+      <input type="text" name="q" class="form-control" placeholder="Enseignant ou module (EC)…" value="{{ search_q }}">
+    </div>
+    <button type="submit" class="btn btn-sm btn-primary">Filtrer</button>
+    {% if semester_id or search_q %}
+    <a href="{% url 'attendance:planned_modules_admin' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-x-lg me-1"></i>Réinitialiser
+    </a>
+    {% endif %}
+  </form>
+
+  {% if not teachers_data %}
+  <div class="alert alert-info">Aucun module planifié trouvé avec ces critères.</div>
+  {% else %}
+
+  <div class="accordion" id="accordTeachers">
+    {% for td in teachers_data %}
+    {% with teacher=td.teacher idx=forloop.counter %}
+    <div class="accordion-item border-0 mb-3 shadow-sm rounded overflow-hidden">
+
+      <!-- En-tête enseignant -->
+      <h2 class="accordion-header" id="head-{{ idx }}">
+        <button class="accordion-button collapsed py-2 pe-3"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#body-{{ idx }}"
+                aria-expanded="false"
+                aria-controls="body-{{ idx }}"
+                style="background:var(--navy);color:#fff;font-size:.9rem;">
+
+          <!-- Avatar initiales -->
+          <span style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.2);
+                        display:inline-flex;align-items:center;justify-content:center;
+                        font-weight:700;font-size:.8rem;margin-right:10px;flex-shrink:0;">
+            {{ teacher.user.first_name|first|upper }}{{ teacher.user.last_name|first|upper }}
+          </span>
+
+          <span class="fw-semibold flex-grow-1">{{ teacher.user.get_full_name }}</span>
+
+          <!-- Badges résumé -->
+          <span style="background:rgba(255,255,255,.15);border-radius:20px;padding:2px 10px;font-size:.72rem;margin-right:6px;">
+            {{ td.nb_modules }} module{{ td.nb_modules|pluralize }}
+          </span>
+
+          <!-- Barre de progression globale enseignant -->
+          <span style="display:inline-flex;align-items:center;gap:6px;min-width:130px;margin-right:8px;">
+            <div style="flex:1;height:7px;background:rgba(255,255,255,.25);border-radius:4px;overflow:hidden;">
+              <div style="height:100%;width:{% if td.global_pct > 100 %}100{% else %}{{ td.global_pct }}{% endif %}%;
+                          background:{% if td.global_pct >= 100 %}#f87171{% elif td.global_pct >= 75 %}#fbbf24{% else %}#4ade80{% endif %};
+                          border-radius:4px;"></div>
+            </div>
+            <span style="font-size:.75rem;min-width:32px;text-align:right;">{{ td.global_pct }}&nbsp;%</span>
+          </span>
+
+          {% if td.nb_complete %}
+          <span style="background:#fca5a5;color:#7f1d1d;border-radius:20px;padding:2px 9px;font-size:.7rem;font-weight:700;margin-right:6px;">
+            <i class="bi bi-lock-fill"></i> {{ td.nb_complete }} terminé{{ td.nb_complete|pluralize }}
+          </span>
+          {% endif %}
+        </button>
+      </h2>
+
+      <!-- Corps : liste des modules -->
+      <div id="body-{{ idx }}"
+           class="accordion-collapse collapse"
+           aria-labelledby="head-{{ idx }}"
+           data-bs-parent="#accordTeachers">
+        <div class="accordion-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0 align-middle" style="font-size:.83rem;">
+              <thead style="background:#f8fafc;font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #e2e8f0;">
+                <tr>
+                  <th class="ps-3" style="color:#64748b;">Module (EC)</th>
+                  <th style="color:#64748b;">Classe</th>
+                  <th style="color:#64748b;">Semestre</th>
+                  <th class="text-center" style="color:#d97706;">H. supp. accordées</th>
+                  <th class="text-center" style="color:#1e3a5f;">Vol. total (h)</th>
+                  <th class="text-center" style="color:#1e3a5f;">H. effectuées</th>
+                  <th class="text-center" style="color:#1e3a5f;">Vol. restant</th>
+                  <th style="min-width:160px;color:#64748b;">Avancement</th>
+                  <th class="text-center" style="width:36px;color:#64748b;"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for m in td.modules %}
+                <tr class="module-row" style="cursor:pointer;{% if m.is_complete %}background:#fff7f7;{% endif %}"
+                    onclick="window.location='{% url 'attendance:module_detail_admin' teacher.pk m.subject.pk m.class_group.pk m.semester.pk %}'"
+                    title="Voir le détail des séances déroulées">
+
+                  <td class="ps-3">
+                    <div class="fw-semibold" style="color:#1e3a5f;">{{ m.subject.title }}</div>
+                    {% if m.subject.code %}
+                    <div style="font-size:.7rem;color:#94a3b8;">{{ m.subject.code }}</div>
+                    {% endif %}
+                    {% if m.is_complete %}
+                    <div style="font-size:.67rem;margin-top:2px;">
+                      <span style="background:#fee2e2;color:#dc2626;border-radius:10px;padding:1px 7px;font-weight:700;">
+                        <i class="bi bi-lock-fill me-1"></i>Volume atteint
+                      </span>
+                    </div>
+                    {% endif %}
+                    <div style="margin-top:6px;">
+                      {% if m.has_course_plan %}
+                      <a href="{% url 'attendance:course_plan_view' teacher.pk m.subject.pk m.class_group.pk m.semester.pk %}"
+                         onclick="event.stopPropagation();"
+                         style="display:inline-flex;align-items:center;gap:5px;font-size:.7rem;font-weight:700;
+                                color:#166534;background:#dcfce7;border:1px solid #bbf7d0;border-radius:20px;
+                                padding:3px 10px;text-decoration:none;">
+                        <i class="bi bi-journal-text"></i>Voir le plan de cours
+                      </a>
+                      {% else %}
+                      <a href="{% url 'attendance:course_plan_view' teacher.pk m.subject.pk m.class_group.pk m.semester.pk %}"
+                         onclick="event.stopPropagation();"
+                         style="display:inline-flex;align-items:center;gap:5px;font-size:.7rem;font-weight:700;
+                                color:#94a3b8;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:20px;
+                                padding:3px 10px;text-decoration:none;">
+                        <i class="bi bi-journal"></i>Plan de cours non défini
+                      </a>
+                      {% endif %}
+                    </div>
+                  </td>
+
+                  <td>{{ m.class_group.name }}</td>
+
+                  <td>
+                    {% if m.semester %}
+                    <span style="background:#eff6ff;color:#1d4ed8;border-radius:10px;padding:1px 8px;font-size:.75rem;">
+                      S{{ m.semester.number }}
+                    </span>
+                    {% else %}—{% endif %}
+                  </td>
+
+                  <!-- H. supp. accordées -->
+                  <td class="text-center">
+                    {% if m.extra_hours > 0 %}
+                    <span style="background:#fef3c7;color:#92400e;border-radius:20px;padding:2px 9px;font-size:.75rem;font-weight:700;">
+                      +{{ m.extra_hours }}h
+                    </span>
+                    {% else %}
+                    <span style="color:#cbd5e1;">—</span>
+                    {% endif %}
+                  </td>
+
+                  <!-- Vol. total -->
+                  <td class="text-center fw-bold" style="color:#1e3a5f;">{{ m.volume_total|floatformat:0 }}</td>
+
+                  <!-- H. effectuées -->
+                  <td class="text-center">{{ m.hours_done|floatformat:0 }}</td>
+
+                  <!-- Vol. restant -->
+                  <td class="text-center">
+                    {% if m.is_complete %}
+                    <span style="background:#fee2e2;color:#dc2626;border-radius:20px;padding:2px 10px;font-size:.78rem;font-weight:800;">
+                      0 h
+                    </span>
+                    {% elif m.percent >= 75 %}
+                    <span style="background:#fef3c7;color:#92400e;border-radius:20px;padding:2px 10px;font-size:.78rem;font-weight:700;">
+                      {{ m.vol_restant|floatformat:2 }} h
+                    </span>
+                    {% else %}
+                    <span style="background:#dcfce7;color:#166534;border-radius:20px;padding:2px 10px;font-size:.78rem;font-weight:700;">
+                      {{ m.vol_restant|floatformat:2 }} h
+                    </span>
+                    {% endif %}
+                  </td>
+
+                  <!-- Avancement -->
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="progress flex-grow-1" style="height:8px;border-radius:4px;">
+                        <div class="progress-bar {% if m.percent >= 100 %}bg-danger{% elif m.percent >= 75 %}bg-warning{% elif m.percent >= 50 %}bg-primary{% else %}bg-success{% endif %}"
+                             role="progressbar"
+                             style="width:{% if m.percent > 100 %}100{% else %}{{ m.percent }}{% endif %}%;">
+                        </div>
+                      </div>
+                      <span style="font-size:.75rem;min-width:36px;text-align:right;
+                        color:{% if m.percent >= 100 %}#dc2626{% elif m.percent >= 75 %}#d97706{% elif m.percent >= 50 %}#1d4ed8{% else %}#16a34a{% endif %};">
+                        {{ m.percent|floatformat:0 }}&nbsp;%
+                      </span>
+                    </div>
+                    {% if m.is_complete %}
+                    <div style="font-size:.67rem;color:#dc2626;margin-top:2px;">
+                      <i class="bi bi-lock-fill"></i> Émargement bloqué
+                    </div>
+                    {% elif m.percent >= 75 %}
+                    <div style="font-size:.67rem;color:#d97706;margin-top:2px;">
+                      <i class="bi bi-exclamation-triangle-fill"></i> Bientôt terminé
+                    </div>
+                    {% endif %}
+                  </td>
+
+                  <td class="text-center">
+                    <i class="bi bi-chevron-right" style="color:#94a3b8;font-size:.8rem;"></i>
+                  </td>
+
+                </tr>
+                {% endfor %}
+
+                <!-- Ligne total enseignant -->
+                <tr style="background:#f1f5f9;font-weight:700;font-size:.8rem;">
+                  <td class="ps-3" colspan="4" style="color:#475569;">
+                    <i class="bi bi-sigma me-1"></i>Total {{ teacher.user.get_full_name }}
+                  </td>
+                  <td class="text-center" style="color:#1e3a5f;">{{ td.total_vol|floatformat:0 }} h</td>
+                  <td class="text-center" style="color:#1e3a5f;">{{ td.total_done|floatformat:0 }} h</td>
+                  <td class="text-center">
+                    {% if td.total_rest == 0 %}
+                    <span style="color:#dc2626;">0 h</span>
+                    {% else %}
+                    <span style="color:#166534;">{{ td.total_rest|floatformat:2 }} h</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="progress flex-grow-1" style="height:8px;border-radius:4px;">
+                        <div class="progress-bar {% if td.global_pct >= 100 %}bg-danger{% elif td.global_pct >= 75 %}bg-warning{% else %}bg-primary{% endif %}"
+                             role="progressbar"
+                             style="width:{% if td.global_pct > 100 %}100{% else %}{{ td.global_pct }}{% endif %}%;">
+                        </div>
+                      </div>
+                      <span style="font-size:.75rem;min-width:36px;text-align:right;">{{ td.global_pct }}&nbsp;%</span>
+                    </div>
+                  </td>
+                  <td></td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+  </div>
+
+  <!-- Légende -->
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;font-size:.78rem;color:#64748b;display:flex;gap:20px;flex-wrap:wrap;margin-top:12px;">
+    <span><span style="background:#dcfce7;color:#166534;border-radius:10px;padding:1px 7px;font-weight:700;">Vert</span> : heures restantes disponibles</span>
+    <span><span style="background:#fef3c7;color:#92400e;border-radius:10px;padding:1px 7px;font-weight:700;">Jaune</span> : moins de 25% restant</span>
+    <span><span style="background:#fee2e2;color:#dc2626;border-radius:10px;padding:1px 7px;font-weight:700;">Rouge — 0 h</span> : volume atteint, émargement bloqué</span>
+  </div>
+
+  {% endif %}
+</div>
+
+<style>
+.module-row:hover { background: #eff6ff !important; }
+</style>
+{% endblock %}

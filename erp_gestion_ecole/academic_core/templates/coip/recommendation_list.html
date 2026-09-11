@@ -1,0 +1,60 @@
+{% extends 'base/base.html' %}
+{% block title %}COIP — Recommandations{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item active">Recommandations</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-envelope-paper-fill"></i></span>
+    Demandes de recommandation
+  </h1>
+</div>
+
+<div class="card-section mb-3">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Tous statuts</option>
+          {% for code, label in status_choices %}
+          <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{% url 'coip:recommendation_list' %}" class="btn btn-outline-secondary btn-sm">Réinit.</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="table-responsive">
+    <table class="table" id="tbl-recommendations">
+      <thead><tr><th>Étudiant</th><th>Destinataire</th><th>Statut</th><th>Assignée à</th><th>Date demande</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for r in requests %}
+        <tr>
+          <td style="font-size:.85rem;font-weight:600;">{{ r.student }}</td>
+          <td style="font-size:.82rem;">{{ r.destinataire|default:"—" }}</td>
+          <td><span class="badge bg-{{ r.statut_color }}">{{ r.get_status_display }}</span></td>
+          <td style="font-size:.82rem;color:#64748b;">{{ r.assigned_to.get_full_name|default:"—" }}</td>
+          <td style="font-size:.82rem;">{{ r.date_demande|date:"d/m/Y" }}</td>
+          <td>
+            <a href="{% url 'coip:recommendation_detail' r.pk %}" class="btn-action" title="Voir"><i class="bi bi-eye"></i></a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">Aucune demande.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>$(document).ready(function(){ $('#tbl-recommendations').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}}); });</script>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base/base.html" %}
+
+{% block title %}Balanced Scorecard{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-grid-3x3-gap-fill me-2"></i>Balanced Scorecard
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Pilotage et Suivi Budgétaire</p>
+  </div>
+  <a href="{% url 'accounting:budget_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<div class="row g-3">
+  {% for persp in perspectives %}
+  <div class="col-md-6">
+    <div class="card-section" style="padding:18px;">
+      <h6 class="fw-bold mb-3" style="color:var(--navy);border-bottom:2px solid #e2e8f0;padding-bottom:8px;">{{ persp.label }}</h6>
+      {% for carte in persp.cartes %}
+      <div class="border rounded p-2 mb-2">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div style="font-weight:700;color:var(--navy);font-size:.85rem;">{{ carte.objectif.code }} — {{ carte.objectif.libelle }}</div>
+            <div class="text-muted" style="font-size:.72rem;">Responsable : {{ carte.objectif.responsable.get_full_name|default:"—" }}</div>
+          </div>
+          <span style="border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;
+            {% if carte.niveau_realisation >= 100 %}background:#dcfce7;color:#166534;
+            {% elif carte.niveau_realisation >= 60 %}background:#fef3c7;color:#92400e;
+            {% else %}background:#fee2e2;color:#991b1b;{% endif %}">
+            {{ carte.niveau_realisation }}%
+          </span>
+        </div>
+        {% if carte.projets %}
+        <div class="mt-1" style="font-size:.72rem;color:#64748b;">
+          Projets liés : {% for p in carte.projets %}{{ p.code }}{% if not forloop.last %}, {% endif %}{% endfor %}
+          — Budget cumulé : {{ carte.budget_cumule|floatformat:0 }} FCFA
+        </div>
+        {% endif %}
+        {% if carte.indicateurs %}
+        <div class="mt-1 d-flex flex-wrap gap-1">
+          {% for i in carte.indicateurs %}
+          <span style="border-radius:20px;padding:1px 8px;font-size:.68rem;font-weight:700;
+            {% if i.etat == 'vert' %}background:#dcfce7;color:#166534;
+            {% elif i.etat == 'orange' %}background:#fef3c7;color:#92400e;
+            {% else %}background:#fee2e2;color:#991b1b;{% endif %}">
+            {{ i.code }} : {{ i.taux_realisation|floatformat:0 }}%
+          </span>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      {% empty %}
+      <p class="text-muted text-center" style="font-size:.8rem;">Aucun objectif classé dans cette perspective.</p>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

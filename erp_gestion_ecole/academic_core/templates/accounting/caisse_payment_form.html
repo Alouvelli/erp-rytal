@@ -1,0 +1,536 @@
+{% extends 'base/base.html' %}
+{% block title %}Nouveau paiement — La Caisse{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Direction Administrative Financière</a></li>
+<li class="breadcrumb-item"><a href="{% url 'accounting:caisse_dashboard' %}">La Caisse</a></li>
+<li class="breadcrumb-item active">Nouveau paiement</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4 gap-3">
+  <div>
+    <h4 class="mb-0 fw-bold" style="color:var(--navy);">
+      <i class="bi bi-cash-coin me-2" style="color:var(--accent);"></i>Enregistrer un paiement
+    </h4>
+    <p class="text-muted mb-0" style="font-size:.82rem;">Un reçu sera généré automatiquement après validation</p>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-12 col-md-8 col-lg-6">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-body p-4">
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          <!-- Étudiant — autocomplétion -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;color:var(--navy);">
+              Étudiant(e) <span class="text-danger">*</span>
+            </label>
+            <div class="position-relative">
+              <div class="input-group">
+                <span class="input-group-text" style="background:#F1F5F9;border-right:0;">
+                  <i class="bi bi-search" style="color:#64748b;font-size:.85rem;"></i>
+                </span>
+                <input type="text" id="student-search-input"
+                       class="form-control {% if errors.student %}is-invalid{% endif %}"
+                       placeholder="Rechercher par matricule, prénom ou nom…"
+                       autocomplete="off"
+                       value="{{ post_student_label }}"
+                       style="border-left:0;border-radius:0 8px 8px 0;">
+              </div>
+              <!-- Champ caché qui contient le PK -->
+              <input type="hidden" name="student" id="student-hidden" value="{{ post.student|default:prefill.student }}">
+              <!-- Dropdown de résultats -->
+              <div id="student-results"
+                   style="display:none;position:absolute;top:100%;left:0;right:0;z-index:1000;
+                          background:#fff;border:1px solid #e2e8f0;border-radius:10px;
+                          box-shadow:0 8px 24px rgba(0,0,0,.1);max-height:260px;overflow-y:auto;margin-top:4px;">
+              </div>
+            </div>
+            {% if errors.student %}<div class="text-danger mt-1" style="font-size:.82rem;">{{ errors.student }}</div>{% endif %}
+          </div>
+
+          <!-- Type de frais -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;color:var(--navy);">
+              Type de frais <span class="text-danger">*</span>
+            </label>
+            <div class="d-flex gap-2 flex-wrap">
+              {% for value, label in TYPE_CHOICES %}
+              <div class="form-check" style="background:#F8FAFC;border:1px solid #e2e8f0;border-radius:9px;padding:10px 16px;cursor:pointer;">
+                <input class="form-check-input" type="radio" name="payment_type" id="type_{{ value }}"
+                       value="{{ value }}"
+                       {% if post.payment_type == value %}checked
+                       {% elif not post.payment_type and prefill.payment_type == value %}checked
+                       {% elif not post.payment_type and not prefill.payment_type and forloop.first %}checked{% endif %}
+                       style="cursor:pointer;">
+                <label class="form-check-label fw-semibold" for="type_{{ value }}" style="cursor:pointer;font-size:.85rem;">
+                  {{ label }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+            {% if errors.payment_type %}<div class="text-danger mt-1" style="font-size:.82rem;">{{ errors.payment_type }}</div>{% endif %}
+          </div>
+
+          <!-- Sélecteur de mois (affiché uniquement pour Frais de scolarité) -->
+          <div id="mois-scolarite-block" class="mb-3" style="display:none;">
+            <label class="form-label fw-semibold" style="font-size:.85rem;color:var(--navy);">
+              Mois concerné <span class="text-danger">*</span>
+            </label>
+            <select name="payment_month" id="payment-month-select" class="form-select" style="border-radius:8px;">
+              <option value="">— Sélectionner un mois —</option>
+              <option value="1">Janvier</option>
+              <option value="2">Février</option>
+              <option value="3">Mars</option>
+              <option value="4">Avril</option>
+              <option value="5">Mai</option>
+              <option value="6">Juin</option>
+              <option value="7">Juillet</option>
+              <option value="8">Août</option>
+              <option value="9">Septembre</option>
+              <option value="10">Octobre</option>
+              <option value="11">Novembre</option>
+              <option value="12">Décembre</option>
+            </select>
+            <!-- Bandeau info mensualité configurée -->
+            <div id="mensualite-info" style="display:none;margin-top:8px;padding:9px 14px;background:#DCFCE7;border-radius:8px;border:1px solid #86efac;font-size:.82rem;color:#166534;">
+              <i class="bi bi-check-circle-fill me-1"></i>
+              Mensualité (<span id="mensualite-source"></span>) : <strong id="mensualite-montant"></strong> FCFA
+            </div>
+            <div id="mensualite-warning" style="display:none;margin-top:8px;padding:9px 14px;background:#FEF3C7;border-radius:8px;border:1px solid #fde047;font-size:.82rem;color:#92400e;">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>
+              Aucune mensualité configurée pour cette classe ou ce niveau. Saisissez le montant manuellement.
+            </div>
+          </div>
+
+          <!-- Montant -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;color:var(--navy);">
+              Montant (FCFA) <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <input type="number" name="amount" id="amount-input" min="1" step="1"
+                     class="form-control {% if errors.amount %}is-invalid{% endif %}"
+                     placeholder="Ex : 150000" value="{{ post.amount }}"
+                     style="border-radius:8px 0 0 8px;">
+              <span class="input-group-text" style="background:#F1F5F9;border-radius:0 8px 8px 0;font-size:.85rem;color:#64748b;">FCFA</span>
+              {% if errors.amount %}<div class="invalid-feedback">{{ errors.amount }}</div>{% endif %}
+            </div>
+            <div id="amount-auto-hint" style="display:none;font-size:.78rem;color:#16a34a;margin-top:4px;">
+              <i class="bi bi-magic me-1"></i>Montant rempli automatiquement selon la mensualité du niveau.
+            </div>
+          </div>
+
+          <!-- Date de paiement -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;color:var(--navy);">
+              Date de paiement <span class="text-danger">*</span>
+            </label>
+            <input type="date" name="payment_date" id="payment-date-input"
+                   class="form-control {% if errors.payment_date %}is-invalid{% endif %}"
+                   value="{{ post.payment_date }}"
+                   style="border-radius:8px;">
+            {% if errors.payment_date %}<div class="invalid-feedback">{{ errors.payment_date }}</div>{% endif %}
+          </div>
+
+          <!-- Année académique -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;color:var(--navy);">
+              Année académique
+            </label>
+            <select name="academic_year" class="form-select" style="border-radius:8px;">
+              <option value="">— Non précisée —</option>
+              {% for yr in academic_years %}
+              <option value="{{ yr.pk }}"
+                {% if post.academic_year == yr.pk|stringformat:"s" %}selected
+                {% elif not post.academic_year and prefill.academic_year == yr.pk|stringformat:"s" %}selected
+                {% elif not post.academic_year and not prefill.academic_year and yr.is_current %}selected
+                {% endif %}>
+                {{ yr.label }}{% if yr.is_current %} (en cours){% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Observations -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold" style="font-size:.85rem;color:var(--navy);">Observations</label>
+            <textarea name="notes" class="form-control" rows="2" placeholder="Informations complémentaires…"
+                      style="border-radius:8px;">{{ post.notes }}</textarea>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="button" id="open-confirm-btn" class="btn flex-fill" style="background:var(--navy);color:#fff;border-radius:9px;font-size:.88rem;font-weight:600;">
+              <i class="bi bi-check-circle-fill me-1"></i>Enregistrer et générer le reçu
+            </button>
+            <a href="{% url 'accounting:caisse_dashboard' %}" class="btn btn-outline-secondary" style="border-radius:9px;font-size:.88rem;">
+              Annuler
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de confirmation du paiement -->
+<div class="modal fade" id="confirmPaymentModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:14px;border:0;">
+      <div class="modal-header border-0 py-3" style="background:var(--navy);border-radius:14px 14px 0 0;">
+        <h6 class="modal-title fw-bold text-white mb-0">
+          <i class="bi bi-cash-stack me-2"></i>Vérifier les informations du paiement
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted" style="font-size:.82rem;">
+          Merci de vérifier attentivement ces informations et de vous assurer que l'argent a bien été reçu avant de valider.
+        </p>
+        <table class="table table-sm mb-0" style="font-size:.85rem;">
+          <tr><td class="fw-semibold text-muted" style="width:45%;">Étudiant(e)</td><td class="fw-bold" id="confirm-student">—</td></tr>
+          <tr><td class="fw-semibold text-muted">Type de frais</td><td id="confirm-type">—</td></tr>
+          <tr><td class="fw-semibold text-muted">Mois concerné</td><td id="confirm-month-row-value">—</td></tr>
+          <tr style="background:#f0fdf4;">
+            <td class="fw-bold" style="color:#166534;">Montant reçu</td>
+            <td class="fw-bold" style="color:#166534;font-size:1.05rem;" id="confirm-amount">—</td>
+          </tr>
+          <tr><td class="fw-semibold text-muted">Date de paiement</td><td id="confirm-date">—</td></tr>
+          <tr><td class="fw-semibold text-muted">Année académique</td><td id="confirm-year">—</td></tr>
+        </table>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-pencil me-1"></i>Modifier
+        </button>
+        <button type="button" id="confirm-payment-submit" class="btn" style="background:#059669;color:#fff;font-weight:700;">
+          <i class="bi bi-check-circle-fill me-1"></i>Argent reçu — Valider le paiement
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const searchInput    = document.getElementById('student-search-input');
+  const hiddenInput    = document.getElementById('student-hidden');
+  const resultsBox     = document.getElementById('student-results');
+  const amountInput    = document.getElementById('amount-input');
+  const moisBlock      = document.getElementById('mois-scolarite-block');
+  const mensualiteInfo = document.getElementById('mensualite-info');
+  const mensualiteWarn = document.getElementById('mensualite-warning');
+  const mensualiteMont = document.getElementById('mensualite-montant');
+  const autoHint       = document.getElementById('amount-auto-hint');
+  const SEARCH_URL     = "{{ student_search_url }}";
+  const FEES_BASE_URL  = "{{ student_fees_base_url }}";
+
+  let debounceTimer = null;
+  let currentFocus  = -1;
+
+  function closeResults() {
+    resultsBox.style.display = 'none';
+    resultsBox.innerHTML = '';
+    currentFocus = -1;
+  }
+
+  function renderResults(items) {
+    resultsBox.innerHTML = '';
+    currentFocus = -1;
+
+    if (!items.length) {
+      resultsBox.innerHTML =
+        '<div style="padding:12px 16px;color:#64748b;font-size:.83rem;">Aucun étudiant trouvé.</div>';
+      resultsBox.style.display = 'block';
+      return;
+    }
+
+    items.forEach(function (item) {
+      const div = document.createElement('div');
+      div.className = 'student-item';
+      div.style.cssText = 'padding:10px 16px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:.84rem;display:flex;align-items:center;gap:10px;';
+      div.innerHTML =
+        '<span style="background:#DBEAFE;color:#1d4ed8;font-weight:700;border-radius:5px;padding:2px 7px;font-size:.78rem;white-space:nowrap;flex-shrink:0;">'
+        + item.matricule + '</span>'
+        + '<span style="flex:1;min-width:0;">' + item.name + '</span>'
+        + (item.classe
+            ? '<span style="background:#F1F5F9;color:#64748b;border-radius:5px;padding:2px 8px;font-size:.75rem;white-space:nowrap;flex-shrink:0;">'
+              + item.classe + '</span>'
+            : '');
+
+      div.addEventListener('mouseenter', function () { div.style.background = '#F0F7FF'; });
+      div.addEventListener('mouseleave', function () { div.style.background = ''; });
+      div.addEventListener('mousedown', function (e) {
+        e.preventDefault();
+        selectItem(item);
+      });
+
+      resultsBox.appendChild(div);
+    });
+
+    resultsBox.style.display = 'block';
+  }
+
+  // ── Mensualité ────────────────────────────────────────────────────
+  let currentFraisMensuel = null;
+  let currentSource       = '';
+  const mensualiteSource  = document.getElementById('mensualite-source');
+
+  const SOURCE_LABELS = {
+    'classe':     'configurée pour cette classe',
+    'niveau':     'configurée pour ce niveau',
+    'enrollment': 'issue de l\'inscription',
+  };
+
+  function isScolarite() {
+    const checked = document.querySelector('input[name="payment_type"]:checked');
+    return checked && checked.value === 'SCOLARITE';
+  }
+
+  // ── Données frais de l'étudiant sélectionné ──────────────────────
+  let currentFees = { mensuel: null, inscription: null, soutenance: null };
+
+  function getSelectedType() {
+    const checked = document.querySelector('input[name="payment_type"]:checked');
+    return checked ? checked.value : '';
+  }
+
+  function applyAmountForType() {
+    if (!hiddenInput.value) return;
+    const type = getSelectedType();
+    let montant = null;
+    if (type === 'SCOLARITE')   montant = currentFees.mensuel;
+    if (type === 'INSCRIPTION') montant = currentFees.inscription;
+    if (type === 'SOUTENANCE')  montant = currentFees.soutenance;
+
+    if (montant !== null) {
+      amountInput.value = montant;
+      autoHint.style.display = 'block';
+    } else {
+      autoHint.style.display = 'none';
+    }
+
+    // Bloc mois scolarité
+    moisBlock.style.display = (type === 'SCOLARITE') ? 'block' : 'none';
+    if (type === 'SCOLARITE') {
+      if (currentFees.mensuel !== null) {
+        mensualiteInfo.style.display = 'block';
+        mensualiteWarn.style.display = 'none';
+        mensualiteMont.textContent   = Number(currentFees.mensuel).toLocaleString('fr-FR');
+        if (mensualiteSource) mensualiteSource.textContent = SOURCE_LABELS[currentSource] || currentSource;
+      } else {
+        mensualiteInfo.style.display = 'none';
+        mensualiteWarn.style.display = 'block';
+      }
+    } else {
+      mensualiteInfo.style.display = 'none';
+      mensualiteWarn.style.display = 'none';
+    }
+  }
+
+  function updateMoisBlock() { applyAmountForType(); }
+
+  function applyMensualite() { applyAmountForType(); }
+
+  function fetchStudentFees(studentId) {
+    fetch(FEES_BASE_URL + studentId + '/frais/')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        currentFraisMensuel        = data.frais_mensuel    || null;
+        currentFees.mensuel        = data.frais_mensuel    || null;
+        currentFees.inscription    = data.frais_inscription || null;
+        currentFees.soutenance     = data.frais_soutenance  || null;
+        currentSource              = data.source || '';
+        applyAmountForType();
+      })
+      .catch(function () {
+        currentFraisMensuel = null;
+        currentFees = { mensuel: null, inscription: null, soutenance: null };
+        currentSource = '';
+      });
+  }
+
+  // Écouter changement de type de frais
+  document.querySelectorAll('input[name="payment_type"]').forEach(function (radio) {
+    radio.addEventListener('change', applyAmountForType);
+  });
+
+  // Pré-sélectionner le mois courant
+  const monthSelect = document.getElementById('payment-month-select');
+  if (monthSelect && !monthSelect.value) {
+    monthSelect.value = new Date().getMonth() + 1;
+  }
+
+  // Date du jour par défaut
+  const dateInput = document.getElementById('payment-date-input');
+  if (dateInput && !dateInput.value) {
+    const today = new Date();
+    const yyyy  = today.getFullYear();
+    const mm    = String(today.getMonth() + 1).padStart(2, '0');
+    const dd    = String(today.getDate()).padStart(2, '0');
+    dateInput.value = yyyy + '-' + mm + '-' + dd;
+  }
+
+  // Init au chargement
+  updateMoisBlock();
+
+  function selectItem(item) {
+    searchInput.value    = item.label + (item.classe ? '  ·  ' + item.classe : '');
+    hiddenInput.value    = item.id;
+    searchInput.style.borderColor = '#22c55e';
+    currentFraisMensuel  = null;
+    closeResults();
+    fetchStudentFees(item.id);
+  }
+
+  function navigateResults(direction) {
+    const items = resultsBox.querySelectorAll('.student-item');
+    if (!items.length) return;
+    items[currentFocus]?.style.setProperty('background', '');
+    currentFocus = (currentFocus + direction + items.length) % items.length;
+    const active = items[currentFocus];
+    active.style.background = '#F0F7FF';
+    active.scrollIntoView({ block: 'nearest' });
+  }
+
+  searchInput.addEventListener('input', function () {
+    const q = searchInput.value.trim();
+    hiddenInput.value = '';
+    searchInput.style.borderColor = '';
+    clearTimeout(debounceTimer);
+    if (q.length < 2) { closeResults(); return; }
+    debounceTimer = setTimeout(function () {
+      fetch(SEARCH_URL + '?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(renderResults)
+        .catch(function () { closeResults(); });
+    }, 220);
+  });
+
+  searchInput.addEventListener('keydown', function (e) {
+    if (resultsBox.style.display === 'none') return;
+    if (e.key === 'ArrowDown')  { e.preventDefault(); navigateResults(1); }
+    else if (e.key === 'ArrowUp')   { e.preventDefault(); navigateResults(-1); }
+    else if (e.key === 'Enter') {
+      const items = resultsBox.querySelectorAll('.student-item');
+      if (currentFocus >= 0 && items[currentFocus]) {
+        e.preventDefault();
+        items[currentFocus].dispatchEvent(new Event('mousedown'));
+      }
+    }
+    else if (e.key === 'Escape') { closeResults(); }
+  });
+
+  searchInput.addEventListener('blur', function () {
+    setTimeout(closeResults, 150);
+  });
+
+  const paymentForm       = document.querySelector('form');
+  const openConfirmBtn    = document.getElementById('open-confirm-btn');
+  const confirmModalEl    = document.getElementById('confirmPaymentModal');
+  const confirmModal      = new bootstrap.Modal(confirmModalEl);
+  const confirmSubmitBtn  = document.getElementById('confirm-payment-submit');
+  const MONTH_LABELS = {
+    '1':'Janvier','2':'Février','3':'Mars','4':'Avril','5':'Mai','6':'Juin',
+    '7':'Juillet','8':'Août','9':'Septembre','10':'Octobre','11':'Novembre','12':'Décembre'
+  };
+
+  function validateForm() {
+    if (!hiddenInput.value) {
+      searchInput.style.borderColor = '#dc2626';
+      searchInput.focus();
+      searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
+    if (!amountInput.value || Number(amountInput.value) <= 0) {
+      amountInput.focus();
+      amountInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
+    if (!dateInput.value) {
+      dateInput.focus();
+      dateInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
+    return true;
+  }
+
+  function fillConfirmModal() {
+    document.getElementById('confirm-student').textContent = searchInput.value || '—';
+
+    const checkedType = document.querySelector('input[name="payment_type"]:checked');
+    const typeLabel = checkedType
+      ? checkedType.closest('.form-check').querySelector('.form-check-label').textContent.trim()
+      : '—';
+    document.getElementById('confirm-type').textContent = typeLabel;
+
+    const monthRow = document.getElementById('confirm-month-row-value').closest('tr');
+    if (isScolarite() && monthSelect && monthSelect.value) {
+      monthRow.style.display = '';
+      document.getElementById('confirm-month-row-value').textContent = MONTH_LABELS[monthSelect.value] || monthSelect.value;
+    } else {
+      monthRow.style.display = 'none';
+    }
+
+    const amountVal = Number(amountInput.value || 0);
+    document.getElementById('confirm-amount').textContent = amountVal.toLocaleString('fr-FR') + ' FCFA';
+
+    if (dateInput.value) {
+      const [y, m, d] = dateInput.value.split('-');
+      document.getElementById('confirm-date').textContent = d + '/' + m + '/' + y;
+    } else {
+      document.getElementById('confirm-date').textContent = '—';
+    }
+
+    const yearSelect = document.querySelector('select[name="academic_year"]');
+    const yearLabel = yearSelect && yearSelect.selectedOptions.length ? yearSelect.selectedOptions[0].textContent.trim() : '—';
+    document.getElementById('confirm-year').textContent = yearLabel;
+  }
+
+  openConfirmBtn.addEventListener('click', function () {
+    if (!validateForm()) return;
+    fillConfirmModal();
+    confirmModal.show();
+  });
+
+  confirmSubmitBtn.addEventListener('click', function () {
+    confirmSubmitBtn.disabled = true;
+    confirmSubmitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enregistrement…';
+    paymentForm.submit();
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!searchInput.contains(e.target) && !resultsBox.contains(e.target)) {
+      closeResults();
+    }
+  });
+
+  // Pré-remplissage depuis l'URL (bouton "Encaisser" du dashboard)
+  const prefillStudentId = "{{ prefill.student }}";
+  if (prefillStudentId && !searchInput.value) {
+    fetch(SEARCH_URL + '?q=&pk=' + prefillStudentId)
+      .then(function (r) { return r.json(); })
+      .then(function (items) {
+        if (items.length) {
+          const item = items[0];
+          searchInput.value = item.matricule + ' — ' + item.name;
+          hiddenInput.value = prefillStudentId;
+          searchInput.style.borderColor = '#22c55e';
+          // Charger les frais pour auto-remplir le montant
+          fetchStudentFees(prefillStudentId);
+        }
+      })
+      .catch(function () {});
+  }
+
+  // Mise à jour du bloc mois au chargement (si INSCRIPTION pré-coché)
+  updateMoisBlock();
+})();
+</script>
+{% endblock %}

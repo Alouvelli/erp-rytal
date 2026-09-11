@@ -1,0 +1,184 @@
+{% extends 'base/base.html' %}
+{% block title %}Sauvegardes du journal d'audit{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:audit_log' %}">Journal d'audit</a></li>
+<li class="breadcrumb-item active">Sauvegardes</li>
+{% endblock %}
+
+{% block content %}
+<style>
+  .bk-card { background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:20px 24px;margin-bottom:16px; }
+  .bk-badge { display:inline-flex;align-items:center;gap:5px;padding:3px 11px;border-radius:20px;font-size:.73rem;font-weight:700; }
+  .bk-auto   { background:#dbeafe;color:#1e40af; }
+  .bk-manual { background:#dcfce7;color:#15803d; }
+  .bk-table thead th { font-size:.71rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;background:#f8fafc;border-bottom:2px solid #e2e8f0;padding:9px 12px;white-space:nowrap; }
+  .bk-table tbody td { font-size:.82rem;padding:9px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle; }
+  .bk-table tbody tr:hover { background:#f8fafc; }
+  .stat-box { background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 20px;text-align:center; }
+  .stat-box .val { font-size:1.6rem;font-weight:800;color:var(--navy); }
+  .stat-box .lbl { font-size:.73rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.04em; }
+  .next-badge { display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;background:#fef3c7;color:#92400e;font-size:.8rem;font-weight:700; }
+</style>
+
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-shield-check"></i></span>Journal d'audit
+  </h1>
+</div>
+
+<!-- Onglets -->
+<div style="display:flex;gap:0;border-bottom:2px solid #e2e8f0;margin-bottom:20px;">
+  <a href="{% url 'accounts:audit_log' %}"
+     style="padding:9px 22px;font-size:.84rem;font-weight:600;text-decoration:none;color:#64748b;margin-bottom:-2px;display:flex;align-items:center;gap:6px;">
+    <i class="bi bi-list-ul"></i>Journal
+  </a>
+  <a href="{% url 'accounts:audit_backup_list' %}"
+     style="padding:9px 22px;font-size:.84rem;font-weight:700;text-decoration:none;border-bottom:3px solid var(--navy);color:var(--navy);margin-bottom:-2px;display:flex;align-items:center;gap:6px;">
+    <i class="bi bi-archive"></i>Sauvegardes
+  </a>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-box">
+      <div class="val">{{ backups.count }}</div>
+      <div class="lbl">Sauvegardes</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-box">
+      <div class="val">{{ total_logs }}</div>
+      <div class="lbl">Entrées en base</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-box">
+      <div class="val" style="font-size:1rem;padding-top:8px;">
+        {% if next_auto %}
+          {{ next_auto|date:"d/m/Y H:i" }}
+        {% else %}
+          —
+        {% endif %}
+      </div>
+      <div class="lbl">Prochaine sauvegarde auto</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-box">
+      <div class="val" style="font-size:1rem;padding-top:8px;">Toutes les 48h</div>
+      <div class="lbl">Fréquence automatique</div>
+    </div>
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="bk-card d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+  <div>
+    <div style="font-weight:700;font-size:.9rem;color:#1e293b;margin-bottom:4px;">
+      <i class="bi bi-info-circle text-primary me-1"></i>
+      Sauvegarde automatique toutes les 48h
+    </div>
+    <div style="font-size:.8rem;color:#64748b;">
+      Les journaux sont exportés en JSON compressé (gzip). Chaque sauvegarde couvre les entrées depuis la précédente.
+      {% if next_auto %}
+        Prochaine sauvegarde automatique : <strong>{{ next_auto|date:"d/m/Y à H:i" }}</strong>.
+      {% endif %}
+    </div>
+  </div>
+  <form method="post" action="{% url 'accounts:audit_backup_create' %}"
+        onsubmit="return confirm('Créer une sauvegarde manuelle maintenant ?')">
+    {% csrf_token %}
+    <button type="submit" style="padding:9px 20px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:.84rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;">
+      <i class="bi bi-archive-fill"></i>Sauvegarder maintenant
+    </button>
+  </form>
+</div>
+
+<!-- Liste des sauvegardes -->
+<div class="card-section" style="padding:0;">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-archive"></i></span>
+      Historique des sauvegardes
+    </h6>
+  </div>
+  {% if backups %}
+  <div class="table-responsive">
+    <table class="table bk-table mb-0">
+      <thead>
+        <tr>
+          <th>Date de création</th>
+          <th>Période couverte</th>
+          <th class="text-center">Entrées</th>
+          <th class="text-center">Taille</th>
+          <th>Fichier</th>
+          <th>Type</th>
+          <th>Créé par</th>
+          <th class="text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for bk in backups %}
+        <tr>
+          <td style="white-space:nowrap;">
+            <div style="font-weight:700;font-size:.8rem;">{{ bk.created_at|date:"d/m/Y" }}</div>
+            <div style="color:#94a3b8;font-size:.74rem;">{{ bk.created_at|date:"H:i:s" }}</div>
+          </td>
+          <td style="font-size:.78rem;color:#475569;">
+            {% if bk.period_start %}{{ bk.period_start|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+            →
+            {% if bk.period_end %}{{ bk.period_end|date:"d/m/Y H:i" }}{% else %}—{% endif %}
+          </td>
+          <td class="text-center">
+            <span style="font-weight:700;color:var(--navy);">{{ bk.entries_count }}</span>
+          </td>
+          <td class="text-center">
+            <span style="font-size:.78rem;color:#475569;">{{ bk.file_size_kb }} Ko</span>
+          </td>
+          <td>
+            <span style="font-family:monospace;font-size:.72rem;color:#64748b;">{{ bk.file_name }}</span>
+          </td>
+          <td>
+            {% if bk.is_auto %}
+            <span class="bk-badge bk-auto"><i class="bi bi-clock"></i>Auto</span>
+            {% else %}
+            <span class="bk-badge bk-manual"><i class="bi bi-hand-index"></i>Manuelle</span>
+            {% endif %}
+          </td>
+          <td style="font-size:.78rem;color:#475569;">
+            {% if bk.created_by %}{{ bk.created_by.get_full_name }}{% else %}<span style="color:#94a3b8;">Système</span>{% endif %}
+          </td>
+          <td class="text-center">
+            <div class="d-flex gap-1 justify-content-center">
+              <a href="{% url 'accounts:audit_backup_download' bk.pk %}"
+                 class="btn btn-sm"
+                 style="background:#eff6ff;color:#1e3a5f;border:1px solid #bfdbfe;font-size:.73rem;padding:4px 10px;"
+                 title="Télécharger">
+                <i class="bi bi-download"></i>
+              </a>
+              <form method="post" action="{% url 'accounts:audit_backup_delete' bk.pk %}" style="display:inline;"
+                    onsubmit="return confirm('Supprimer cette sauvegarde ?')">
+                {% csrf_token %}
+                <button type="submit"
+                        style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:6px;font-size:.73rem;padding:4px 10px;cursor:pointer;"
+                        title="Supprimer">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+    <i class="bi bi-archive d-block mb-3" style="font-size:2.5rem;color:#cbd5e1;"></i>
+    <div style="font-size:.9rem;font-weight:600;">Aucune sauvegarde disponible</div>
+    <div style="font-size:.8rem;margin-top:6px;">La première sauvegarde automatique sera créée dans les 48h ou vous pouvez en créer une manuellement.</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,486 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Dossier — {{ student.user.get_full_name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:list' %}">Étudiants</a></li>
+<li class="breadcrumb-item"><a href="{% url 'students:detail' student.pk %}">{{ student.user.get_full_name }}</a></li>
+<li class="breadcrumb-item active">Dossier complet</li>
+{% endblock %}
+
+{% block content %}
+<style>
+/* ── Variables ── */
+:root {
+  --navy: #1e3a5f;
+  --accent: #f59e0b;
+  --border: #e2e8f0;
+  --bg-card: #fff;
+  --bg-page: #f8fafc;
+}
+
+/* ── Layout ── */
+.dossier-wrap    { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+.dossier-header  { display:flex; align-items:center; gap:20px; background:var(--navy);
+                   color:#fff; border-radius:16px; padding:24px 28px; margin-bottom:32px;
+                   box-shadow:0 4px 20px rgba(30,58,95,.18); }
+.dossier-avatar  { width:72px; height:72px; border-radius:16px; background:#fff2;
+                   display:flex; align-items:center; justify-content:center;
+                   font-size:2rem; font-weight:800; color:#fff; flex-shrink:0; overflow:hidden; }
+.dossier-avatar img { width:100%; height:100%; object-fit:cover; }
+.dossier-name    { font-size:1.35rem; font-weight:800; }
+.dossier-meta    { font-size:.82rem; opacity:.82; margin-top:4px; display:flex; gap:16px; flex-wrap:wrap; }
+.dossier-kpi     { display:flex; gap:12px; margin-left:auto; flex-wrap:wrap; }
+.kpi-box         { background:#fff2; border-radius:12px; padding:12px 18px; text-align:center; min-width:90px; }
+.kpi-val         { font-size:1.5rem; font-weight:800; }
+.kpi-lbl         { font-size:.7rem; opacity:.75; text-transform:uppercase; letter-spacing:.04em; }
+
+/* ── Timeline ── */
+.timeline        { position:relative; padding-left:30px; }
+.timeline::before{ content:''; position:absolute; left:10px; top:0; bottom:0;
+                   width:3px; background:linear-gradient(180deg,var(--navy),#94a3b8); border-radius:3px; }
+.tl-year         { position:relative; margin-bottom:36px; }
+.tl-dot          { position:absolute; left:-26px; top:16px; width:18px; height:18px;
+                   border-radius:50%; border:3px solid var(--navy); background:#fff;
+                   display:flex; align-items:center; justify-content:center; z-index:1; }
+.tl-dot.first    { background:var(--accent); border-color:var(--accent); }
+.tl-dot.last     { background:#10b981; border-color:#10b981; }
+.tl-dot.abandoned{ background:#dc2626; border-color:#dc2626; }
+.tl-dot.suspended{ background:#f59e0b; border-color:#f59e0b; }
+
+/* ── Card ── */
+.yr-card         { background:var(--bg-card); border:1px solid var(--border); border-radius:14px;
+                   overflow:hidden; box-shadow:0 1px 6px rgba(0,0,0,.06); }
+.yr-head         { display:flex; align-items:center; gap:14px; padding:16px 20px;
+                   background:linear-gradient(90deg,#f0f6ff,#f8fafc);
+                   border-bottom:1px solid var(--border); cursor:pointer; user-select:none; }
+.yr-head:hover   { background:linear-gradient(90deg,#e0effe,#f0f6ff); }
+.yr-year         { font-size:1.05rem; font-weight:800; color:var(--navy); }
+.yr-type         { font-size:.72rem; font-weight:700; padding:3px 10px; border-radius:20px;
+                   text-transform:uppercase; letter-spacing:.04em; }
+.type-new        { background:#dbeafe; color:#1d4ed8; }
+.type-rei        { background:#d1fae5; color:#065f46; }
+.type-change     { background:#fef3c7; color:#92400e; }
+.yr-status       { font-size:.72rem; font-weight:700; padding:3px 10px; border-radius:20px;
+                   margin-left:auto; }
+.status-validated{ background:#dcfce7; color:#15803d; }
+.status-pending  { background:#fef9c3; color:#854d0e; }
+.status-abandoned{ background:#fee2e2; color:#991b1b; }
+.status-suspended{ background:#ffedd5; color:#9a3412; }
+.status-rejected { background:#f3f4f6; color:#6b7280; }
+.yr-body         { padding:20px; display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+@media(max-width:720px){ .yr-body { grid-template-columns:1fr; } }
+
+/* ── Sections internes ── */
+.sec-title       { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.06em;
+                   color:#64748b; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+.sec-title i     { font-size:.85rem; }
+.info-row        { display:flex; justify-content:space-between; align-items:center;
+                   padding:5px 0; border-bottom:1px dashed #f1f5f9; font-size:.83rem; }
+.info-row:last-child { border:none; }
+.info-lbl        { color:#64748b; }
+.info-val        { font-weight:600; color:#1e293b; }
+
+/* Bulletins */
+.bulletin-grid   { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+@media(max-width:500px){ .bulletin-grid { grid-template-columns:1fr; } }
+.bulletin-card   { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;
+                   padding:12px; text-align:center; }
+.bul-sem         { font-size:.7rem; color:#64748b; font-weight:600; text-transform:uppercase; }
+.bul-avg         { font-size:1.6rem; font-weight:800; margin:4px 0; }
+.avg-good        { color:#15803d; }
+.avg-ok          { color:#d97706; }
+.avg-bad         { color:#dc2626; }
+.bul-mention     { font-size:.72rem; color:#475569; }
+.bul-rank        { font-size:.72rem; color:#94a3b8; }
+
+/* Présences */
+.presence-bar-wrap { margin-bottom:8px; }
+.presence-bar-label{ display:flex; justify-content:space-between; font-size:.78rem; margin-bottom:3px; }
+.presence-bar      { height:8px; border-radius:4px; background:#e2e8f0; overflow:hidden; }
+.presence-bar-fill { height:100%; border-radius:4px; transition:width .4s; }
+.bar-good          { background:#10b981; }
+.bar-ok            { background:#f59e0b; }
+.bar-bad           { background:#ef4444; }
+
+/* Paiements */
+.pay-row         { display:flex; align-items:center; gap:8px; padding:5px 0;
+                   border-bottom:1px dashed #f1f5f9; font-size:.81rem; }
+.pay-row:last-child { border:none; }
+.pay-type        { font-size:.68rem; padding:2px 7px; border-radius:12px; font-weight:700; white-space:nowrap; }
+.type-inscription{ background:#dbeafe; color:#1d4ed8; }
+.type-scolarite  { background:#d1fae5; color:#065f46; }
+.type-soutenance { background:#faf5ff; color:#6d28d9; }
+.type-autre      { background:#f3f4f6; color:#6b7280; }
+.pay-date        { color:#94a3b8; font-size:.72rem; }
+.pay-amount      { margin-left:auto; font-weight:700; color:var(--navy); }
+
+/* Collapse arrow */
+.yr-chevron      { margin-left:auto; color:#94a3b8; transition:transform .25s; font-size:.8rem; }
+.yr-head.open .yr-chevron { transform:rotate(180deg); }
+.yr-body-wrap    { display:none; }
+.yr-body-wrap.open { display:block; }
+
+/* Badge "Aucun" */
+.empty-badge     { font-size:.78rem; color:#94a3b8; font-style:italic;
+                   padding:8px 0; text-align:center; }
+</style>
+
+<div class="dossier-wrap">
+
+  <!-- ══ En-tête ══ -->
+  <div class="dossier-header">
+    <div class="dossier-avatar">
+      {% if student.photo %}
+        <img src="{{ student.photo.url }}" alt="Photo">
+      {% else %}
+        {{ student.user.get_full_name|slice:":1"|upper }}
+      {% endif %}
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div class="dossier-name">{{ student.user.get_full_name }}</div>
+      <div class="dossier-meta">
+        <span><i class="bi bi-hash me-1"></i>{{ student.matricule }}</span>
+        {% if student.user.email %}<span><i class="bi bi-envelope me-1"></i>{{ student.user.email }}</span>{% endif %}
+        {% if student.phone %}<span><i class="bi bi-phone me-1"></i>{{ student.phone }}</span>{% endif %}
+        {% if student.gender %}<span><i class="bi bi-person me-1"></i>{{ student.get_gender_display }}</span>{% endif %}
+        {% if student.date_of_birth %}<span><i class="bi bi-calendar3 me-1"></i>{{ student.date_of_birth|date:"d/m/Y" }}</span>{% endif %}
+        {% if student.place_of_birth %}<span><i class="bi bi-geo-alt-fill me-1"></i>{{ student.place_of_birth }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="dossier-kpi">
+      <div class="kpi-box">
+        <div class="kpi-val">{{ total_years }}</div>
+        <div class="kpi-lbl">Année{% if total_years > 1 %}s{% endif %}</div>
+      </div>
+      <div class="kpi-box">
+        <div class="kpi-val" style="font-size:1.1rem;">{{ total_paid_global|floatformat:0 }}&nbsp;F</div>
+        <div class="kpi-lbl">Total payé</div>
+      </div>
+      {% if student.is_boursier %}
+      <div class="kpi-box" style="background:#fef9c3;">
+        <div class="kpi-val" style="color:#854d0e;font-size:1rem;"><i class="bi bi-award-fill"></i></div>
+        <div class="kpi-lbl" style="color:#854d0e;">Boursier</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Bouton retour fiche + documents de l'étudiant -->
+  <div style="margin-bottom:20px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <a href="{% url 'students:detail' student.pk %}"
+       style="display:inline-flex;align-items:center;gap:6px;font-size:.82rem;color:#475569;
+              text-decoration:none;border:1px solid var(--border);border-radius:8px;
+              padding:6px 14px;background:#fff;">
+      <i class="bi bi-arrow-left"></i> Retour à la fiche
+    </a>
+    {% if can_carte %}
+    <a href="{% url 'students:student_card_pdf' student.pk %}" target="_blank"
+       style="display:inline-flex;align-items:center;gap:6px;font-size:.82rem;color:var(--navy);
+              text-decoration:none;border:1px solid var(--border);border-radius:8px;
+              padding:6px 14px;background:#fff;">
+      <i class="bi bi-credit-card-fill"></i> Carte étudiant
+    </a>
+    {% endif %}
+    {% if can_reussite and not student.payment_suspended and student.user.is_active %}
+    <a href="{% url 'accounting:attestation_reussite_pdf' student.pk %}" target="_blank"
+       style="display:inline-flex;align-items:center;gap:6px;font-size:.82rem;color:var(--navy);
+              text-decoration:none;border:1px solid var(--border);border-radius:8px;
+              padding:6px 14px;background:#fff;">
+      <i class="bi bi-patch-check-fill"></i> Attestation de réussite
+    </a>
+    {% endif %}
+  </div>
+
+  {% if not timeline %}
+    <div style="text-align:center;padding:60px 0;color:#94a3b8;">
+      <i class="bi bi-folder2-open" style="font-size:3rem;display:block;margin-bottom:12px;"></i>
+      Aucune inscription enregistrée pour cet étudiant.
+    </div>
+  {% else %}
+
+  <!-- ══ Timeline ══ -->
+  <div class="timeline">
+    {% for item in timeline %}
+    {% with enr=item.enrollment forloop_counter=forloop.counter %}
+
+    {% comment %} Classes CSS du point de timeline {% endcomment %}
+    {% if enr.status == 'ABANDONED' %}{% with dot_cls='abandoned' %}{% endwith %}{% endif %}
+
+    <div class="tl-year">
+      <!-- Point timeline -->
+      <div class="tl-dot
+        {% if forloop.first %}first{% elif forloop.last and enr.status != 'ABANDONED' and enr.status != 'SUSPENDED' %}last
+        {% elif enr.status == 'ABANDONED' %}abandoned
+        {% elif enr.status == 'SUSPENDED' %}suspended
+        {% endif %}">
+      </div>
+
+      <!-- Carte année -->
+      <div class="yr-card">
+        <!-- En-tête cliquable -->
+        <div class="yr-head" onclick="toggleYear(this)">
+          <div>
+            <div class="yr-year">
+              <i class="bi bi-calendar-range me-1" style="font-size:.85rem;"></i>
+              {{ enr.academic_year }}
+            </div>
+            <div style="font-size:.78rem;color:#475569;margin-top:2px;">
+              {{ enr.class_group.name }}
+              {% if enr.class_group.program %}— {{ enr.class_group.program.name }}{% endif %}
+            </div>
+          </div>
+
+          {% if enr.enrollment_type == 'NEW' %}
+            <span class="yr-type type-new"><i class="bi bi-star-fill me-1"></i>Nouvelle inscription</span>
+          {% elif enr.enrollment_type == 'REINSCRIPTION' %}
+            <span class="yr-type type-rei"><i class="bi bi-arrow-repeat me-1"></i>Réinscription</span>
+          {% elif enr.enrollment_type == 'CHANGE_FILIERE' %}
+            <span class="yr-type type-change"><i class="bi bi-signpost-split me-1"></i>Changement de filière</span>
+          {% endif %}
+
+          {% if enr.status == 'VALIDATED' %}
+            <span class="yr-status status-validated"><i class="bi bi-check-circle-fill me-1"></i>Validée</span>
+          {% elif enr.status == 'PENDING' or enr.status == 'PENDING_CAISSE' %}
+            <span class="yr-status status-pending"><i class="bi bi-hourglass-split me-1"></i>En attente</span>
+          {% elif enr.status == 'ABANDONED' %}
+            <span class="yr-status status-abandoned"><i class="bi bi-x-circle-fill me-1"></i>Abandon</span>
+          {% elif enr.status == 'SUSPENDED' %}
+            <span class="yr-status status-suspended"><i class="bi bi-pause-circle-fill me-1"></i>Suspendue</span>
+          {% elif enr.status == 'REJECTED' %}
+            <span class="yr-status status-rejected"><i class="bi bi-slash-circle me-1"></i>Rejetée</span>
+          {% endif %}
+
+          <i class="bi bi-chevron-down yr-chevron"></i>
+        </div>
+
+        <!-- Corps (collapsible) -->
+        <div class="yr-body-wrap {% if forloop.last %}open{% endif %}">
+          <div class="yr-body">
+
+            <!-- ── 1. Inscription ── -->
+            <div>
+              <div class="sec-title"><i class="bi bi-file-earmark-person-fill"></i> Inscription</div>
+              <div class="info-row">
+                <span class="info-lbl">Date d'inscription</span>
+                <span class="info-val">{{ enr.enrollment_date|date:"d/m/Y" }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-lbl">Classe</span>
+                <span class="info-val">{{ enr.class_group.name }}</span>
+              </div>
+              {% if enr.previous_class %}
+              <div class="info-row">
+                <span class="info-lbl">Classe précédente</span>
+                <span class="info-val">{{ enr.previous_class.name }}</span>
+              </div>
+              {% endif %}
+              <div class="info-row">
+                <span class="info-lbl">Frais totaux</span>
+                <span class="info-val">{{ enr.total_fees|floatformat:0 }} F CFA</span>
+              </div>
+              {% if enr.is_boursier %}
+              <div class="info-row">
+                <span class="info-lbl">Bourse</span>
+                <span class="info-val">{{ enr.bourse_pourcentage }}%</span>
+              </div>
+              {% endif %}
+              <div class="info-row">
+                <span class="info-lbl">Net à payer</span>
+                <span class="info-val" style="color:var(--navy);">{{ enr.net_fees|floatformat:0 }} F CFA</span>
+              </div>
+              <div class="info-row">
+                <span class="info-lbl">Restant dû</span>
+                <span class="info-val" style="color:{% if enr.remaining_amount > 0 %}#dc2626{% else %}#15803d{% endif %};">
+                  {{ enr.remaining_amount|floatformat:0 }} F CFA
+                </span>
+              </div>
+              {% if enr.validated_by %}
+              <div class="info-row">
+                <span class="info-lbl">Validée par</span>
+                <span class="info-val">{{ enr.validated_by.get_full_name }}</span>
+              </div>
+              {% endif %}
+              {% if enr.status_reason %}
+              <div style="margin-top:8px;padding:8px 12px;background:#fff7ed;border-radius:8px;font-size:.78rem;color:#92400e;">
+                <i class="bi bi-info-circle me-1"></i>{{ enr.status_reason }}
+              </div>
+              {% endif %}
+              {% if can_inscription_docs and enr.is_validated %}
+              <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
+                <a href="{% url 'accounting:certificat_inscription_pdf' enr.pk %}" target="_blank"
+                   style="display:inline-flex;align-items:center;gap:5px;font-size:.74rem;color:var(--navy);
+                          text-decoration:none;border:1px solid var(--border);border-radius:7px;
+                          padding:4px 10px;background:#f8fafc;">
+                  <i class="bi bi-file-earmark-check-fill"></i> Certificat d'inscription
+                </a>
+                {% if enr.is_reinscription %}
+                <a href="{% url 'accounting:attestation_passage_pdf' enr.pk %}" target="_blank"
+                   style="display:inline-flex;align-items:center;gap:5px;font-size:.74rem;color:var(--navy);
+                          text-decoration:none;border:1px solid var(--border);border-radius:7px;
+                          padding:4px 10px;background:#f8fafc;">
+                  <i class="bi bi-arrow-up-right-circle-fill"></i> Attestation de passage
+                </a>
+                {% endif %}
+              </div>
+              {% endif %}
+            </div>
+
+            <!-- ── 2. Résultats académiques ── -->
+            <div>
+              <div class="sec-title"><i class="bi bi-award-fill"></i> Résultats académiques</div>
+              {% if item.bulletins %}
+                <div class="bulletin-grid">
+                  {% for bul in item.bulletins %}
+                  <div class="bulletin-card">
+                    <div class="bul-sem">Semestre {{ bul.semester.number }}</div>
+                    {% if bul.semester_average is not None %}
+                    <div class="bul-avg {% if bul.semester_average >= 14 %}avg-good{% elif bul.semester_average >= 10 %}avg-ok{% else %}avg-bad{% endif %}">
+                      {{ bul.semester_average|floatformat:2 }}
+                    </div>
+                    {% else %}
+                    <div class="bul-avg" style="color:#94a3b8;">—</div>
+                    {% endif %}
+                    {% if bul.mention %}
+                    <div class="bul-mention">{{ bul.mention }}</div>
+                    {% endif %}
+                    {% if bul.total_credits_obtained is not None %}
+                    <div class="bul-rank">{{ bul.total_credits_obtained }} crédits</div>
+                    {% endif %}
+                    {% if bul.jury_decision %}
+                    <div style="font-size:.68rem;margin-top:4px;padding:2px 8px;border-radius:10px;
+                      {% if bul.jury_decision == 'ADMIS' %}background:#dcfce7;color:#15803d;
+                      {% elif bul.jury_decision == 'AJOURNE' %}background:#fee2e2;color:#991b1b;
+                      {% else %}background:#f3f4f6;color:#475569;{% endif %}
+                      font-weight:700;">
+                      {{ bul.jury_decision }}
+                    </div>
+                    {% endif %}
+                  </div>
+                  {% endfor %}
+                </div>
+              {% elif item.sem_averages %}
+                <div class="bulletin-grid">
+                  {% for sa in item.sem_averages %}
+                  <div class="bulletin-card">
+                    <div class="bul-sem">Semestre {{ sa.semester.number }}</div>
+                    <div class="bul-avg {% if sa.average >= 14 %}avg-good{% elif sa.average >= 10 %}avg-ok{% else %}avg-bad{% endif %}">
+                      {{ sa.average|floatformat:2 }}
+                    </div>
+                    {% if sa.rank %}
+                    <div class="bul-rank">{{ sa.rank }}{% if sa.total_students %}/{{ sa.total_students }}{% endif %}</div>
+                    {% endif %}
+                    {% if sa.mention %}<div class="bul-mention">{{ sa.mention }}</div>{% endif %}
+                  </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="empty-badge"><i class="bi bi-journal-x me-1"></i>Aucun bulletin disponible</div>
+              {% endif %}
+            </div>
+
+            <!-- ── 3. Présences ── -->
+            <div>
+              <div class="sec-title"><i class="bi bi-person-check-fill"></i> Présences</div>
+              {% if item.presences %}
+                {% for p in item.presences %}
+                <div class="presence-bar-wrap">
+                  <div class="presence-bar-label">
+                    <span style="font-weight:600;font-size:.8rem;">Semestre {{ p.sem_number }}</span>
+                    <span style="color:{% if p.taux >= 75 %}#15803d{% elif p.taux >= 50 %}#d97706{% else %}#dc2626{% endif %};font-weight:700;">
+                      {% if p.taux is not None %}{{ p.taux }}%{% else %}—{% endif %}
+                    </span>
+                  </div>
+                  <div class="presence-bar">
+                    {% if p.taux is not None %}
+                    <div class="presence-bar-fill {% if p.taux >= 75 %}bar-good{% elif p.taux >= 50 %}bar-ok{% else %}bar-bad{% endif %}"
+                         style="width:{{ p.taux }}%;"></div>
+                    {% endif %}
+                  </div>
+                  <div style="font-size:.72rem;color:#94a3b8;margin-top:3px;">
+                    {{ p.present }} présence{% if p.present != 1 %}s{% endif %} /
+                    {{ p.total }} séance{% if p.total != 1 %}s{% endif %}
+                    — {{ p.absent }} absence{% if p.absent != 1 %}s{% endif %}
+                  </div>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div class="empty-badge"><i class="bi bi-calendar-x me-1"></i>Aucune donnée de présence</div>
+              {% endif %}
+            </div>
+
+            <!-- ── 4. Paiements ── -->
+            <div>
+              <div class="sec-title"><i class="bi bi-cash-stack"></i> Paiements caisse</div>
+              {% if item.payments %}
+                {% for cp in item.payments %}
+                <div class="pay-row">
+                  <span class="pay-type
+                    {% if cp.payment_type == 'INSCRIPTION' %}type-inscription
+                    {% elif cp.payment_type == 'SCOLARITE' %}type-scolarite
+                    {% elif cp.payment_type == 'SOUTENANCE' %}type-soutenance
+                    {% else %}type-autre{% endif %}">
+                    {{ cp.get_payment_type_display }}
+                  </span>
+                  <span class="pay-date">{{ cp.payment_date|date:"d/m/Y" }}</span>
+                  <span class="pay-amount">{{ cp.amount|floatformat:0 }} F</span>
+                  {% if can_recu %}
+                  <a href="{% url 'accounting:caisse_recu_pdf' cp.pk %}" target="_blank" title="Voir le reçu"
+                     style="color:var(--navy);margin-left:6px;">
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+                  </a>
+                  {% endif %}
+                </div>
+                {% endfor %}
+                <div style="text-align:right;font-size:.8rem;font-weight:700;color:var(--navy);margin-top:8px;padding-top:6px;border-top:2px solid var(--border);">
+                  Total : {{ item.payments|length }} paiement{% if item.payments|length != 1 %}s{% endif %}
+                </div>
+              {% else %}
+                <div class="empty-badge"><i class="bi bi-receipt me-1"></i>Aucun paiement enregistré</div>
+              {% endif %}
+
+              <!-- Échéancier -->
+              {% if enr.installments.exists %}
+              <div style="margin-top:14px;">
+                <div class="sec-title" style="font-size:.68rem;"><i class="bi bi-calendar-week"></i> Échéancier mensualités</div>
+                {% for inst in enr.installments.all|dictsort:"installment_number" %}
+                <div class="pay-row">
+                  <span style="font-size:.78rem;color:#64748b;min-width:60px;">M{{ inst.installment_number }} — {{ inst.due_date|date:"M Y" }}</span>
+                  <span class="pay-type {% if inst.is_paid %}type-scolarite{% else %}type-autre{% endif %}">
+                    {% if inst.is_paid %}<i class="bi bi-check-circle-fill"></i> Payé{% else %}En attente{% endif %}
+                  </span>
+                  <span class="pay-amount">{{ inst.amount_expected|floatformat:0 }} F</span>
+                  {% if can_mensualite_recu and inst.is_paid %}
+                  <a href="{% url 'accounting:mensualite_recu_pdf' enr.pk inst.due_date.year inst.due_date.month %}"
+                     target="_blank" title="Voir le reçu" style="color:var(--navy);margin-left:6px;">
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+                  </a>
+                  {% endif %}
+                </div>
+                {% endfor %}
+              </div>
+              {% endif %}
+            </div>
+
+          </div>{# /.yr-body #}
+        </div>{# /.yr-body-wrap #}
+      </div>{# /.yr-card #}
+    </div>{# /.tl-year #}
+    {% endwith %}
+    {% endfor %}
+  </div>{# /.timeline #}
+  {% endif %}
+
+</div>{# /.dossier-wrap #}
+
+<script>
+function toggleYear(head) {
+  head.classList.toggle('open');
+  const body = head.nextElementSibling;
+  body.classList.toggle('open');
+}
+// Ouvrir automatiquement la dernière année au chargement (déjà fait via class)
+</script>
+{% endblock %}

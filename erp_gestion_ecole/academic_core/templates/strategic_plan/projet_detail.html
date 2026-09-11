@@ -1,0 +1,410 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ projet.libelle }}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-kanban-fill me-2"></i>{{ projet.code }} — {{ projet.libelle }}
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Programme : {{ projet.programme.code }} · Responsable : {{ projet.responsable.get_full_name|default:"—" }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'strategic_plan:projet_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+    <a href="{% url 'strategic_plan:projet_gantt' projet.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-bar-chart-steps me-1"></i>Gantt</a>
+    <a href="{% url 'strategic_plan:projet_kanban' projet.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-columns-gap me-1"></i>Kanban</a>
+    <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('projEditModal')).show()"><i class="bi bi-pencil me-1"></i>Modifier</button>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:.72rem;color:#64748b;font-weight:700;">STATUT</div>
+      <div style="font-size:1rem;font-weight:700;color:var(--navy);">{{ projet.get_statut_display }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:.72rem;color:#64748b;font-weight:700;">AVANCEMENT</div>
+      <div style="font-size:1rem;font-weight:700;color:var(--navy);">{{ projet.taux_avancement }}%</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:.72rem;color:#64748b;font-weight:700;">BUDGET PRÉVISIONNEL</div>
+      <div style="font-size:1rem;font-weight:700;color:var(--navy);">{{ projet.budget_total|floatformat:0 }} FCFA</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:.72rem;color:#64748b;font-weight:700;">PÉRIODE</div>
+      <div style="font-size:.85rem;font-weight:700;color:var(--navy);">{{ projet.date_debut|date:"d/m/Y"|default:"—" }} → {{ projet.date_fin|date:"d/m/Y"|default:"—" }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Activités -->
+<div class="card-section mb-3" style="padding:20px;">
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <h6 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-list-check me-2"></i>Activités</h6>
+    <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('activiteModal')).show()"><i class="bi bi-plus-lg me-1"></i>Ajouter</button>
+  </div>
+  {% for a in activites %}
+  <div class="border rounded p-2 mb-2">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <span style="font-weight:700;color:var(--navy);">{{ a.code }}</span> — {{ a.libelle }}
+        <span style="border-radius:20px;padding:1px 8px;font-size:.68rem;font-weight:700;background:#f1f5f9;color:#64748b;margin-left:6px;">{{ a.get_statut_display }}</span>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span style="font-size:.72rem;color:#64748b;">{{ a.taux_avancement }}%</span>
+        <button type="button" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:2px 8px;font-size:.68rem;"
+          onclick="editActivite({{ a.pk }}, '{{ a.libelle|escapejs }}', {{ a.responsable_id|default:'null' }}, {{ a.budget }}, '{{ a.date_debut|date:'Y-m-d'|default:'' }}', '{{ a.date_fin|date:'Y-m-d'|default:'' }}', '{{ a.statut }}')">Modifier</button>
+        <form method="post" action="{% url 'strategic_plan:activite_delete' a.pk %}" onsubmit="return confirm('Supprimer cette activité ?');">
+          {% csrf_token %}<button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:2px 8px;font-size:.68rem;">Suppr.</button>
+        </form>
+        <button type="button" class="btn btn-sm" style="background:#f1f5f9;color:#334155;border-radius:7px;padding:2px 8px;font-size:.68rem;"
+          onclick="document.getElementById('sa-form-{{ a.pk }}').classList.toggle('d-none')">+ Sous-activité</button>
+      </div>
+    </div>
+    {% for s in a.sous_activites.all %}
+    <div class="d-flex justify-content-between align-items-center ms-4 mt-1" style="font-size:.78rem;">
+      <div>↳ <strong>{{ s.code }}</strong> — {{ s.libelle }} <span class="text-muted">({{ s.get_statut_display }})</span></div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="text-muted">{{ s.taux_avancement }}%</span>
+        <button type="button" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:1px 6px;font-size:.65rem;"
+          onclick="editSousActivite({{ s.pk }}, '{{ s.libelle|escapejs }}', {{ s.responsable_id|default:'null' }}, '{{ s.date_debut|date:'Y-m-d'|default:'' }}', '{{ s.date_fin|date:'Y-m-d'|default:'' }}', '{{ s.statut }}', {{ s.taux_avancement }})">Modifier</button>
+        <form method="post" action="{% url 'strategic_plan:sous_activite_delete' s.pk %}" onsubmit="return confirm('Supprimer ?');" class="d-inline">
+          {% csrf_token %}<button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:1px 6px;font-size:.65rem;">Suppr.</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+    <form id="sa-form-{{ a.pk }}" method="post" action="{% url 'strategic_plan:sous_activite_create' %}" class="d-none ms-4 mt-2 row g-2">
+      {% csrf_token %}
+      <input type="hidden" name="activite" value="{{ a.pk }}">
+      <div class="col-3"><input type="text" name="code" class="form-control form-control-sm" placeholder="Code" required></div>
+      <div class="col-5"><input type="text" name="libelle" class="form-control form-control-sm" placeholder="Libellé" required></div>
+      <div class="col-2"><input type="number" name="taux_avancement" class="form-control form-control-sm" placeholder="%" min="0" max="100"></div>
+      <div class="col-2"><button type="submit" class="btn btn-sm btn-primary w-100">Ajouter</button></div>
+    </form>
+  </div>
+  {% empty %}
+  <p class="text-muted text-center" style="font-size:.82rem;">Aucune activité.</p>
+  {% endfor %}
+</div>
+
+<div class="row g-3">
+  <!-- Jalons -->
+  <div class="col-md-6">
+    <div class="card-section" style="padding:20px;">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h6 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-flag me-2"></i>Jalons</h6>
+        <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('jalonModal')).show()"><i class="bi bi-plus-lg me-1"></i>Ajouter</button>
+      </div>
+      {% for j in jalons %}
+      <div class="d-flex justify-content-between align-items-center border-bottom py-1" style="font-size:.8rem;">
+        <div>{{ j.libelle }} <span class="text-muted">({{ j.date_prevue|date:"d/m/Y" }})</span></div>
+        <div class="d-flex align-items-center gap-1">
+          <span style="border-radius:20px;padding:1px 8px;font-size:.68rem;font-weight:700;
+            {% if j.statut == 'atteint' %}background:#dcfce7;color:#166534;
+            {% elif j.statut == 'manque' %}background:#fee2e2;color:#991b1b;
+            {% else %}background:#f1f5f9;color:#64748b;{% endif %}">{{ j.get_statut_display }}</span>
+          <form method="post" action="{% url 'strategic_plan:jalon_delete' j.pk %}" onsubmit="return confirm('Supprimer ?');">
+            {% csrf_token %}<button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:1px 6px;font-size:.65rem;">✕</button>
+          </form>
+        </div>
+      </div>
+      {% empty %}<p class="text-muted text-center" style="font-size:.8rem;">Aucun jalon.</p>{% endfor %}
+    </div>
+  </div>
+
+  <!-- Livrables -->
+  <div class="col-md-6">
+    <div class="card-section" style="padding:20px;">
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <h6 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-file-earmark-check me-2"></i>Livrables</h6>
+        <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('livrableModal')).show()"><i class="bi bi-plus-lg me-1"></i>Ajouter</button>
+      </div>
+      {% for l in livrables %}
+      <div class="d-flex justify-content-between align-items-center border-bottom py-1" style="font-size:.8rem;">
+        <div>{{ l.libelle }}</div>
+        <div class="d-flex align-items-center gap-1">
+          <span style="border-radius:20px;padding:1px 8px;font-size:.68rem;font-weight:700;
+            {% if l.statut == 'valide' %}background:#dcfce7;color:#166534;
+            {% elif l.statut == 'rejete' %}background:#fee2e2;color:#991b1b;
+            {% else %}background:#f1f5f9;color:#64748b;{% endif %}">{{ l.get_statut_display }}</span>
+          <form method="post" action="{% url 'strategic_plan:livrable_delete' l.pk %}" onsubmit="return confirm('Supprimer ?');">
+            {% csrf_token %}<button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:1px 6px;font-size:.65rem;">✕</button>
+          </form>
+        </div>
+      </div>
+      {% empty %}<p class="text-muted text-center" style="font-size:.8rem;">Aucun livrable.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Équipe projet -->
+<div class="card-section mt-3" style="padding:20px;">
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <h6 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-people-fill me-2"></i>Équipe projet</h6>
+  </div>
+  <div class="d-flex flex-wrap gap-2 mb-2">
+    {% for m in membres %}
+    <span style="background:#f1f5f9;border-radius:20px;padding:4px 10px;font-size:.78rem;">
+      {{ m.utilisateur.get_full_name }} <span class="text-muted">({{ m.role_dans_projet }})</span>
+      <form method="post" action="{% url 'strategic_plan:membre_delete' m.pk %}" onsubmit="return confirm('Retirer ce membre ?');" class="d-inline">
+        {% csrf_token %}<button type="submit" style="border:none;background:none;color:#991b1b;font-size:.75rem;">✕</button>
+      </form>
+    </span>
+    {% empty %}<span class="text-muted" style="font-size:.8rem;">Aucun membre affecté.</span>{% endfor %}
+  </div>
+  <form method="post" action="{% url 'strategic_plan:membre_create' %}" class="row g-2">
+    {% csrf_token %}
+    <input type="hidden" name="projet" value="{{ projet.pk }}">
+    <div class="col-md-5">
+      <select name="utilisateur" class="form-select form-select-sm" required>
+        <option value="">— Utilisateur —</option>
+        {% for u in users %}<option value="{{ u.pk }}">{{ u.get_full_name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-5">
+      <input type="text" name="role_dans_projet" class="form-control form-control-sm" placeholder="Rôle dans le projet" required>
+    </div>
+    <div class="col-md-2"><button type="submit" class="btn btn-primary btn-sm w-100">Ajouter</button></div>
+  </form>
+</div>
+
+<!-- Modals -->
+<div class="modal fade" id="projEditModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-pencil me-2"></i>Modifier le projet</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'strategic_plan:projet_edit' projet.pk %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Libellé</label>
+            <input type="text" name="libelle" class="form-control" value="{{ projet.libelle }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Programme</label>
+            <select name="programme" class="form-select">
+              {% for prog in programmes %}<option value="{{ prog.pk }}" {% if prog.pk == projet.programme_id %}selected{% endif %}>{{ prog.code }} — {{ prog.libelle }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Responsable</label>
+            <select name="responsable" class="form-select">
+              <option value="">— Aucun —</option>
+              {% for u in users %}<option value="{{ u.pk }}" {% if u.pk == projet.responsable_id %}selected{% endif %}>{{ u.get_full_name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Statut</label>
+            <select name="statut" class="form-select">
+              {% for val, label in STATUT_CHOICES %}<option value="{{ val }}" {% if val == projet.statut %}selected{% endif %}>{{ label }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Budget total prévisionnel (FCFA)</label>
+            <input type="number" name="budget_total" class="form-control" value="{{ projet.budget_total }}" min="0" step="1000">
+          </div>
+          <div class="row mb-3">
+            <div class="col-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Date de début</label>
+              <input type="date" name="date_debut" class="form-control" value="{{ projet.date_debut|date:'Y-m-d' }}">
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Date de fin</label>
+              <input type="date" name="date_fin" class="form-control" value="{{ projet.date_fin|date:'Y-m-d' }}">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="activiteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0" id="activiteModalTitle"><i class="bi bi-plus-circle me-2"></i>Nouvelle activité</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="activiteForm" action="{% url 'strategic_plan:activite_create' %}">
+        {% csrf_token %}
+        <input type="hidden" name="projet" value="{{ projet.pk }}">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Code <span class="text-danger">*</span></label>
+            <input type="text" name="code" id="act_code" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Libellé <span class="text-danger">*</span></label>
+            <input type="text" name="libelle" id="act_libelle" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Responsable</label>
+            <select name="responsable" id="act_responsable" class="form-select">
+              <option value="">— Aucun —</option>{% for u in users %}<option value="{{ u.pk }}">{{ u.get_full_name }}</option>{% endfor %}
+            </select></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Budget (FCFA)</label>
+            <input type="number" name="budget" id="act_budget" class="form-control" min="0" step="1000"></div>
+          <div class="row mb-3">
+            <div class="col-6"><label class="form-label fw-semibold" style="font-size:.82rem;">Date de début</label>
+              <input type="date" name="date_debut" id="act_date_debut" class="form-control"></div>
+            <div class="col-6"><label class="form-label fw-semibold" style="font-size:.82rem;">Date de fin</label>
+              <input type="date" name="date_fin" id="act_date_fin" class="form-control"></div>
+          </div>
+          <div class="mb-3" id="act_statut_wrap" style="display:none;">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Statut</label>
+            <select name="statut" id="act_statut" class="form-select">
+              <option value="planifiee">Planifiée</option><option value="en_cours">En cours</option>
+              <option value="terminee">Terminée</option><option value="retardee">Retardée</option><option value="annulee">Annulée</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="sousActiviteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-pencil me-2"></i>Modifier la sous-activité</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="sousActiviteForm">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Libellé</label>
+            <input type="text" name="libelle" id="sa_libelle" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Responsable</label>
+            <select name="responsable" id="sa_responsable" class="form-select">
+              <option value="">— Aucun —</option>{% for u in users %}<option value="{{ u.pk }}">{{ u.get_full_name }}</option>{% endfor %}
+            </select></div>
+          <div class="row mb-3">
+            <div class="col-6"><label class="form-label fw-semibold" style="font-size:.82rem;">Date de début</label>
+              <input type="date" name="date_debut" id="sa_date_debut" class="form-control"></div>
+            <div class="col-6"><label class="form-label fw-semibold" style="font-size:.82rem;">Date de fin</label>
+              <input type="date" name="date_fin" id="sa_date_fin" class="form-control"></div>
+          </div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Statut</label>
+            <select name="statut" id="sa_statut" class="form-select">
+              <option value="planifiee">Planifiée</option><option value="en_cours">En cours</option>
+              <option value="terminee">Terminée</option><option value="retardee">Retardée</option><option value="annulee">Annulée</option>
+            </select></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Taux d'avancement (%)</label>
+            <input type="number" name="taux_avancement" id="sa_taux" class="form-control" min="0" max="100"></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="jalonModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nouveau jalon</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'strategic_plan:jalon_create' %}">
+        {% csrf_token %}
+        <input type="hidden" name="projet" value="{{ projet.pk }}">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Libellé <span class="text-danger">*</span></label>
+            <input type="text" name="libelle" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Date prévue <span class="text-danger">*</span></label>
+            <input type="date" name="date_prevue" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Responsable</label>
+            <select name="responsable" class="form-select">
+              <option value="">— Aucun —</option>{% for u in users %}<option value="{{ u.pk }}">{{ u.get_full_name }}</option>{% endfor %}
+            </select></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="livrableModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nouveau livrable</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'strategic_plan:livrable_create' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="projet" value="{{ projet.pk }}">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Libellé <span class="text-danger">*</span></label>
+            <input type="text" name="libelle" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Description</label>
+            <textarea name="description" class="form-control" rows="2"></textarea></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Date prévue</label>
+            <input type="date" name="date_prevue" class="form-control"></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Responsable</label>
+            <select name="responsable" class="form-select">
+              <option value="">— Aucun —</option>{% for u in users %}<option value="{{ u.pk }}">{{ u.get_full_name }}</option>{% endfor %}
+            </select></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Fichier</label>
+            <input type="file" name="fichier" class="form-control"></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function editActivite(pk, libelle, responsableId, budget, dateDebut, dateFin, statut) {
+  document.getElementById('activiteModalTitle').innerHTML = '<i class="bi bi-pencil me-2"></i>Modifier l\'activité';
+  document.getElementById('activiteForm').action = '/plan-strategique/activites/' + pk + '/modifier/';
+  document.getElementById('act_libelle').value = libelle;
+  document.getElementById('act_responsable').value = responsableId || '';
+  document.getElementById('act_budget').value = budget;
+  document.getElementById('act_date_debut').value = dateDebut;
+  document.getElementById('act_date_fin').value = dateFin;
+  document.getElementById('act_statut').value = statut;
+  document.getElementById('act_statut_wrap').style.display = 'block';
+  var codeWrap = document.getElementById('act_code').closest('.mb-3');
+  codeWrap.style.display = 'none';
+  document.getElementById('act_code').required = false;
+  new bootstrap.Modal(document.getElementById('activiteModal')).show();
+}
+function editSousActivite(pk, libelle, responsableId, dateDebut, dateFin, statut, taux) {
+  document.getElementById('sousActiviteForm').action = '/plan-strategique/sous-activites/' + pk + '/modifier/';
+  document.getElementById('sa_libelle').value = libelle;
+  document.getElementById('sa_responsable').value = responsableId || '';
+  document.getElementById('sa_date_debut').value = dateDebut;
+  document.getElementById('sa_date_fin').value = dateFin;
+  document.getElementById('sa_statut').value = statut;
+  document.getElementById('sa_taux').value = taux;
+  new bootstrap.Modal(document.getElementById('sousActiviteModal')).show();
+}
+</script>
+{% endblock %}

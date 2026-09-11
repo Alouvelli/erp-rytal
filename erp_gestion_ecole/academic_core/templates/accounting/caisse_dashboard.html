@@ -1,0 +1,502 @@
+{% extends 'base/base.html' %}
+{% block title %}La Caisse{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Direction Administrative Financière</a></li>
+<li class="breadcrumb-item active">La Caisse</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="mb-0 fw-bold" style="color:var(--navy);">
+      <i class="bi bi-cash-stack me-2" style="color:var(--accent);"></i>La Caisse
+    </h4>
+    <p class="text-muted mb-0" style="font-size:.82rem;">Gestion des paiements et génération de reçus</p>
+  </div>
+  <a href="{% url 'accounting:caisse_payment_create' %}" class="btn btn-sm" style="background:var(--navy);color:#fff;border-radius:8px;font-size:.82rem;">
+    <i class="bi bi-plus-lg me-1"></i>Nouveau paiement
+  </a>
+</div>
+
+<!-- Inscriptions envoyées par le trésorier — en attente de validation du paiement à la caisse -->
+{% if pending_enrollments %}
+<div class="card border-0 mb-4" style="border-radius:12px;border-left:4px solid #f59e0b!important;background:#fffbeb;">
+  <div class="card-body py-3 px-4">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+      <div>
+        <span class="fw-bold" style="color:#92400e;font-size:.9rem;">
+          <i class="bi bi-hourglass-split me-1"></i>
+          {{ pending_enrollments|length }} dossier{{ pending_enrollments|length|pluralize }} en attente de validation à la caisse
+        </span>
+        <div style="font-size:.76rem;color:#b45309;">
+          Ces inscriptions ont été préparées par le trésorier général. Le caissier doit confirmer la réception du paiement pour les valider définitivement.
+        </div>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm mb-0" style="font-size:.8rem;">
+        <thead style="background:#fef3c7;">
+          <tr>
+            <th style="font-size:.73rem;color:#78350f;padding:8px 10px;">ÉTUDIANT</th>
+            <th style="font-size:.73rem;color:#78350f;padding:8px 10px;">MATRICULE</th>
+            <th style="font-size:.73rem;color:#78350f;padding:8px 10px;">CLASSE</th>
+            <th style="font-size:.73rem;color:#78350f;padding:8px 10px;">ANNÉE</th>
+            <th style="font-size:.73rem;color:#78350f;padding:8px 10px;">MONTANT</th>
+            <th style="font-size:.73rem;color:#78350f;padding:8px 10px;">PRÉPARÉ PAR</th>
+            <th style="font-size:.73rem;color:#78350f;padding:8px 10px;">ACTION</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for enr in pending_enrollments %}
+          <tr style="border-bottom:1px solid #fde68a;">
+            <td class="fw-semibold" style="padding:8px 10px;">{{ enr.student.user.get_full_name }}</td>
+            <td style="color:#64748b;padding:8px 10px;">{{ enr.student.matricule }}</td>
+            <td style="padding:8px 10px;">{{ enr.class_group.name }}</td>
+            <td style="padding:8px 10px;">{{ enr.academic_year }}</td>
+            <td class="fw-bold" style="padding:8px 10px;color:#92400e;">
+              {% if enr.payment_amount %}
+                {{ enr.payment_amount|floatformat:0 }} FCFA
+              {% else %}—{% endif %}
+            </td>
+            <td style="padding:8px 10px;color:#64748b;font-size:.75rem;">
+              {{ enr.validated_by.get_full_name|default:"—" }}
+            </td>
+            <td style="padding:8px 10px;">
+              <a href="{% url 'accounting:validation_inscription_detail' pk=enr.pk %}"
+                 class="btn btn-sm"
+                 style="background:#f59e0b;color:#fff;border-radius:6px;font-size:.72rem;padding:4px 12px;font-weight:600;">
+                <i class="bi bi-cash-coin me-1"></i>Valider paiement
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Compteurs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <a href="?type=" class="text-decoration-none">
+      <div class="card border-0 shadow-sm text-center py-3" style="border-radius:12px;{% if not payment_type %}border-left:3px solid var(--navy)!important;{% endif %}">
+        <div style="font-size:1.6rem;font-weight:800;color:var(--navy);">{{ counts.all }}</div>
+        <div style="font-size:.75rem;color:#64748b;">Tous les paiements</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="?type=INSCRIPTION" class="text-decoration-none">
+      <div class="card border-0 shadow-sm text-center py-3" style="border-radius:12px;{% if payment_type == 'INSCRIPTION' %}border-left:3px solid #3b82f6!important;{% endif %}">
+        <div style="font-size:1.6rem;font-weight:800;color:#2563eb;">{{ counts.inscription }}</div>
+        <div style="font-size:.75rem;color:#64748b;">Inscriptions</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="?type=SCOLARITE" class="text-decoration-none">
+      <div class="card border-0 shadow-sm text-center py-3" style="border-radius:12px;{% if payment_type == 'SCOLARITE' %}border-left:3px solid #22c55e!important;{% endif %}">
+        <div style="font-size:1.6rem;font-weight:800;color:#16a34a;">{{ counts.scolarite }}</div>
+        <div style="font-size:.75rem;color:#64748b;">Scolarité</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="?type=SOUTENANCE" class="text-decoration-none">
+      <div class="card border-0 shadow-sm text-center py-3" style="border-radius:12px;{% if payment_type == 'SOUTENANCE' %}border-left:3px solid #f59e0b!important;{% endif %}">
+        <div style="font-size:1.6rem;font-weight:800;color:#d97706;">{{ counts.soutenance }}</div>
+        <div style="font-size:.75rem;color:#64748b;">Soutenance</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Filtres -->
+<div class="card border-0 shadow-sm mb-3" style="border-radius:12px;">
+  <div class="card-body py-2">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+      <div>
+        <label class="form-label mb-1" style="font-size:.75rem;font-weight:600;">Recherche</label>
+        <input type="text" name="q" class="form-control form-control-sm"
+               placeholder="Référence, matricule ou nom…" value="{{ search }}"
+               style="border-radius:8px;min-width:200px;">
+      </div>
+      <div>
+        <label class="form-label mb-1" style="font-size:.75rem;font-weight:600;">Type de frais</label>
+        <select name="type" class="form-select form-select-sm" style="border-radius:8px;">
+          <option value="">Tous les types</option>
+          <option value="INSCRIPTION" {% if payment_type == 'INSCRIPTION' %}selected{% endif %}>Frais d'inscription</option>
+          <option value="SCOLARITE"   {% if payment_type == 'SCOLARITE'   %}selected{% endif %}>Frais de scolarité</option>
+          <option value="SOUTENANCE"  {% if payment_type == 'SOUTENANCE'  %}selected{% endif %}>Frais de soutenance</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label mb-1" style="font-size:.75rem;font-weight:600;">Département</label>
+        <select name="department" class="form-select form-select-sm" style="border-radius:8px;min-width:180px;">
+          <option value="">Tous les départements</option>
+          {% for d in departments %}
+          <option value="{{ d.pk }}" {% if dept_filter == d.pk|stringformat:"s" %}selected{% endif %}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="form-label mb-1" style="font-size:.75rem;font-weight:600;">Année académique</label>
+        <select name="academic_year" class="form-select form-select-sm" style="border-radius:8px;">
+          {% for yr in academic_years %}
+          <option value="{{ yr.pk }}" {% if year_filter == yr.pk|stringformat:"s" or not year_filter and yr.is_current %}selected{% endif %}>{{ yr.label }}{% if yr.is_current %} (en cours){% endif %}</option>
+          {% endfor %}
+          <option value="all" {% if year_filter == 'all' %}selected{% endif %}>Toutes les années</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label mb-1" style="font-size:.75rem;font-weight:600;">Niveau</label>
+        <select name="level" class="form-select form-select-sm" style="border-radius:8px;min-width:130px;">
+          <option value="">Tous les niveaux</option>
+          {% for lv in levels %}
+          <option value="{{ lv.pk }}" {% if level_filter == lv.pk|stringformat:"s" %}selected{% endif %}>{{ lv.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="form-label mb-1" style="font-size:.75rem;font-weight:600;">Classe</label>
+        <select name="classe" class="form-select form-select-sm" style="border-radius:8px;min-width:150px;">
+          <option value="">Toutes les classes</option>
+          {% for cl in classes %}
+          <option value="{{ cl.pk }}" {% if class_filter == cl.pk|stringformat:"s" %}selected{% endif %}>{{ cl.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="form-label mb-1" style="font-size:.75rem;font-weight:600;">Mois</label>
+        <select name="month" class="form-select form-select-sm" style="border-radius:8px;min-width:130px;">
+          <option value="">Tous les mois</option>
+          {% for val, label in months_choices %}
+          <option value="{{ val }}" {% if month_filter == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-sm" style="background:var(--navy);color:#fff;border-radius:8px;">
+        <i class="bi bi-funnel-fill me-1"></i>Filtrer
+      </button>
+      <a href="{% url 'accounting:caisse_dashboard' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+        <i class="bi bi-x me-1"></i>Réinitialiser
+      </a>
+    </form>
+  </div>
+</div>
+
+<!-- Liste des paiements groupés par date (accordéon) -->
+{% if payments_by_class %}
+<div class="d-flex flex-column gap-3">
+  {% for cls in payments_by_class %}
+
+  <!-- ── Accordéon CLASSE ─────────────────────────────────────────────── -->
+  <div class="card border-0 shadow-sm" style="border-radius:12px;overflow:hidden;">
+
+    <!-- En-tête classe -->
+    <div class="d-flex align-items-center justify-content-between px-3 py-2"
+         data-bs-toggle="collapse"
+         data-bs-target="#cls{{ forloop.counter }}"
+         aria-expanded="false"
+         style="background:#00173B;cursor:pointer;user-select:none;">
+      <div class="d-flex align-items-center gap-3">
+        <span style="width:32px;height:32px;border-radius:8px;background:#D4AF37;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-people-fill" style="color:#00173B;font-size:.85rem;"></i>
+        </span>
+        <div>
+          <span class="fw-bold text-white" style="font-size:.92rem;">{{ cls.class_name }}</span>
+          <span style="font-size:.74rem;color:rgba(255,255,255,.6);margin-left:8px;">
+            {{ cls.count }} paiement{{ cls.count|pluralize }} — {{ cls.students|length }} étudiant{{ cls.students|length|pluralize }}
+          </span>
+        </div>
+      </div>
+      <div class="d-flex align-items-center gap-3">
+        <span class="fw-bold" style="color:#D4AF37;font-size:.92rem;">
+          {{ cls.total|floatformat:0 }} <span style="font-size:.72rem;font-weight:400;color:rgba(255,255,255,.5);">FCFA</span>
+        </span>
+        <i class="bi bi-chevron-down grp-chev" style="color:rgba(255,255,255,.7);font-size:.85rem;transition:transform .25s;"></i>
+      </div>
+    </div>
+
+    <!-- Corps classe -->
+    <div id="cls{{ forloop.counter }}" class="collapse">
+      <div class="d-flex flex-column gap-0">
+        {% for stu in cls.students %}
+
+        <!-- ── Accordéon ÉTUDIANT ──────────────────────────────────────── -->
+        <div style="border-bottom:1px solid #f1f5f9;">
+
+          <!-- En-tête étudiant -->
+          <div class="d-flex align-items-center justify-content-between px-4 py-2"
+               data-bs-toggle="collapse"
+               data-bs-target="#stu{{ forloop.parentloop.counter }}_{{ forloop.counter }}"
+               aria-expanded="false"
+               style="background:#f8fafc;cursor:pointer;user-select:none;">
+            <div class="d-flex align-items-center gap-3">
+              <span style="width:28px;height:28px;border-radius:50%;background:#e0e7ff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-person-fill" style="color:#4338ca;font-size:.78rem;"></i>
+              </span>
+              <div>
+                <span class="fw-semibold" style="font-size:.85rem;color:#1e293b;">{{ stu.student.full_name }}</span>
+                <span style="font-size:.73rem;color:#64748b;margin-left:6px;">{{ stu.student.matricule }}</span>
+              </div>
+              <span style="font-size:.72rem;color:#94a3b8;margin-left:4px;">
+                {{ stu.payments|length }} paiement{{ stu.payments|length|pluralize }}
+              </span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+              <span class="fw-bold" style="color:#166534;font-size:.85rem;">
+                {{ stu.subtotal|floatformat:0 }} <span style="font-size:.7rem;font-weight:400;color:#6b7280;">FCFA</span>
+              </span>
+              <i class="bi bi-chevron-down grp-chev" style="color:#94a3b8;font-size:.8rem;transition:transform .25s;"></i>
+            </div>
+          </div>
+
+          <!-- Tableau paiements étudiant -->
+          <div id="stu{{ forloop.parentloop.counter }}_{{ forloop.counter }}" class="collapse">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0" style="font-size:.81rem;">
+                <thead>
+                  <tr style="background:#EFF6FF;">
+                    <th class="ps-4 py-2" style="font-size:.73rem;color:#475569;">Référence</th>
+                    <th class="py-2" style="font-size:.73rem;color:#475569;">Type</th>
+                    <th class="py-2" style="font-size:.73rem;color:#475569;">Mois payés</th>
+                    <th class="py-2" style="font-size:.73rem;color:#475569;">Date</th>
+                    <th class="py-2" style="font-size:.73rem;color:#475569;">Année acad.</th>
+                    <th class="py-2 text-end pe-3" style="font-size:.73rem;color:#475569;">Montant (FCFA)</th>
+                    <th class="py-2 text-center" style="font-size:.73rem;color:#475569;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for p in stu.payments %}
+                  <tr style="border-bottom:1px solid #f1f5f9;">
+                    <td class="ps-4 py-2">
+                      <span class="badge" style="background:#DBEAFE;color:#1d4ed8;font-size:.75rem;font-weight:700;border-radius:6px;padding:3px 7px;">
+                        {{ p.reference }}
+                      </span>
+                    </td>
+                    <td class="py-2">
+                      {% if p.payment_type == 'INSCRIPTION' %}
+                        <span class="badge" style="background:#DBEAFE;color:#1e40af;border-radius:6px;font-size:.72rem;">Inscription</span>
+                      {% elif p.payment_type == 'SCOLARITE' %}
+                        <span class="badge" style="background:#DCFCE7;color:#166534;border-radius:6px;font-size:.72rem;">Scolarité</span>
+                      {% else %}
+                        <span class="badge" style="background:#FEF3C7;color:#92400e;border-radius:6px;font-size:.72rem;">Soutenance</span>
+                      {% endif %}
+                    </td>
+                    <td class="py-2">
+                      {% with months=p.get_months_labels %}
+                      {% if months %}
+                        <div class="d-flex flex-wrap gap-1">
+                          {% for m in months %}
+                          <span style="background:#dcfce7;color:#166534;border-radius:10px;padding:1px 7px;font-size:.68rem;font-weight:600;">{{ m }}</span>
+                          {% endfor %}
+                        </div>
+                      {% elif p.payment_month %}
+                        <span style="color:#64748b;font-size:.78rem;">{{ p.get_month_label }}</span>
+                      {% else %}
+                        <span style="color:#94a3b8;">—</span>
+                      {% endif %}
+                      {% endwith %}
+                    </td>
+                    <td class="py-2" style="font-size:.79rem;color:#64748b;">{{ p.payment_date|date:"d/m/Y" }}</td>
+                    <td class="py-2" style="font-size:.79rem;color:#64748b;">{{ p.academic_year.label|default:"-" }}</td>
+                    <td class="py-2 text-end pe-3 fw-bold" style="color:#166534;font-size:.87rem;">{{ p.amount|floatformat:0 }}</td>
+                    <td class="py-2 text-center">
+                      <div style="display:flex;align-items:center;justify-content:center;gap:4px;">
+                        {% if p.enrollment %}
+                        <a href="{% url 'accounting:inscription_recu' pk=p.enrollment.pk %}"
+                           class="btn btn-sm" style="border-radius:7px;font-size:.72rem;padding:2px 7px;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;"
+                           title="Voir le reçu"><i class="bi bi-receipt-cutoff"></i></a>
+                        {% endif %}
+                        <a href="{% url 'accounting:caisse_recu_pdf' pk=p.pk %}" target="_blank"
+                           class="btn btn-sm btn-outline-secondary" style="border-radius:7px;font-size:.72rem;padding:2px 7px;"
+                           title="PDF"><i class="bi bi-file-earmark-pdf-fill" style="color:#dc2626;"></i></a>
+                        <button type="button"
+                                onclick="openCaisseEdit({{ p.pk }}, '{{ p.amount|floatformat:0 }}', '{{ p.payment_date|date:'Y-m-d' }}', '{{ p.notes|default:''|escapejs }}')"
+                                class="btn btn-sm" style="border-radius:7px;font-size:.72rem;padding:2px 7px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;"
+                                title="Modifier"><i class="bi bi-pencil-square"></i></button>
+                        <button type="button"
+                                onclick="confirmCaisseDelete({{ p.pk }}, '{{ p.reference }}', '{{ p.student.full_name|escapejs }}')"
+                                class="btn btn-sm" style="border-radius:7px;font-size:.72rem;padding:2px 7px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;"
+                                title="Supprimer"><i class="bi bi-trash3"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+
+        <!-- Total classe -->
+        <div class="d-flex justify-content-end align-items-center px-4 py-2" style="background:#f0fdf4;">
+          <span style="font-size:.78rem;color:#166534;font-weight:600;">
+            Total {{ cls.class_name }} : {{ cls.total|floatformat:0 }} FCFA
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card border-0 shadow-sm text-center py-5 text-muted" style="border-radius:12px;">
+  <i class="bi bi-inbox" style="font-size:2.5rem;display:block;margin-bottom:.5rem;"></i>
+  Aucun paiement trouvé.
+</div>
+{% endif %}
+
+<script>
+// Rotation du chevron via événements Bootstrap collapse
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(function (header) {
+    var chev = header.querySelector('.grp-chev');
+    var targetId = header.getAttribute('data-bs-target');
+    var collapseEl = document.querySelector(targetId);
+    if (!collapseEl || !chev) return;
+
+    // État initial
+    if (!collapseEl.classList.contains('show')) {
+      chev.style.transform = 'rotate(180deg)';
+    }
+
+    collapseEl.addEventListener('show.bs.collapse', function () {
+      chev.style.transform = '';
+    });
+    collapseEl.addEventListener('hide.bs.collapse', function () {
+      chev.style.transform = 'rotate(180deg)';
+    });
+  });
+});
+</script>
+
+<!-- ── Modal Modifier paiement caisse ────────────────────────────────── -->
+<div id="caisseEditModal" style="display:none;position:fixed;inset:0;z-index:1060;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:28px 32px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.25);position:relative;">
+    <button onclick="closeCaisseEdit()" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.3rem;color:#94a3b8;cursor:pointer;">&times;</button>
+    <h5 style="font-weight:700;color:#00173B;margin:0 0 18px;"><i class="bi bi-pencil-square me-2" style="color:#0284c7;"></i>Modifier le paiement</h5>
+    <form id="caisseEditForm" onsubmit="submitCaisseEdit(event)">
+      <input type="hidden" id="ce_id">
+      <div style="margin-bottom:13px;">
+        <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Montant (FCFA)</label>
+        <input type="number" id="ce_amount" min="0" step="500"
+               style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:.95rem;"
+               onfocus="this.style.borderColor='#0284c7'" onblur="this.style.borderColor='#cbd5e1'">
+      </div>
+      <div style="margin-bottom:13px;">
+        <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Date de paiement</label>
+        <input type="date" id="ce_date"
+               style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:.95rem;"
+               onfocus="this.style.borderColor='#0284c7'" onblur="this.style.borderColor='#cbd5e1'">
+      </div>
+      <div style="margin-bottom:18px;">
+        <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Notes <span style="font-weight:400;color:#94a3b8;">(optionnel)</span></label>
+        <textarea id="ce_notes" rows="2"
+                  style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:.9rem;resize:none;"
+                  onfocus="this.style.borderColor='#0284c7'" onblur="this.style.borderColor='#cbd5e1'"></textarea>
+      </div>
+      <div id="ce_error" style="display:none;color:#dc2626;font-size:.8rem;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" onclick="closeCaisseEdit()" style="padding:8px 18px;border-radius:8px;border:1.5px solid #cbd5e1;background:#f8fafc;color:#64748b;font-weight:600;cursor:pointer;">Annuler</button>
+        <button type="submit" id="ce_submit" style="padding:8px 20px;border-radius:8px;border:none;background:#0284c7;color:#fff;font-weight:600;cursor:pointer;"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Modal Confirmer suppression ───────────────────────────────────── -->
+<div id="caisseDeleteModal" style="display:none;position:fixed;inset:0;z-index:1060;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:28px 32px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.25);position:relative;">
+    <button onclick="closeCaisseDelete()" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.3rem;color:#94a3b8;cursor:pointer;">&times;</button>
+    <h5 style="font-weight:700;color:#991b1b;margin:0 0 10px;"><i class="bi bi-exclamation-triangle-fill me-2"></i>Supprimer le paiement ?</h5>
+    <p id="cd_message" style="color:#475569;font-size:.88rem;margin-bottom:20px;"></p>
+    <input type="hidden" id="cd_id">
+    <div id="cd_error" style="display:none;color:#dc2626;font-size:.8rem;margin-bottom:10px;"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button type="button" onclick="closeCaisseDelete()" style="padding:8px 18px;border-radius:8px;border:1.5px solid #cbd5e1;background:#f8fafc;color:#64748b;font-weight:600;cursor:pointer;">Annuler</button>
+      <button type="button" id="cd_submit" onclick="submitCaisseDelete()" style="padding:8px 20px;border-radius:8px;border:none;background:#dc2626;color:#fff;font-weight:600;cursor:pointer;"><i class="bi bi-trash3 me-1"></i>Supprimer</button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getCsrf() {
+  var m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : '{{ csrf_token }}';
+}
+
+/* ── Modifier ─────────────────────────────────────────────────────── */
+function openCaisseEdit(id, amount, date, notes) {
+  document.getElementById('ce_id').value     = id;
+  document.getElementById('ce_amount').value = amount.replace(/\s/g,'') || '';
+  document.getElementById('ce_date').value   = date   || '';
+  document.getElementById('ce_notes').value  = notes  || '';
+  document.getElementById('ce_error').style.display = 'none';
+  var m = document.getElementById('caisseEditModal');
+  m.style.display = 'flex';
+  setTimeout(function(){ document.getElementById('ce_amount').focus(); }, 80);
+}
+function closeCaisseEdit() { document.getElementById('caisseEditModal').style.display = 'none'; }
+document.getElementById('caisseEditModal').addEventListener('click', function(e){ if(e.target===this) closeCaisseEdit(); });
+
+function submitCaisseEdit(e) {
+  e.preventDefault();
+  var id    = document.getElementById('ce_id').value;
+  var btn   = document.getElementById('ce_submit');
+  var errEl = document.getElementById('ce_error');
+  var fd    = new FormData();
+  fd.append('amount',       document.getElementById('ce_amount').value.trim());
+  fd.append('payment_date', document.getElementById('ce_date').value.trim());
+  fd.append('notes',        document.getElementById('ce_notes').value.trim());
+  fd.append('csrfmiddlewaretoken', getCsrf());
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Enregistrement…';
+  fetch('/accounting/etat/caisse/' + id + '/modifier/', { method:'POST', body: fd })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Enregistrer';
+      if (data.error) { errEl.textContent = data.error; errEl.style.display='block'; return; }
+      closeCaisseEdit();
+      location.reload();
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML='<i class="bi bi-check-lg me-1"></i>Enregistrer'; errEl.textContent='Erreur réseau.'; errEl.style.display='block'; });
+}
+
+/* ── Supprimer ────────────────────────────────────────────────────── */
+function confirmCaisseDelete(id, ref, student) {
+  document.getElementById('cd_id').value = id;
+  document.getElementById('cd_message').textContent = 'Supprimer le paiement ' + ref + ' de ' + student + ' ? Cette action est irréversible.';
+  document.getElementById('cd_error').style.display = 'none';
+  document.getElementById('caisseDeleteModal').style.display = 'flex';
+}
+function closeCaisseDelete() { document.getElementById('caisseDeleteModal').style.display = 'none'; }
+document.getElementById('caisseDeleteModal').addEventListener('click', function(e){ if(e.target===this) closeCaisseDelete(); });
+
+function submitCaisseDelete() {
+  var id    = document.getElementById('cd_id').value;
+  var btn   = document.getElementById('cd_submit');
+  var errEl = document.getElementById('cd_error');
+  var fd    = new FormData(); fd.append('csrfmiddlewaretoken', getCsrf());
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Suppression…';
+  fetch('/accounting/etat/caisse/' + id + '/supprimer/', { method:'POST', body: fd })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      btn.disabled = false; btn.innerHTML = '<i class="bi bi-trash3 me-1"></i>Supprimer';
+      if (data.error) { errEl.textContent = data.error; errEl.style.display='block'; return; }
+      closeCaisseDelete();
+      location.reload();
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML='<i class="bi bi-trash3 me-1"></i>Supprimer'; errEl.textContent='Erreur réseau.'; errEl.style.display='block'; });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends 'base/base.html' %}
+{% block title %}Mon Contrat{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Mon Contrat</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003D82;"><i class="bi bi-file-earmark-text-fill"></i></span>
+    Mon Contrat
+  </h1>
+</div>
+
+{% if not contrats %}
+<div class="card-section">
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-inbox" style="font-size:2rem;"></i>
+    <p class="mt-2 mb-0">Aucun contrat pour le moment. Il sera généré automatiquement dès qu'un module vous sera affecté.</p>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-3">
+  {% for c in contrats %}
+  <div class="col-md-6">
+    <div class="card-section h-100">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#003D82;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-building"></i></span>
+          {{ c.department.name }}
+        </h6>
+      </div>
+      <div class="p-3">
+        <p class="mb-1"><strong>Année académique :</strong> {{ c.academic_year.label }}</p>
+        <p class="mb-3 text-muted small">Mis à jour le {{ c.updated_at|date:'d/m/Y H:i' }}</p>
+        <a href="{% url 'teachers:contrat_pdf' c.pk %}" target="_blank" class="btn btn-primary">
+          <i class="bi bi-file-earmark-pdf"></i> Télécharger le PDF
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

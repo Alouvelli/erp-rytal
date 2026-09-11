@@ -1,0 +1,131 @@
+{% extends 'base/base.html' %}
+{% block title %}Cellule d'Orientation et d'Insertion Professionnelle{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">COIP</li>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-compass-fill"></i></span>
+    Cellule d'Orientation et d'Insertion Professionnelle
+  </h1>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <div class="card-section p-3">
+      <div style="font-size:.78rem;color:#64748b;font-weight:600;">ALUMNI</div>
+      <div style="font-size:1.6rem;font-weight:700;color:var(--navy);">{{ total_alumni }}</div>
+      <div style="font-size:.78rem;color:#16a34a;">{{ taux_insertion }}% en activité</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section p-3">
+      <div style="font-size:.78rem;color:#64748b;font-weight:600;">PARTENAIRES ACTIFS</div>
+      <div style="font-size:1.6rem;font-weight:700;color:var(--navy);">{{ total_partners }}</div>
+      <div style="font-size:.78rem;color:#64748b;">{{ active_partnerships }} conventions actives</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section p-3">
+      <div style="font-size:.78rem;color:#64748b;font-weight:600;">STAGES EN COURS</div>
+      <div style="font-size:1.6rem;font-weight:700;color:var(--navy);">{{ ongoing_internships }}</div>
+      <div style="font-size:.78rem;color:#64748b;">{{ open_opportunities }} opportunités publiées</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section p-3">
+      <div style="font-size:.78rem;color:#64748b;font-weight:600;">RECOMMANDATIONS EN ATTENTE</div>
+      <div style="font-size:1.6rem;font-weight:700;color:{% if pending_recommendations %}#dc2626{% else %}var(--navy){% endif %};">{{ pending_recommendations }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title"><i class="bi bi-clock-history me-2"></i>Conventions arrivant à expiration (30 jours)</h6></div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Partenaire</th><th>Convention</th><th>Expire le</th></tr></thead>
+          <tbody>
+            {% for p in expiring_partnerships %}
+            <tr>
+              <td style="font-size:.82rem;">{{ p.partner.raison_sociale }}</td>
+              <td style="font-size:.82rem;">{{ p.intitule }}</td>
+              <td style="font-size:.82rem;">{{ p.date_expiration|date:"d/m/Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-muted py-3">Aucune convention n'expire dans les 30 prochains jours.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title"><i class="bi bi-envelope-paper me-2"></i>Dernières demandes de recommandation</h6></div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Étudiant</th><th>Statut</th><th>Date</th></tr></thead>
+          <tbody>
+            {% for r in recent_recommendations %}
+            <tr>
+              <td style="font-size:.82rem;">{{ r.student }}</td>
+              <td><span class="badge bg-{{ r.statut_color }}">{{ r.get_status_display }}</span></td>
+              <td style="font-size:.82rem;">{{ r.date_demande|date:"d/m/Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-muted py-3">Aucune demande récente.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title"><i class="bi bi-calendar-event me-2"></i>Activités à venir</h6></div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Titre</th><th>Type</th><th>Date</th></tr></thead>
+          <tbody>
+            {% for a in upcoming_activities %}
+            <tr>
+              <td style="font-size:.82rem;">{{ a.titre }}</td>
+              <td style="font-size:.82rem;">{{ a.get_type_activite_display }}</td>
+              <td style="font-size:.82rem;">{{ a.date_debut|date:"d/m/Y H:i" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-muted py-3">Aucune activité planifiée.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title"><i class="bi bi-person-plus me-2"></i>Derniers alumni enregistrés</h6></div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Nom</th><th>Entreprise</th><th>Secteur</th></tr></thead>
+          <tbody>
+            {% for al in recent_alumni %}
+            <tr>
+              <td style="font-size:.82rem;"><a href="{% url 'coip:alumni_detail' al.pk %}">{{ al.get_full_name }}</a></td>
+              <td style="font-size:.82rem;">{{ al.entreprise_actuelle|default:"—" }}</td>
+              <td style="font-size:.82rem;">{{ al.get_secteur_activite_display|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-muted py-3">Aucun alumni enregistré.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends 'base/base.html' %}
+{% block title %}Enregistrer les présences{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_list' %}">Émargements</a></li>
+<li class="breadcrumb-item active">Présences</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:var(--navy);"><i class="bi bi-person-check-fill"></i></span>Enregistrer les présences</h1>
+</div>
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-people"></i></span>
+      {{ sheet.timetable_entry.subject.title }} — {{ sheet.timetable_entry.class_group.name }} — {{ sheet.session_date|date:"d/m/Y" }}
+    </h6>
+  </div>
+  <div class="p-4">
+    <form method="post">
+      {% csrf_token %}
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Étudiant</th><th>Matricule</th><th>Présence</th><th>Observation</th></tr></thead>
+          <tbody>
+            {% for student, att in students_data %}
+            <tr>
+              <td style="font-weight:600;font-size:.85rem;">{{ student.full_name }}</td>
+              <td style="font-size:.83rem;color:#64748b;">{{ student.matricule }}</td>
+              <td>
+                <select name="status_{{ student.pk }}" class="form-select form-select-sm" style="width:140px;">
+                  <option value="PRESENT" {% if att and att.status == 'PRESENT' %}selected{% endif %}>{% if student.gender == 'F' %}Présente{% else %}Présent{% endif %}</option>
+                  <option value="ABSENT"  {% if att and att.status == 'ABSENT'  %}selected{% endif %}>{% if student.gender == 'F' %}Absente{% else %}Absent{% endif %}</option>
+                  <option value="LATE"    {% if att and att.status == 'LATE'    %}selected{% endif %}>Retard</option>
+                  <option value="JUSTIFIED" {% if att and att.status == 'JUSTIFIED' %}selected{% endif %}>{% if student.gender == 'F' %}Justifiée{% else %}Justifié{% endif %}</option>
+                </select>
+              </td>
+              <td><input type="text" name="comment_{{ student.pk }}" class="form-control form-control-sm" placeholder="Observation…" style="min-width:180px;" value="{{ att.comment|default:'' }}"></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Aucun étudiant inscrit dans cette classe</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="d-flex gap-2 justify-content-end border-top pt-3 mt-2">
+        <a href="{% url 'attendance:sheet_detail' sheet.pk %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-save me-1"></i>Enregistrer les présences</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

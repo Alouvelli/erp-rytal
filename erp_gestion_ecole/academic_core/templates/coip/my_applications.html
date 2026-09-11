@@ -1,0 +1,32 @@
+{% extends 'base/base.html' %}
+{% block title %}Mes candidatures{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:opportunities_browse' %}">Opportunités</a></li>
+<li class="breadcrumb-item active">Mes candidatures</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-send-fill"></i></span>
+    Mes candidatures
+  </h1>
+</div>
+<div class="card-section">
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Opportunité</th><th>Statut</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for a in applications %}
+        <tr>
+          <td style="font-size:.85rem;font-weight:600;">{{ a.opportunity.titre }}</td>
+          <td><span class="badge bg-{{ a.statut_color }}">{{ a.get_status_display }}</span></td>
+          <td style="font-size:.82rem;">{{ a.submitted_at|date:"d/m/Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="text-center text-muted py-4">Aucune candidature envoyée.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

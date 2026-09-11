@@ -1,0 +1,128 @@
+{% extends 'base/base.html' %}
+{% block title %}Modèle de contrat{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'teachers:contrat_list' %}">Contrats Enseignants</a></li>
+<li class="breadcrumb-item active">Modèle de contrat</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003D82;"><i class="bi bi-sliders"></i></span>
+    Modèle de contrat — {{ config.nom }}
+  </h1>
+  <a href="{% url 'teachers:contrat_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Contrats Enseignants
+  </a>
+</div>
+
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;font-size:.85rem;color:#1e3a5f;margin-bottom:20px;">
+  <i class="bi bi-info-circle me-1"></i>
+  Ce texte est utilisé pour générer le PDF de chaque contrat enseignant (bouton <strong>PDF</strong> sur la liste des contrats).
+  Les informations civiles de l'enseignant, la période et le tableau des modules restent calculés automatiquement.
+  Une mise en forme simple est acceptée dans le texte : <code>&lt;b&gt;gras&lt;/b&gt;</code>, <code>&lt;i&gt;italique&lt;/i&gt;</code>, <code>&lt;br/&gt;</code> pour un retour à la ligne.
+</div>
+
+<!-- Introduction -->
+<div class="card-section mb-4">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#7c3aed;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-text-paragraph"></i></span>
+      Introduction
+    </h6>
+  </div>
+  <div class="p-4">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="save_intro">
+      <div class="mb-3">
+        <label class="form-label fw-semibold" style="font-size:.85rem;">Titre du contrat</label>
+        <input type="text" name="contrat_titre" class="form-control" value="{{ config.contrat_titre }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold" style="font-size:.85rem;">Article 1 — texte d'introduction</label>
+        <textarea name="contrat_article1_texte" class="form-control" rows="3">{{ config.contrat_article1_texte }}</textarea>
+        <div class="form-text" style="font-size:.75rem;">
+          <i class="bi bi-info-circle me-1"></i>Le repère <code>{periode}</code> est remplacé automatiquement par l'année académique du contrat.
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold" style="font-size:.85rem;">Paragraphe « cahier de charge » (après le tableau des modules)</label>
+        <textarea name="contrat_cahier_charge_texte" class="form-control" rows="3">{{ config.contrat_cahier_charge_texte }}</textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+    </form>
+  </div>
+</div>
+
+<!-- Articles -->
+<div class="card-section mb-4">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#003D82;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ol"></i></span>
+      Articles
+    </h6>
+  </div>
+  <div class="p-4">
+    {% for article in articles %}
+    <div style="border:1.5px solid {% if article.actif %}#e2e8f0{% else %}#fecaca{% endif %};border-radius:10px;padding:14px 16px;margin-bottom:12px;{% if not article.actif %}background:#fef2f2;{% endif %}">
+      <form method="post" class="d-flex gap-2 align-items-start">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_article">
+        <input type="hidden" name="article_id" value="{{ article.pk }}">
+        <div style="flex-shrink:0;width:90px;padding-top:8px;font-weight:700;color:#003D82;font-size:.85rem;">
+          Article {{ article.numero }}
+          {% if not article.actif %}<div class="badge bg-danger mt-1" style="font-size:.65rem;">Désactivé</div>{% endif %}
+        </div>
+        <div class="flex-grow-1">
+          <textarea name="texte" class="form-control" rows="2" style="font-size:.85rem;">{{ article.texte }}</textarea>
+        </div>
+        <div class="d-flex flex-column gap-1" style="flex-shrink:0;">
+          <button type="submit" class="btn btn-sm btn-outline-primary" title="Enregistrer"><i class="bi bi-check-lg"></i></button>
+        </div>
+      </form>
+      <div class="d-flex gap-2 mt-2">
+        <form method="post" onsubmit="return confirm('{% if article.actif %}Désactiver{% else %}Réactiver{% endif %} cet article dans le contrat ?');">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="toggle_article">
+          <input type="hidden" name="article_id" value="{{ article.pk }}">
+          <button type="submit" class="btn btn-sm btn-outline-secondary">
+            {% if article.actif %}<i class="bi bi-eye-slash me-1"></i>Désactiver{% else %}<i class="bi bi-eye me-1"></i>Réactiver{% endif %}
+          </button>
+        </form>
+        <form method="post" onsubmit="return confirm('Supprimer définitivement l\'article {{ article.numero }} ?');">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="delete_article">
+          <input type="hidden" name="article_id" value="{{ article.pk }}">
+          <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Supprimer</button>
+        </form>
+      </div>
+    </div>
+    {% empty %}
+    <p class="text-muted">Aucun article pour le moment.</p>
+    {% endfor %}
+
+    <!-- Ajouter un article -->
+    <div style="border:1.5px dashed #cbd5e1;border-radius:10px;padding:14px 16px;margin-top:16px;">
+      <div style="font-weight:700;font-size:.85rem;color:#64748b;margin-bottom:10px;">
+        <i class="bi bi-plus-circle me-1"></i>Ajouter un article
+      </div>
+      <form method="post" class="row g-2 align-items-start">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_article">
+        <div class="col-auto">
+          <label class="form-label" style="font-size:.75rem;">Numéro</label>
+          <input type="number" name="numero" class="form-control form-control-sm" style="width:90px;" value="{{ next_numero }}" min="1">
+        </div>
+        <div class="col">
+          <label class="form-label" style="font-size:.75rem;">Texte</label>
+          <textarea name="texte" class="form-control form-control-sm" rows="2" placeholder="Texte de l'article…"></textarea>
+        </div>
+        <div class="col-auto" style="padding-top:24px;">
+          <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-plus-lg me-1"></i>Ajouter</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

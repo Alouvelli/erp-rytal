@@ -1,0 +1,268 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if form.instance.pk %}Modifier le module (EC){% else %}Nouveau module (EC){% endif %}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'subjects:list' %}">Modules (EC)</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Modifier{% else %}Nouveau module (EC){% endif %}</li>
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-book"></i></span>
+    {% if form.instance.pk %}Modifier le module (EC){% else %}Nouveau module (EC){% endif %}
+  </h1>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-pencil"></i></span>
+          Informations du module (EC)
+        </h6>
+      </div>
+      <div class="p-4">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="row g-3">
+
+            <!-- Code + Intitulé -->
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Code <span class="text-danger">*</span></label>
+              {{ form.code }}
+              {% if form.code.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.code.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-9">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Intitulé <span class="text-danger">*</span></label>
+              {{ form.title }}
+              {% if form.title.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.title.errors.0 }}</div>{% endif %}
+            </div>
+
+            <!-- Filière + Semestre -->
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Filière / Programme</label>
+              {{ form.program }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Semestre</label>
+              {{ form.semester }}
+            </div>
+
+            <!-- Coefficient -->
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Coefficient</label>
+              {{ form.coefficient }}
+            </div>
+
+            <!-- Volumes horaires -->
+            <div class="col-12">
+              <div style="background:#f8fafc;border-radius:10px;border:1.5px solid #e2e8f0;padding:16px 20px;">
+                <div style="font-weight:700;font-size:.88rem;color:#1e3a5f;margin-bottom:14px;">
+                  <i class="bi bi-clock me-1"></i>Volumes horaires
+                </div>
+                <div class="row g-3">
+                  <div class="col-md-3">
+                    <label class="form-label fw-semibold" style="font-size:.82rem;">CM (h)</label>
+                    {{ form.volume_cm }}
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label fw-semibold" style="font-size:.82rem;">TD (h)</label>
+                    {{ form.volume_td }}
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label fw-semibold" style="font-size:.82rem;">TP (h)</label>
+                    {{ form.volume_tp }}
+                  </div>
+                  <div class="col-md-3">
+                    <label class="form-label fw-semibold" style="font-size:.82rem;">
+                      TPE (h)
+                      <span style="font-size:.7rem;color:#94a3b8;font-weight:400;">hors calcul</span>
+                    </label>
+                    {{ form.volume_tpe }}
+                  </div>
+                </div>
+
+                <!-- Résultats calculés -->
+                <div class="row g-3 mt-2">
+                  <!-- Volume horaire officiel -->
+                  <div class="col-md-4">
+                    <div style="background:#003D82;border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+                      <div>
+                        <div style="font-size:.68rem;color:#bfdbfe;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Volume horaire</div>
+                        <div style="font-size:.68rem;color:#93c5fd;">CM + TD + TP</div>
+                      </div>
+                      <span id="total-hours" style="font-weight:800;font-size:1.3rem;color:#fff;">
+                        {{ form.instance.volume_hours|default:0|floatformat:0 }} h
+                      </span>
+                    </div>
+                  </div>
+                  <!-- Volume total UE -->
+                  <div class="col-md-4">
+                    <div style="background:#7c3aed;border-radius:8px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+                      <div>
+                        <div style="font-size:.68rem;color:#ddd6fe;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Volume total UE</div>
+                        <div style="font-size:.68rem;color:#c4b5fd;">CM + TD + TP + TPE</div>
+                      </div>
+                      <span id="total-ue" style="font-weight:800;font-size:1.3rem;color:#fff;">
+                        {{ form.instance.volume_total_ue|default:0|floatformat:0 }} h
+                      </span>
+                    </div>
+                  </div>
+                  <!-- Crédits ECTS -->
+                  <div class="col-md-4">
+                    <div style="background:#f0fdf4;border-radius:8px;padding:12px 16px;border:1.5px solid #86efac;display:flex;align-items:center;justify-content:space-between;">
+                      <div>
+                        <div style="font-size:.68rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Crédits ECTS</div>
+                        <div style="font-size:.68rem;color:#94a3b8;">Vol. total UE ÷ 20, partie entière</div>
+                      </div>
+                      <span id="auto-credits" style="font-weight:800;font-size:1.3rem;color:#16a34a;">
+                        {{ form.instance.credits|default:0 }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Attribution à un enseignant + Syllabus -->
+            <div class="col-12">
+              <div style="background:#f5f3ff;border-radius:10px;border:1.5px solid #ddd6fe;padding:16px 20px;">
+                <div style="font-weight:700;font-size:.88rem;color:#4c1d95;margin-bottom:2px;">
+                  <i class="bi bi-person-check me-1"></i>Attribution à un enseignant
+                </div>
+                <div class="form-text mb-3" style="font-size:.72rem;">
+                  <i class="bi bi-info-circle me-1"></i>
+                  Facultatif à la création : le module peut être créé sans enseignant, puis affecté plus tard depuis cette même page d'édition.
+                </div>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold" style="font-size:.85rem;">
+                      Enseignant responsable
+                      <span style="font-size:.7rem;color:#94a3b8;font-weight:400;">optionnel</span>
+                    </label>
+                    {{ form.responsible_teacher }}
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold" style="font-size:.85rem;">
+                      Taux horaire du niveau
+                      <span style="font-size:.7rem;color:#94a3b8;font-weight:400;">optionnel — laisser vide pour ne pas modifier</span>
+                    </label>
+                    {{ form.taux_horaire }}
+                    {% if form.taux_horaire.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.taux_horaire.errors.0 }}</div>{% endif %}
+                    <div class="form-text" id="taux-horaire-hint" style="font-size:.72rem;">
+                      <i class="bi bi-info-circle me-1"></i>Sélectionnez filière et semestre pour voir/modifier le taux horaire du niveau correspondant.
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold" style="font-size:.85rem;">
+                      Syllabus
+                      <span style="font-size:.7rem;color:#7c3aed;font-weight:400;">PDF ou Word, optionnel</span>
+                    </label>
+                    {% if form.instance.syllabus %}
+                    <div style="margin-bottom:6px;">
+                      <a href="{{ form.instance.syllabus.url }}" target="_blank" rel="noopener"
+                         style="display:inline-flex;align-items:center;gap:6px;font-size:.8rem;font-weight:600;color:#7c3aed;text-decoration:none;background:#fff;padding:4px 10px;border-radius:6px;border:1px solid #ddd6fe;">
+                        <i class="bi bi-file-earmark-text-fill"></i>Syllabus actuel
+                      </a>
+                    </div>
+                    {% endif %}
+                    {{ form.syllabus }}
+                    <div class="form-text" style="font-size:.72rem;">
+                      <i class="bi bi-info-circle me-1"></i>
+                      Document fourni à l'enseignant lors de l'attribution de l'EC ; il devra le suivre.
+                    </div>
+                    {% if form.syllabus.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.syllabus.errors.0 }}</div>{% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Description</label>
+              {{ form.description }}
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end border-top pt-3 mt-3">
+            <a href="{% url 'subjects:list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-check-lg me-1"></i>Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Taux horaire du niveau (info seulement — le champ n'est jamais rempli
+// automatiquement pour ne pas écraser une saisie de l'utilisateur) ─────────
+const PROGRAM_DEPT_MAP  = {{ program_dept_map|safe }};
+const SEMESTER_INFO_MAP = {{ semester_info_map|safe }};
+const RATE_MAP           = {{ rate_map|safe }};
+const elProgram  = document.getElementById('id_program');
+const elSemester = document.getElementById('id_semester');
+const elTauxHint = document.getElementById('taux-horaire-hint');
+
+function updateTauxHint() {
+  const progId = elProgram ? elProgram.value : '';
+  const semId  = elSemester ? elSemester.value : '';
+  const sem = SEMESTER_INFO_MAP[semId];
+  const deptId = PROGRAM_DEPT_MAP[progId];
+  if (!progId || !semId || !sem || !sem.level_id || !deptId) {
+    elTauxHint.innerHTML = '<i class="bi bi-info-circle me-1"></i>Sélectionnez filière et semestre pour voir/modifier le taux horaire du niveau correspondant.';
+    return;
+  }
+  const key = `${deptId}-${sem.level_id}-${sem.year_id}`;
+  const rate = RATE_MAP[key];
+  if (rate) {
+    elTauxHint.innerHTML = `<i class="bi bi-check-circle me-1" style="color:#16a34a;"></i>Taux actuel pour ${sem.level_name} : <strong>${rate.toLocaleString('fr-FR')} FCFA/h</strong> — remplissez le champ ci-dessus pour le modifier.`;
+  } else {
+    elTauxHint.innerHTML = `<i class="bi bi-exclamation-triangle me-1" style="color:#f59e0b;"></i>Aucun taux horaire défini pour ${sem.level_name}. Saisissez-en un ci-dessus pour le créer.`;
+  }
+}
+
+if (elProgram && elSemester) {
+  elProgram.addEventListener('change', updateTauxHint);
+  elSemester.addEventListener('change', updateTauxHint);
+  updateTauxHint();
+}
+
+function recalculate() {
+  const cm  = parseFloat(document.getElementById('id_volume_cm').value)  || 0;
+  const td  = parseFloat(document.getElementById('id_volume_td').value)  || 0;
+  const tp  = parseFloat(document.getElementById('id_volume_tp').value)  || 0;
+  const tpe = parseFloat(document.getElementById('id_volume_tpe').value) || 0;
+  const total    = cm + td + tp;
+  const totalUE  = cm + td + tp + tpe;
+  const credits  = totalUE > 0 ? Math.floor(totalUE / 20) : 0;
+  const fmt = v => (v % 1 === 0 ? v : v.toFixed(1)) + ' h';
+  document.getElementById('total-hours').textContent = fmt(total);
+  document.getElementById('total-ue').textContent    = fmt(totalUE);
+  document.getElementById('auto-credits').textContent = credits;
+}
+
+document.querySelectorAll('.vol-input').forEach(el => {
+  el.addEventListener('input', recalculate);
+});
+recalculate();
+</script>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script>
+  new TomSelect('#id_responsible_teacher', {
+    placeholder: 'Rechercher un enseignant…',
+    allowEmptyOption: true,
+    maxOptions: 300,
+  });
+</script>
+{% endblock %}
+{% endblock %}

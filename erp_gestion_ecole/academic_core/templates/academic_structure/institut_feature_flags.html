@@ -1,0 +1,114 @@
+{% extends 'base/base.html' %}
+{% block title %}Fonctionnalités — {{ config.nom|default:config.sigle }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academic_structure:institut_list' %}">Instituts</a></li>
+<li class="breadcrumb-item active">Fonctionnalités — {{ config.nom|default:config.sigle }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-2" style="max-width:1160px;">
+
+  <!-- En-tête -->
+  <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+    {% if config.logo %}
+    <img src="{{ config.logo.url }}" alt="Logo" style="height:52px;max-width:90px;object-fit:contain;border-radius:8px;border:1px solid #e2e8f0;background:#fff;padding:4px;flex-shrink:0;">
+    {% endif %}
+    <div style="flex:1;min-width:0;">
+      <h4 class="mb-0 fw-bold" style="color:var(--navy);">
+        <i class="bi bi-toggles me-2" style="color:var(--accent);"></i>{{ config.nom|default:config.sigle }}
+      </h4>
+      <p class="text-muted mb-0" style="font-size:.82rem;">
+        Activer/désactiver des onglets ou des fonctionnalités précises de l'interface de cet institut
+      </p>
+    </div>
+    <a href="{% url 'academic_structure:institut_list' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;font-size:.82rem;">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+  </div>
+
+  <div class="mb-4 p-3 d-flex align-items-center gap-3" style="border-radius:12px;background:#EFF6FF;border:1px solid #BFDBFE;">
+    <i class="bi bi-info-circle-fill" style="font-size:1.3rem;color:#1d4ed8;flex-shrink:0;"></i>
+    <div style="font-size:.82rem;color:#1d4ed8;">
+      Désactiver un onglet masque et bloque automatiquement toutes ses fonctionnalités.
+      Désactiver une seule fonctionnalité ne touche pas au reste de son onglet.
+    </div>
+  </div>
+
+  <div class="d-flex flex-column gap-2">
+    {% for t in tabs %}
+    <div class="card border-0 shadow-sm" style="border-radius:14px;{% if t.disabled %}opacity:.6;{% endif %}">
+      <div class="card-header border-0 py-2 px-4 d-flex align-items-center justify-content-between" style="background:transparent;">
+        <button type="button" class="btn btn-link p-0 text-decoration-none d-flex align-items-center flex-grow-1"
+                data-bs-toggle="collapse" data-bs-target="#tabFeatures-{{ t.key }}"
+                aria-expanded="false" aria-controls="tabFeatures-{{ t.key }}"
+                style="min-width:0;">
+          <i class="bi bi-chevron-right me-2 feature-toggle-chevron" style="color:#94a3b8;transition:transform .2s;flex-shrink:0;"></i>
+          <h6 class="fw-bold mb-0" style="color:var(--navy);font-size:.9rem;">
+            <i class="bi bi-folder2{% if not t.disabled %}-open{% endif %} me-2" style="color:var(--accent);"></i>{{ t.label }}
+          </h6>
+          {% if t.features %}
+          <span class="badge rounded-pill ms-2" style="background:#eff6ff;color:#1d4ed8;font-size:.68rem;font-weight:600;">{{ t.features|length }}</span>
+          {% endif %}
+        </button>
+        <form method="post" class="d-inline ms-2">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="toggle_tab">
+          <input type="hidden" name="tab_key" value="{{ t.key }}">
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" role="switch"
+                   style="cursor:pointer;width:2.4em;height:1.3em;"
+                   {% if not t.disabled %}checked{% endif %}
+                   onchange="this.form.submit()">
+          </div>
+        </form>
+      </div>
+      <div class="collapse" id="tabFeatures-{{ t.key }}">
+        <div class="card-body pt-1 pb-3 px-4" style="border-top:1px solid #f1f5f9;">
+          {% if t.features %}
+          <div class="d-flex flex-column gap-1">
+            {% for f in t.features %}
+            <div class="d-flex align-items-center justify-content-between py-1"
+                 style="border-bottom:1px solid #f1f5f9;{% if t.disabled %}opacity:.55;{% endif %}">
+              <span style="font-size:.82rem;color:#334155;{% if f.disabled %}text-decoration:line-through;color:#94a3b8;{% endif %}">
+                {{ f.label }}
+              </span>
+              <form method="post" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="toggle_feature">
+                <input type="hidden" name="tab_key" value="{{ t.key }}">
+                <input type="hidden" name="feature_key" value="{{ f.key }}">
+                <div class="form-check form-switch mb-0">
+                  <input class="form-check-input" type="checkbox" role="switch"
+                         style="cursor:pointer;"
+                         {% if not f.disabled %}checked{% endif %}
+                         onchange="this.form.submit()">
+                </div>
+              </form>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="text-muted" style="font-size:.78rem;">Aucune fonctionnalité listée pour cet onglet.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<style>
+  button[aria-expanded="true"] .feature-toggle-chevron { transform: rotate(90deg); }
+</style>
+<script>
+  document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(function (btn) {
+    var targetId = btn.getAttribute('data-bs-target');
+    var target = document.querySelector(targetId);
+    if (!target) return;
+    target.addEventListener('show.bs.collapse', function () { btn.setAttribute('aria-expanded', 'true'); });
+    target.addEventListener('hide.bs.collapse', function () { btn.setAttribute('aria-expanded', 'false'); });
+  });
+</script>
+{% endblock %}

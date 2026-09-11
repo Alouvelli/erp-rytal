@@ -1,0 +1,153 @@
+{% extends "base/base.html" %}
+{% block title %}Recrutement{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-statut { display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:.73rem;font-weight:600; }
+.br-SOUMISE  { background:#fef3c7;color:#92400e; }
+.br-VALIDEE  { background:#e0f2fe;color:#0369a1; }
+.br-EN_COURS { background:#dbeafe;color:#1e40af; }
+.br-POURVUE  { background:#dcfce7;color:#15803d; }
+.br-REJETEE  { background:#fee2e2;color:#b91c1c; }
+.bc-CANDIDATURE    { background:#f1f5f9;color:#475569; }
+.bc-PRESELECTIONNE { background:#e0f2fe;color:#0369a1; }
+.bc-ENTRETIEN      { background:#fef3c7;color:#92400e; }
+.bc-RETENU         { background:#dcfce7;color:#15803d; }
+.bc-REJETE          { background:#fee2e2;color:#b91c1c; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'hr:dashboard' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+      <div>
+        <h5 class="mb-0 fw-bold">Recrutement</h5>
+        <small class="text-muted">Besoins de recrutement et candidats</small>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-sm fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#form-besoin">
+      <i class="bi bi-plus-lg me-1"></i>Exprimer un besoin
+    </button>
+  </div>
+
+  <div class="collapse mb-4" id="form-besoin">
+    <form method="post" action="{% url 'hr:recruitment_create' %}" class="card border-0 shadow-sm p-3">
+      {% csrf_token %}
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3"><input type="text" name="titre" class="form-control form-control-sm" placeholder="Titre du poste" required></div>
+        <div class="col-md-2">
+          <select name="department" class="form-select form-select-sm">
+            <option value="">— Département —</option>{% for d in departments %}<option value="{{ d.pk }}">{{ d.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2"><input type="text" name="poste" class="form-control form-control-sm" placeholder="Poste"></div>
+        <div class="col-md-2">
+          <select name="mode" class="form-select form-select-sm">
+            <option value="EXTERNE">Appel externe</option><option value="INTERNE">Recrutement interne</option>
+          </select>
+        </div>
+        <div class="col-md-3"><input type="text" name="description" class="form-control form-control-sm" placeholder="Description du besoin"></div>
+        <div class="col-12"><button class="btn btn-primary btn-sm">Soumettre</button></div>
+      </div>
+    </form>
+  </div>
+
+  {% for r in requests %}
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+        <div>
+          <div class="fw-bold" style="font-size:.95rem;">{{ r.titre }}</div>
+          <div style="font-size:.78rem;color:#64748b;">
+            {{ r.get_mode_display }}{% if r.department %} — {{ r.department.name }}{% endif %}{% if r.poste %} — {{ r.poste }}{% endif %}
+          </div>
+          {% if r.description %}<div style="font-size:.76rem;color:#94a3b8;">{{ r.description|truncatechars:120 }}</div>{% endif %}
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge-statut br-{{ r.statut }}">{{ r.get_statut_display }}</span>
+          <button class="btn btn-xs btn-outline-secondary" style="font-size:.72rem;padding:3px 9px;" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#cand-{{ r.pk }}">
+            <i class="bi bi-people"></i> {{ r.candidats.count }} candidat{{ r.candidats.count|pluralize }}
+          </button>
+        </div>
+      </div>
+      <div class="d-flex gap-1 mt-2">
+        {% if r.statut == 'SOUMISE' %}
+        <form method="post" action="{% url 'hr:recruitment_action' pk=r.pk %}"><input type="hidden" name="action" value="valider">{% csrf_token %}<button class="btn btn-xs btn-success" style="font-size:.7rem;padding:3px 8px;">Valider</button></form>
+        <form method="post" action="{% url 'hr:recruitment_action' pk=r.pk %}"><input type="hidden" name="action" value="rejeter">{% csrf_token %}<button class="btn btn-xs btn-outline-danger" style="font-size:.7rem;padding:3px 8px;">Rejeter</button></form>
+        {% elif r.statut == 'VALIDEE' %}
+        <form method="post" action="{% url 'hr:recruitment_action' pk=r.pk %}"><input type="hidden" name="action" value="diffuser">{% csrf_token %}<button class="btn btn-xs btn-outline-primary" style="font-size:.7rem;padding:3px 8px;">Diffuser</button></form>
+        <form method="post" action="{% url 'hr:recruitment_action' pk=r.pk %}"><input type="hidden" name="action" value="rejeter">{% csrf_token %}<button class="btn btn-xs btn-outline-danger" style="font-size:.7rem;padding:3px 8px;">Rejeter</button></form>
+        {% elif r.statut == 'EN_COURS' %}
+        <form method="post" action="{% url 'hr:recruitment_action' pk=r.pk %}"><input type="hidden" name="action" value="pourvoir">{% csrf_token %}<button class="btn btn-xs btn-success" style="font-size:.7rem;padding:3px 8px;">Marquer pourvue</button></form>
+        {% endif %}
+        <form method="post" action="{% url 'hr:recruitment_delete' pk=r.pk %}" onsubmit="return confirm('Supprimer ce besoin ?');">{% csrf_token %}
+          <button class="btn btn-xs btn-outline-danger" style="font-size:.7rem;padding:3px 8px;"><i class="bi bi-trash"></i></button></form>
+      </div>
+
+      <div class="collapse mt-3" id="cand-{{ r.pk }}">
+        <hr>
+        <form method="post" action="{% url 'hr:candidate_create' request_pk=r.pk %}" class="d-flex gap-2 mb-3 flex-wrap">
+          {% csrf_token %}
+          <input type="text" name="prenom" class="form-control form-control-sm" placeholder="Prénom" style="max-width:120px;" required>
+          <input type="text" name="nom" class="form-control form-control-sm" placeholder="Nom" style="max-width:120px;" required>
+          <input type="email" name="email" class="form-control form-control-sm" placeholder="Email" style="max-width:180px;">
+          <input type="text" name="telephone" class="form-control form-control-sm" placeholder="Téléphone" style="max-width:130px;">
+          <input type="text" name="source" class="form-control form-control-sm" placeholder="Source" style="max-width:130px;">
+          <button class="btn btn-sm btn-outline-primary">+ Candidat</button>
+        </form>
+        <table class="table table-sm">
+          <thead><tr style="font-size:.72rem;text-transform:uppercase;color:#94a3b8;"><th>Candidat</th><th>Contact</th><th>Statut</th><th class="text-end">Actions</th></tr></thead>
+          <tbody>
+            {% for c in r.candidats.all %}
+            <tr>
+              <td style="font-size:.83rem;">{{ c.prenom }} {{ c.nom }}</td>
+              <td style="font-size:.78rem;color:#64748b;">{{ c.email }} {{ c.telephone }}</td>
+              <td><span class="badge-statut bc-{{ c.statut }}">{{ c.get_statut_display }}</span></td>
+              <td class="text-end">
+                <div class="d-flex gap-1 justify-content-end flex-wrap">
+                  {% if c.statut == 'CANDIDATURE' %}
+                  <form method="post" action="{% url 'hr:candidate_action' pk=c.pk %}"><input type="hidden" name="action" value="preselectionner">{% csrf_token %}<button class="btn btn-xs btn-outline-primary" style="font-size:.68rem;padding:2px 7px;">Présélectionner</button></form>
+                  {% elif c.statut == 'PRESELECTIONNE' %}
+                  <form method="post" action="{% url 'hr:candidate_action' pk=c.pk %}"><input type="hidden" name="action" value="entretien">{% csrf_token %}<button class="btn btn-xs btn-outline-primary" style="font-size:.68rem;padding:2px 7px;">Entretien</button></form>
+                  {% elif c.statut == 'ENTRETIEN' %}
+                  <form method="post" action="{% url 'hr:candidate_action' pk=c.pk %}"><input type="hidden" name="action" value="retenir">{% csrf_token %}<button class="btn btn-xs btn-success" style="font-size:.68rem;padding:2px 7px;">Retenir</button></form>
+                  {% endif %}
+                  {% if c.statut != 'RETENU' and c.statut != 'REJETE' %}
+                  <form method="post" action="{% url 'hr:candidate_action' pk=c.pk %}"><input type="hidden" name="action" value="rejeter">{% csrf_token %}<button class="btn btn-xs btn-outline-danger" style="font-size:.68rem;padding:2px 7px;">Rejeter</button></form>
+                  {% endif %}
+                  {% if c.statut == 'RETENU' %}
+                  <button class="btn btn-xs btn-success" style="font-size:.68rem;padding:2px 7px;" type="button" data-bs-toggle="collapse" data-bs-target="#hire-{{ c.pk }}">Embaucher</button>
+                  {% endif %}
+                </div>
+                {% if c.statut == 'RETENU' %}
+                <div class="collapse mt-2" id="hire-{{ c.pk }}">
+                  <form method="post" action="{% url 'hr:candidate_hire' pk=c.pk %}" class="d-flex gap-1 flex-wrap justify-content-end">
+                    {% csrf_token %}
+                    <input type="text" name="username" class="form-control form-control-sm" placeholder="Identifiant" style="max-width:140px;" required>
+                    <input type="text" name="password" class="form-control form-control-sm" placeholder="Mot de passe provisoire" style="max-width:160px;">
+                    <select name="role" class="form-select form-select-sm" style="max-width:180px;" required>
+                      <option value="">— Rôle —</option>
+                      {% for role in roles %}<option value="{{ role.pk }}">{{ role.get_name_display }}</option>{% endfor %}
+                    </select>
+                    <button class="btn btn-sm btn-success">Confirmer</button>
+                  </form>
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Aucun candidat.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="text-center py-5 text-muted">Aucun besoin de recrutement.</div>
+  {% endfor %}
+</div>
+{% endblock %}

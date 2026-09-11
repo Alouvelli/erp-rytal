@@ -1,0 +1,142 @@
+{% extends 'base/base.html' %}
+{% block title %}Pièces justificatives — Mon Dossier de Candidature{% endblock %}
+{% block content %}
+{% include 'admissions/_stepper.html' with current_step=current_step|default:3 %}
+
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003d82;"><i class="bi bi-file-earmark-arrow-up-fill"></i></span>
+    Pièces justificatives
+  </h1>
+  <a href="{% url 'candidat:candidat_dashboard' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Retour à mon dossier
+  </a>
+</div>
+
+<div class="card-section p-4 mx-auto" style="max-width: 700px;">
+  <p class="text-muted small">
+    Formats acceptés : PDF, JPG, PNG (5 Mo max par fichier). Un nouveau dépôt
+    remplace le fichier précédent pour une même pièce (sauf les bulletins,
+    qui s'accumulent).
+  </p>
+
+  <form method="post" enctype="multipart/form-data" id="docs-form">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">{{ form.niveau_entree.label }}</label>
+      {{ form.niveau_entree }}
+      {% if form.niveau_entree.errors %}<div class="text-danger small mt-1">{{ form.niveau_entree.errors|striptags }}</div>{% endif %}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">{{ form.cni_passeport.label }}</label>
+      {{ form.cni_passeport }}
+      {% if form.cni_passeport.errors %}<div class="text-danger small mt-1">{{ form.cni_passeport.errors|striptags }}</div>{% endif %}
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">{{ form.diplome_bac.label }}</label>
+      {{ form.diplome_bac }}
+      {% if form.diplome_bac.errors %}<div class="text-danger small mt-1">{{ form.diplome_bac.errors|striptags }}</div>{% endif %}
+    </div>
+
+    <div id="section-l1" class="border rounded p-3 mb-3" style="background:#f8fafc;">
+      <p class="small fw-semibold mb-2">Pour un candidat de 1ère année</p>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">{{ form.releve_bac.label }}</label>
+        {{ form.releve_bac }}
+        {% if form.releve_bac.errors %}<div class="text-danger small mt-1">{{ form.releve_bac.errors|striptags }}</div>{% endif %}
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">{{ form.photo_identite_1.label }}</label>
+        {{ form.photo_identite_1 }}
+        {% if form.photo_identite_1.errors %}<div class="text-danger small mt-1">{{ form.photo_identite_1.errors|striptags }}</div>{% endif %}
+      </div>
+
+      <div class="mb-0">
+        <label class="form-label small fw-semibold">{{ form.photo_identite_2.label }}</label>
+        {{ form.photo_identite_2 }}
+        {% if form.photo_identite_2.errors %}<div class="text-danger small mt-1">{{ form.photo_identite_2.errors|striptags }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="border rounded p-3 mb-3" style="background:#f8fafc;">
+      <p class="small fw-semibold mb-1">Bulletins de notes</p>
+      <p class="text-muted small mb-2">
+        Obligatoire pour les candidats de 2ième à 5ième année (tous les bulletins des
+        semestres antérieurs) — facultatif pour la 1ère année.
+      </p>
+      <div id="bulletins-rows">
+        <div class="input-group mb-2 bulletin-row">
+          <input type="file" name="bulletins" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+          <button type="button" class="btn btn-outline-danger bulletin-remove" title="Retirer">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+      </div>
+      <button type="button" id="bulletin-add" class="btn btn-sm btn-outline-primary mt-1">
+        <i class="bi bi-plus-lg me-1"></i>Ajouter un fichier
+      </button>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Enregistrer mes pièces</button>
+  </form>
+
+  {% if existing_docs %}
+  <hr class="my-4">
+  <h2 class="h6 fw-bold">Pièces déjà déposées</h2>
+  <ul class="list-unstyled small">
+    {% for doc in existing_docs %}
+    <li class="mb-1">
+      <i class="bi bi-file-earmark-check-fill text-success me-1"></i>
+      {{ doc.get_document_type_display }}{% if doc.libelle %} — {{ doc.libelle }}{% endif %}
+      <a href="{{ doc.fichier.url }}" target="_blank" class="ms-2">Voir</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>
+
+<script>
+(function() {
+  var select = document.querySelector('[name="niveau_entree"]');
+  var l1 = document.getElementById('section-l1');
+  function toggle() {
+    l1.style.display = select.value === 'L1' ? '' : 'none';
+  }
+  if (select) {
+    select.addEventListener('change', toggle);
+    toggle();
+  }
+})();
+
+(function() {
+  var rows = document.getElementById('bulletins-rows');
+  var addBtn = document.getElementById('bulletin-add');
+
+  addBtn.addEventListener('click', function() {
+    var row = document.createElement('div');
+    row.className = 'input-group mb-2 bulletin-row';
+    row.innerHTML =
+      '<input type="file" name="bulletins" class="form-control" accept=".pdf,.jpg,.jpeg,.png">' +
+      '<button type="button" class="btn btn-outline-danger bulletin-remove" title="Retirer">' +
+      '<i class="bi bi-x-lg"></i></button>';
+    rows.appendChild(row);
+  });
+
+  rows.addEventListener('click', function(e) {
+    var btn = e.target.closest('.bulletin-remove');
+    if (!btn) return;
+    // Toujours garder au moins une ligne visible.
+    if (rows.querySelectorAll('.bulletin-row').length > 1) {
+      btn.closest('.bulletin-row').remove();
+    } else {
+      btn.closest('.bulletin-row').querySelector('input[type="file"]').value = '';
+    }
+  });
+})();
+</script>
+{% endblock %}

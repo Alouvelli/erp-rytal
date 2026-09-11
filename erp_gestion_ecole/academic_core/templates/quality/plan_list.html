@@ -1,0 +1,116 @@
+{% extends "base/base.html" %}
+
+{% block title %}Plans d'amélioration{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-clipboard-check me-2"></i>Plans d'amélioration</h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Qualité — Pilotage et Suivi Budgétaire</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'quality:quality_dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+    <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('planModal')).show()"><i class="bi bi-plus-lg me-1"></i>Nouveau plan</button>
+  </div>
+</div>
+
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Critère</th><th>Action</th><th>Responsable</th><th>Échéance</th><th>Statut</th><th style="width:140px;">Avancement</th><th class="text-center" style="width:120px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in plans %}
+        <tr>
+          <td style="padding:8px 16px;font-size:.78rem;">{{ p.critere.code }}</td>
+          <td>{{ p.action }}</td>
+          <td style="font-size:.78rem;">{{ p.responsable.get_full_name|default:"—" }}</td>
+          <td style="font-size:.78rem;">{{ p.date_echeance|date:"d/m/Y"|default:"—" }}</td>
+          <td>
+            <span style="border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;
+              {% if p.statut == 'realisee' %}background:#dcfce7;color:#166534;
+              {% elif p.statut == 'retardee' %}background:#fee2e2;color:#991b1b;
+              {% elif p.statut == 'en_cours' %}background:#eff6ff;color:#1d4ed8;
+              {% else %}background:#f1f5f9;color:#64748b;{% endif %}">{{ p.get_statut_display }}</span>
+          </td>
+          <td>
+            <div class="progress" style="height:8px;"><div class="progress-bar" style="width:{{ p.taux_avancement }}%;background:var(--navy);"></div></div>
+          </td>
+          <td class="text-center">
+            <div class="d-flex gap-1 justify-content-center">
+              <button type="button" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 10px;font-size:.72rem;"
+                onclick="editPlan({{ p.pk }}, '{{ p.action|escapejs }}', '{{ p.description|escapejs }}', {{ p.responsable_id|default:'null' }}, '{{ p.date_echeance|date:'Y-m-d'|default:'' }}', '{{ p.statut }}', {{ p.taux_avancement }})">Modifier</button>
+              <form method="post" action="{% url 'quality:plan_delete' p.pk %}" onsubmit="return confirm('Supprimer ce plan ?');">
+                {% csrf_token %}<button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:3px 10px;font-size:.72rem;">Supprimer</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:40px;">Aucun plan d'amélioration défini.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="planModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0" id="planModalTitle"><i class="bi bi-plus-circle me-2"></i>Nouveau plan d'amélioration</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="planForm" action="{% url 'quality:plan_create' %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3" id="plan_critere_wrap"><label class="form-label fw-semibold" style="font-size:.82rem;">Critère <span class="text-danger">*</span></label>
+            <select name="critere" class="form-select" required>
+              <option value="">— Sélectionner —</option>
+              {% for c in criteres %}<option value="{{ c.pk }}">{{ c.code }} — {{ c.libelle }}</option>{% endfor %}
+            </select></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Action <span class="text-danger">*</span></label>
+            <input type="text" name="action" id="plan_action" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Description</label>
+            <textarea name="description" id="plan_description" class="form-control" rows="2"></textarea></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Responsable</label>
+            <select name="responsable" id="plan_responsable" class="form-select">
+              <option value="">— Aucun —</option>{% for u in users %}<option value="{{ u.pk }}">{{ u.get_full_name }}</option>{% endfor %}
+            </select></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Date d'échéance</label>
+            <input type="date" name="date_echeance" id="plan_date_echeance" class="form-control"></div>
+          <div class="mb-3" id="plan_statut_wrap" style="display:none;"><label class="form-label fw-semibold" style="font-size:.82rem;">Statut</label>
+            <select name="statut" id="plan_statut" class="form-select">
+              <option value="planifiee">Planifiée</option><option value="en_cours">En cours</option><option value="realisee">Réalisée</option><option value="retardee">Retardée</option>
+            </select></div>
+          <div class="mb-3" id="plan_taux_wrap" style="display:none;"><label class="form-label fw-semibold" style="font-size:.82rem;">Taux d'avancement (%)</label>
+            <input type="number" name="taux_avancement" id="plan_taux" class="form-control" min="0" max="100"></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function editPlan(pk, action, description, responsableId, dateEcheance, statut, taux) {
+  document.getElementById('planModalTitle').innerHTML = '<i class="bi bi-pencil me-2"></i>Modifier le plan';
+  document.getElementById('planForm').action = '/qualite/plans/' + pk + '/modifier/';
+  document.getElementById('plan_critere_wrap').style.display = 'none';
+  document.getElementById('plan_critere_wrap').querySelector('select').required = false;
+  document.getElementById('plan_action').value = action;
+  document.getElementById('plan_description').value = description;
+  document.getElementById('plan_responsable').value = responsableId || '';
+  document.getElementById('plan_date_echeance').value = dateEcheance;
+  document.getElementById('plan_statut').value = statut;
+  document.getElementById('plan_taux').value = taux;
+  document.getElementById('plan_statut_wrap').style.display = 'block';
+  document.getElementById('plan_taux_wrap').style.display = 'block';
+  new bootstrap.Modal(document.getElementById('planModal')).show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,138 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:repartition_annee_list' %}">Répartition Année Académique</a></li>
+<li class="breadcrumb-item active">{{ title }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="mb-0 fw-bold" style="color:var(--navy);">
+      <i class="bi bi-calendar-range-fill me-2" style="color:var(--accent);"></i>{{ title }}
+    </h4>
+    <p class="text-muted mb-0" style="font-size:.82rem;">
+      {% if obj %}Modifier le nombre de mois pour {{ obj.class_group.name }} — {{ obj.academic_year.label }}
+      {% else %}Associer un nombre de mois à une classe pour une année académique{% endif %}
+    </p>
+  </div>
+  <a href="{% url 'accounting:repartition_annee_list' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-header border-0 py-3" style="background:var(--navy);border-radius:14px 14px 0 0;">
+        <h6 class="mb-0 fw-bold text-white">
+          <i class="bi bi-calendar3 me-2"></i>{% if obj %}Modifier la répartition{% else %}Nouvelle répartition{% endif %}
+        </h6>
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+
+          {% if obj %}
+          <!-- En mode édition : classe et année non modifiables -->
+          <div class="mb-3 p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;">
+            <div class="fw-semibold" style="color:var(--navy);font-size:.9rem;">{{ obj.class_group.name }}</div>
+            <div style="font-size:.78rem;color:#64748b;">
+              {{ obj.class_group.program.department.name }} —
+              {{ obj.class_group.program.name }} —
+              {{ obj.class_group.level|default:"" }} —
+              {{ obj.academic_year.label }}
+            </div>
+          </div>
+          {% else %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Année académique <span class="text-danger">*</span></label>
+            <select name="academic_year" class="form-select" required style="border-radius:9px;">
+              <option value="">— Sélectionner —</option>
+              {% for yr in academic_years %}
+              <option value="{{ yr.pk }}" {% if yr.is_current %}selected{% endif %}>{{ yr.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Classe <span class="text-danger">*</span></label>
+            <select name="class_group" class="form-select" required style="border-radius:9px;">
+              <option value="">— Sélectionner une classe —</option>
+              {% for cls in classes %}
+              <option value="{{ cls.pk }}">{{ cls.name }} — {{ cls.program.department.code }} ({{ cls.academic_year.label }})</option>
+              {% endfor %}
+            </select>
+            <div class="form-text">La répartition sera unique par classe + année académique.</div>
+          </div>
+          {% endif %}
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Mois de début <span class="text-danger">*</span></label>
+              <select name="start_month" class="form-select" required style="border-radius:9px;" onchange="updateEndMonth()">
+                <option value="">— Sélectionner —</option>
+                {% for num, label in months %}
+                <option value="{{ num }}" {% if obj.start_month == num %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Nombre de mois <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="number" name="nb_months" id="nb_months" class="form-control" min="1" max="12" required
+                       value="{{ obj.nb_months|default:'' }}" placeholder="Ex : 9" style="border-radius:9px 0 0 9px;"
+                       oninput="updateEndMonth()">
+                <span class="input-group-text" style="border-radius:0 9px 9px 0;background:#f1f5f9;font-size:.85rem;">mois</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Affichage dynamique du mois de fin -->
+          <div class="mb-3 p-3 rounded d-flex align-items-center gap-3" style="background:#eff6ff;border:1px solid #bfdbfe;" id="end-month-block">
+            <i class="bi bi-arrow-right-circle-fill" style="color:#2563eb;font-size:1.3rem;"></i>
+            <div>
+              <div style="font-size:.75rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Mois de fin calculé</div>
+              <div class="fw-bold" style="color:#1e40af;font-size:1rem;" id="end-month-label">—</div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Observations</label>
+            <textarea name="notes" class="form-control" rows="3" placeholder="Précisions éventuelles…" style="border-radius:9px;">{{ obj.notes|default:'' }}</textarea>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'accounting:repartition_annee_list' %}" class="btn btn-outline-secondary" style="border-radius:9px;">Annuler</a>
+            <button type="submit" class="btn" style="background:var(--navy);color:#fff;border-radius:9px;">
+              <i class="bi bi-save me-1"></i>{% if obj %}Enregistrer les modifications{% else %}Créer la répartition{% endif %}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var MONTHS = {
+  {% for num, label in months %}{{ num }}: "{{ label }}"{% if not forloop.last %},{% endif %}{% endfor %}
+};
+
+function updateEndMonth() {
+  var sel = document.querySelector('select[name="start_month"]');
+  var nb  = parseInt(document.getElementById('nb_months').value, 10);
+  var start = parseInt(sel ? sel.value : '', 10);
+  var label = document.getElementById('end-month-label');
+  if (!start || !nb || nb < 1) { label.textContent = '—'; return; }
+  var endNum = ((start - 1 + nb - 1) % 12) + 1;
+  label.textContent = MONTHS[start] + ' → ' + MONTHS[endNum] + ' (' + nb + ' mois)';
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  updateEndMonth();
+});
+</script>
+{% endblock %}

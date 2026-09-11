@@ -1,0 +1,49 @@
+{% extends 'base/base.html' %}
+{% block title %}Changement de filière créé{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:list' %}">Étudiants</a></li>
+<li class="breadcrumb-item active">Changement de filière</li>
+{% endblock %}
+
+{% block content %}
+<div class="card-section" style="max-width:680px;margin:0 auto;">
+  <div class="p-4 text-center">
+    <div style="width:64px;height:64px;border-radius:50%;background:#dcfce7;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <i class="bi bi-check-circle-fill" style="font-size:2rem;color:#16a34a;"></i>
+    </div>
+    <h5 class="fw-bold mb-2" style="color:var(--navy);">Demande de changement de filière créée</h5>
+    <p style="font-size:.88rem;color:#64748b;">
+      La demande pour <strong>{{ enrollment.student.full_name }}</strong> ({{ enrollment.student.matricule }})
+      a été enregistrée en statut <strong>En attente</strong>.
+    </p>
+
+    <div class="p-3 my-3 text-start" style="background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;font-size:.83rem;">
+      <div class="d-flex justify-content-between py-1"><span class="text-muted">Filière précédente</span><strong>{{ enrollment.previous_class.name|default:"—" }}</strong></div>
+      <div class="d-flex justify-content-between py-1"><span class="text-muted">Nouvelle classe</span><strong>{{ enrollment.class_group.name }}</strong></div>
+      <div class="d-flex justify-content-between py-1"><span class="text-muted">Nouvelle filière</span><strong>{{ enrollment.class_group.program.name|default:"—" }}</strong></div>
+      <div class="d-flex justify-content-between py-1"><span class="text-muted">Année académique</span><strong>{{ enrollment.academic_year }}</strong></div>
+      {% if enrollment.credit_report %}
+      <div class="d-flex justify-content-between py-1"><span class="text-muted">Crédit reporté</span><strong style="color:#166534;">{{ enrollment.credit_report|floatformat:0 }} FCFA</strong></div>
+      {% endif %}
+    </div>
+
+    <div class="p-3 mb-4 text-start" style="background:#fff7ed;border-radius:8px;border:1px solid #fed7aa;font-size:.8rem;color:#9a3412;">
+      <i class="bi bi-info-circle me-1"></i>
+      Imprimez ou téléchargez la fiche ci-dessous et transmettez-la au <strong>Trésorier Général</strong> pour validation.
+      Tant que la validation n'est pas faite, l'étudiant reste en attente et n'apparaît dans aucune classe.
+    </div>
+
+    <div class="d-flex gap-2 justify-content-center flex-wrap">
+      <a href="{% url 'students:fiche_changement_filiere_pdf' enrollment.pk %}" target="_blank" class="btn btn-sm" style="background:#c2410c;color:#fff;">
+        <i class="bi bi-file-earmark-pdf-fill me-1"></i>Imprimer / Télécharger la fiche
+      </a>
+      <a href="{% url 'students:changement_filiere' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-plus-lg me-1"></i>Nouveau changement de filière
+      </a>
+      <a href="{% url 'students:list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Retour à la liste des étudiants
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

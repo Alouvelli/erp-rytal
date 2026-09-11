@@ -1,0 +1,146 @@
+{% extends 'base/base.html' %}
+{% block title %}Historique des clôtures{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Direction Administrative Financière</a></li>
+<li class="breadcrumb-item"><a href="{% url 'accounting:etat_journalier' %}">État journalier</a></li>
+<li class="breadcrumb-item active">Clôtures</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-archive-fill"></i></span>
+    Historique des clôtures comptables
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounting:closure_email_config' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-envelope me-1"></i>E-mails destinataires
+      {% if email_cfg.recipients %}
+        <span style="background:#dcfce7;color:#166534;font-size:.7rem;padding:1px 6px;border-radius:10px;margin-left:4px;">
+          {{ email_cfg.get_recipients_list|length }}
+        </span>
+      {% else %}
+        <span style="background:#fee2e2;color:#dc2626;font-size:.7rem;padding:1px 6px;border-radius:10px;margin-left:4px;">
+          0
+        </span>
+      {% endif %}
+    </a>
+    <a href="{% url 'accounting:etat_journalier' %}" class="btn btn-sm"
+       style="background:var(--navy);color:#fff;border:none;">
+      <i class="bi bi-plus-lg me-1"></i>État du jour
+    </a>
+  </div>
+</div>
+
+<div class="card-section mb-3">
+  <div style="padding:14px 20px;">
+    <form method="get" class="d-flex align-items-center gap-2">
+      <label style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">
+        <i class="bi bi-calendar-range me-1"></i>Année académique
+      </label>
+      <select name="annee" class="form-select form-select-sm" style="width:180px;" onchange="this.form.submit()">
+        {% for y in academic_years %}
+        <option value="{{ y.pk }}" {% if selected_year.pk == y.pk %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;">
+        <i class="bi bi-clock-history"></i>
+      </span>Toutes les clôtures
+    </h6>
+    <span style="font-size:.8rem;color:#64748b;font-weight:600;">{{ clotures|length }} clôture{{ clotures|length|pluralize }}</span>
+  </div>
+
+  {% if clotures %}
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Année académique</th>
+          <th class="text-end">Inscriptions (FCFA)</th>
+          <th class="text-end">Scolarité (FCFA)</th>
+          <th class="text-end">Soutenance (FCFA)</th>
+          <th class="text-end" style="color:#16a34a;">Total encaissé</th>
+          <th class="text-end" style="color:#dc2626;">Restant dû</th>
+          <th>Inscriptions</th>
+          <th>Suspendus</th>
+          <th>Clôturé par</th>
+          <th>Observations</th>
+          {% if request.user.is_inst_admin %}<th class="text-center">Actions</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in clotures %}
+        <tr>
+          <td style="font-weight:700;white-space:nowrap;">{{ c.closure_date|date:"d/m/Y" }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ c.academic_year|default:"—" }}</td>
+          <td class="text-end" style="font-size:.83rem;font-weight:600;">
+            {{ c.caisse_inscription|floatformat:0 }}
+          </td>
+          <td class="text-end" style="font-size:.83rem;font-weight:600;">
+            {{ c.caisse_scolarite|floatformat:0 }}
+          </td>
+          <td class="text-end" style="font-size:.83rem;font-weight:600;">
+            {{ c.caisse_soutenance|floatformat:0 }}
+          </td>
+          <td class="text-end" style="font-weight:800;color:#16a34a;font-size:.9rem;">
+            {{ c.caisse_total|floatformat:0 }}
+          </td>
+          <td class="text-end" style="font-weight:700;color:#dc2626;font-size:.83rem;">{{ c.total_remaining|floatformat:0 }}</td>
+          <td style="font-size:.83rem;">
+            <span style="color:#16a34a;font-weight:600;">{{ c.nb_validated }}✓</span>
+            {% if c.nb_pending %}
+            <span style="color:#f59e0b;font-weight:600;margin-left:4px;">{{ c.nb_pending }}⏳</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">
+            {% if c.nb_suspended %}
+            <span class="badge" style="background:#fee2e2;color:#dc2626;font-size:.72rem;border-radius:20px;padding:3px 8px;">
+              {{ c.nb_suspended }}
+            </span>
+            {% else %}
+            <span style="color:#94a3b8;">0</span>
+            {% endif %}
+          </td>
+          <td style="font-size:.82rem;color:#64748b;">
+            {% if c.closed_by %}{{ c.closed_by.get_full_name|default:c.closed_by.username }}{% else %}—{% endif %}
+          </td>
+          <td style="font-size:.78rem;color:#64748b;max-width:160px;">
+            {{ c.notes|truncatechars:60|default:"—" }}
+          </td>
+          {% if request.user.is_inst_admin %}
+          <td class="text-center" style="white-space:nowrap;">
+            <a href="{% url 'accounting:closure_edit' c.pk %}"
+               class="btn btn-sm"
+               style="background:#e0f2fe;color:#0369a1;border-radius:6px;padding:3px 8px;font-size:.75rem;margin-right:2px;"
+               title="Modifier">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <a href="{% url 'accounting:closure_delete' c.pk %}"
+               class="btn btn-sm"
+               style="background:#fee2e2;color:#dc2626;border-radius:6px;padding:3px 8px;font-size:.75rem;"
+               title="Supprimer">
+              <i class="bi bi-trash3"></i>
+            </a>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-5" style="color:#94a3b8;">
+    <i class="bi bi-archive" style="font-size:2.5rem;display:block;margin-bottom:10px;"></i>
+    Aucune clôture enregistrée.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

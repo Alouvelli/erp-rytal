@@ -1,0 +1,103 @@
+{% extends 'base/base.html' %}
+{% block title %}COIP — Rapport d'insertion{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:report_list' %}">Rapports</a></li>
+<li class="breadcrumb-item active">Insertion par filière</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0d9488;"><i class="bi bi-graph-up-arrow"></i></span>
+    Taux d'insertion par filière
+  </h1>
+  <a href="{% url 'coip:insertion_report_pdf' %}?promotion={{ promotion_filtre|urlencode }}&annee={{ annee_filtre|default:'' }}"
+     class="btn btn-sm btn-outline-primary" target="_blank">
+    <i class="bi bi-file-earmark-pdf me-1"></i>Télécharger le PDF
+  </a>
+</div>
+
+<div class="card-section mb-3">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-sm-4 col-md-3">
+        <label class="form-label fw-semibold" style="font-size:.82rem;">Promotion</label>
+        <select name="promotion" class="form-select form-select-sm">
+          <option value="">Toutes</option>
+          {% for p in promotions %}
+          <option value="{{ p }}" {% if p == promotion_filtre %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-4 col-md-3">
+        <label class="form-label fw-semibold" style="font-size:.82rem;">Année d'obtention</label>
+        <select name="annee" class="form-select form-select-sm">
+          <option value="">Toutes</option>
+          {% for a in annees %}
+          <option value="{{ a }}" {% if a == annee_filtre %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-4 col-md-3">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+        {% if promotion_filtre or annee_filtre %}
+        <a href="{% url 'coip:insertion_report' %}" class="btn btn-sm btn-outline-secondary">Réinitialiser</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-4">
+    <div class="card-section p-3">
+      <div style="font-size:.78rem;color:#64748b;font-weight:600;">ALUMNI RECENSÉS</div>
+      <div style="font-size:1.6rem;font-weight:700;color:var(--navy);">{{ data.total_alumni }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card-section p-3">
+      <div style="font-size:.78rem;color:#64748b;font-weight:600;">EN ACTIVITÉ</div>
+      <div style="font-size:1.6rem;font-weight:700;color:var(--navy);">{{ data.total_employed }}</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card-section p-3">
+      <div style="font-size:.78rem;color:#64748b;font-weight:600;">TAUX D'INSERTION GLOBAL</div>
+      <div style="font-size:1.6rem;font-weight:700;color:#0d9488;">{{ data.taux_global }} %</div>
+    </div>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="card-section-header"><h6 class="card-section-title">Détail par filière</h6></div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Filière</th>
+          <th class="text-center">Alumni recensés</th>
+          <th class="text-center">En activité</th>
+          <th class="text-center">Taux d'insertion</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in data.par_filiere %}
+        <tr>
+          <td style="font-size:.85rem;font-weight:600;">{{ r.filiere_nom }}</td>
+          <td class="text-center" style="font-size:.85rem;">{{ r.total }}</td>
+          <td class="text-center" style="font-size:.85rem;">{{ r.employed }}</td>
+          <td class="text-center" style="font-size:.85rem;">
+            <span class="badge" style="background:{% if r.taux >= 60 %}#16a34a{% elif r.taux >= 30 %}#f59e0b{% else %}#dc2626{% endif %};">
+              {{ r.taux }} %
+            </span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-center text-muted py-4">Aucun alumni recensé pour ces filtres.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

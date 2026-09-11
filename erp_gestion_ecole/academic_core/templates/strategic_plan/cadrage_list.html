@@ -1,0 +1,127 @@
+{% extends "base/base.html" %}
+
+{% block title %}Cadrages stratégiques{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-flag-fill me-2"></i>Cadrages stratégiques
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Plan Stratégique de Développement</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap no-print">
+    <a href="{% url 'accounting:budget_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    <a href="{% url 'strategic_plan:cadrage_import' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-file-earmark-arrow-up-fill me-1"></i>Importer
+    </a>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+      <i class="bi bi-printer-fill me-1"></i>Imprimer
+    </button>
+    <a href="{% url 'strategic_plan:cadrage_pdf' %}" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>Télécharger PDF
+    </a>
+    <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('cadrageModal')).show()">
+      <i class="bi bi-plus-lg me-1"></i>Nouveau cadrage
+    </button>
+  </div>
+</div>
+
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Libellé</th>
+          <th>Période</th>
+          <th>Vision</th>
+          <th class="text-center no-print" style="width:120px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in cadrages %}
+        <tr>
+          <td style="padding:8px 16px;font-weight:700;color:var(--navy);">{{ c.libelle }}</td>
+          <td>{{ c.annee_debut }} - {{ c.annee_fin }}</td>
+          <td style="font-size:.78rem;">{{ c.vision|truncatechars:80 }}</td>
+          <td class="text-center no-print">
+            <div class="d-flex gap-1 justify-content-center">
+              <button type="button" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 10px;font-size:.72rem;"
+                onclick="editCadrage({{ c.pk }}, '{{ c.libelle|escapejs }}', {{ c.annee_debut }}, {{ c.annee_fin }}, '{{ c.vision|escapejs }}', '{{ c.mission|escapejs }}', '{{ c.valeurs|escapejs }}')">Modifier</button>
+              <form method="post" action="{% url 'strategic_plan:cadrage_delete' c.pk %}" onsubmit="return confirm('Supprimer ce cadrage ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:3px 10px;font-size:.72rem;">Supprimer</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:40px;">Aucun cadrage stratégique défini.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="cadrageModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0" id="cadrageModalTitle"><i class="bi bi-plus-circle me-2"></i>Nouveau cadrage stratégique</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="cadrageForm" action="{% url 'strategic_plan:cadrage_create' %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Libellé <span class="text-danger">*</span></label>
+            <input type="text" name="libelle" id="cadrage_libelle" class="form-control" required>
+          </div>
+          <div class="row mb-3">
+            <div class="col-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Année de début <span class="text-danger">*</span></label>
+              <input type="number" name="annee_debut" id="cadrage_annee_debut" class="form-control" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Année de fin <span class="text-danger">*</span></label>
+              <input type="number" name="annee_fin" id="cadrage_annee_fin" class="form-control" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Vision</label>
+            <textarea name="vision" id="cadrage_vision" class="form-control" rows="2"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Mission</label>
+            <textarea name="mission" id="cadrage_mission" class="form-control" rows="2"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Valeurs</label>
+            <textarea name="valeurs" id="cadrage_valeurs" class="form-control" rows="3" placeholder="Une valeur par ligne"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function editCadrage(pk, libelle, debut, fin, vision, mission, valeurs) {
+  document.getElementById('cadrageModalTitle').innerHTML = '<i class="bi bi-pencil me-2"></i>Modifier le cadrage';
+  document.getElementById('cadrageForm').action = '/plan-strategique/cadrages/' + pk + '/modifier/';
+  document.getElementById('cadrage_libelle').value = libelle;
+  document.getElementById('cadrage_annee_debut').value = debut;
+  document.getElementById('cadrage_annee_fin').value = fin;
+  document.getElementById('cadrage_vision').value = vision;
+  document.getElementById('cadrage_mission').value = mission;
+  document.getElementById('cadrage_valeurs').value = valeurs;
+  new bootstrap.Modal(document.getElementById('cadrageModal')).show();
+}
+</script>
+{% endblock %}

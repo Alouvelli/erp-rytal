@@ -1,0 +1,56 @@
+{% extends 'base/base.html' %}
+{% block title %}Dates d'inscription — {{ department.name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003d82;"><i class="bi bi-calendar-range-fill"></i></span>
+    Dates d'inscription — {{ department.name }}
+  </h1>
+  {% if request.user.is_communication %}
+  <a href="{% url 'admissions:department_admissions_dates_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+  {% else %}
+  <a href="{% url 'admissions:mes_filieres_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+  {% endif %}
+</div>
+
+<div class="card-section p-4 mx-auto" style="max-width: 600px;">
+  <p class="text-muted small">
+    En dehors de cette fenêtre de dates, le bandeau du département reste visible sur le
+    portail public mais affiche « Inscriptions fermées » — plus aucune candidature ne peut y
+    être soumise. Laisser un champ vide retire la limite correspondante.
+  </p>
+
+  <div class="mb-3 p-2" style="border-radius:8px;{% if department.admissions_ouvertes %}background:#f0fdf4;border:1px solid #bbf7d0;{% else %}background:#fef2f2;border:1px solid #fecaca;{% endif %}">
+    <span class="fw-semibold {% if department.admissions_ouvertes %}text-success{% else %}text-danger{% endif %}">
+      <i class="bi {% if department.admissions_ouvertes %}bi-check-circle-fill{% else %}bi-x-circle-fill{% endif %} me-1"></i>
+      Portail actuellement {% if department.admissions_ouvertes %}ouvert{% else %}fermé{% endif %} pour ce département
+    </span>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    {% for field in form %}
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
+      {% if field.help_text %}<div class="text-muted small mt-1">{{ field.help_text }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+      {% if department.admissions_date_ouverture or department.admissions_date_fermeture %}
+      <button type="submit" formaction="{% url 'admissions:department_admissions_dates_clear' department.pk %}"
+              class="btn btn-outline-danger"
+              onclick="return confirm('Supprimer les dates d\'inscription de {{ department.name|escapejs }} ? Le portail redeviendra toujours ouvert pour ce département.');">
+        Supprimer les dates
+      </button>
+      {% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

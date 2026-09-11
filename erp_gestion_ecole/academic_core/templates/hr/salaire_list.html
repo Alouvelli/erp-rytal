@@ -1,0 +1,93 @@
+{% extends "base/base.html" %}
+{% block title %}Gestion des salaires{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'hr:dashboard' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+      <div>
+        <h5 class="mb-0 fw-bold">Gestion des salaires</h5>
+        <small class="text-muted">Configuration salariale récurrente du personnel</small>
+      </div>
+    </div>
+    <div class="card border-0 shadow-sm px-3 py-2" style="background:#f0fdf4;">
+      <span style="font-size:.75rem;color:#166534;font-weight:600;">Masse salariale mensuelle (net)</span>
+      <div style="font-size:1.1rem;font-weight:700;color:#15803d;">{{ total_masse|floatformat:0 }} FCFA</div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 justify-content-end mb-3 no-print">
+    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+      <i class="bi bi-printer me-1"></i>Imprimer
+    </button>
+    <a href="{% url 'hr:salaire_pdf' %}" class="btn btn-sm" style="background:#dc2626;color:#fff;">
+      <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+    </a>
+    <a href="{% url 'hr:salaire_word' %}" class="btn btn-sm" style="background:#1d4ed8;color:#fff;">
+      <i class="bi bi-file-earmark-word me-1"></i>Word
+    </a>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3">
+      <span class="fw-bold">{{ rows|length }} employé{{ rows|length|pluralize }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead style="background:#f8fafc;">
+            <tr style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">
+              <th class="px-3">Employé</th>
+              <th class="text-end">Salaire de base</th>
+              <th class="text-end">Primes</th>
+              <th class="text-end">Retenues</th>
+              <th class="text-end">Net</th>
+              <th>Statut</th>
+              <th class="text-end px-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr>
+              <td class="px-3">
+                <span class="fw-semibold" style="font-size:.87rem;">{{ row.employe.get_full_name }}</span>
+                <div style="font-size:.73rem;color:#94a3b8;">{{ row.employe.role.get_name_display|default:'—' }}</div>
+              </td>
+              {% if row.config %}
+              <td class="text-end" style="font-size:.85rem;">{{ row.config.salaire_base|floatformat:0 }}</td>
+              <td class="text-end" style="font-size:.85rem;">{{ row.config.primes|floatformat:0 }}</td>
+              <td class="text-end" style="font-size:.85rem;">{{ row.config.retenues|floatformat:0 }}</td>
+              <td class="text-end fw-bold" style="font-size:.88rem;color:#15803d;">{{ row.config.salaire_net|floatformat:0 }}</td>
+              <td>
+                {% if row.config.is_active %}
+                <span class="badge" style="background:#dcfce7;color:#15803d;">Actif</span>
+                {% else %}
+                <span class="badge" style="background:#f1f5f9;color:#94a3b8;">Inactif</span>
+                {% endif %}
+              </td>
+              {% else %}
+              <td colspan="5" class="text-center" style="font-size:.8rem;color:#94a3b8;">Aucune configuration salariale</td>
+              {% endif %}
+              <td class="text-end px-3">
+                <a href="{% url 'hr:salaire_edit' pk=row.employe.pk %}" class="btn btn-xs btn-outline-primary" style="padding:4px 10px;font-size:.73rem;">
+                  <i class="bi bi-pencil-square me-1"></i>{% if row.config %}Modifier{% else %}Configurer{% endif %}
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center py-5 text-muted">
+                <i class="bi bi-cash-stack d-block mb-2" style="font-size:2rem;opacity:.3;"></i>
+                Aucun employé trouvé.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

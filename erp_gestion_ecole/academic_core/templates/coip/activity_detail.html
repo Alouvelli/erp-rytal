@@ -1,0 +1,63 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ activity.titre }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:activity_list' %}">Activités</a></li>
+<li class="breadcrumb-item active">{{ activity.titre }}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-calendar-event-fill"></i></span>
+    {{ activity.titre }}
+  </h1>
+  <a href="{% url 'coip:activity_edit' activity.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i>Modifier</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card-section p-3" style="font-size:.85rem;">
+      <div class="mb-2"><strong>Type :</strong> {{ activity.get_type_activite_display }}</div>
+      <div class="mb-2"><strong>Statut :</strong> <span class="badge bg-{{ activity.statut_color }}">{{ activity.get_status_display }}</span></div>
+      <div class="mb-2"><strong>Date :</strong> {{ activity.date_debut|date:"d/m/Y H:i" }}{% if activity.date_fin %} → {{ activity.date_fin|date:"d/m/Y H:i" }}{% endif %}</div>
+      <div class="mb-2"><strong>Lieu :</strong> {{ activity.lieu|default:"—" }}</div>
+      <div class="mb-2"><strong>Responsable :</strong> {{ activity.responsable.get_full_name|default:"—" }}</div>
+      {% if activity.description %}<div class="mb-2"><strong>Description :</strong><br>{{ activity.description|linebreaksbr }}</div>{% endif %}
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title">Participants ({{ participants|length }})</h6></div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Présent</th><th></th></tr></thead>
+          <tbody>
+            {% for p in participants %}
+            <tr>
+              <td style="font-size:.82rem;">{{ p.user.get_full_name }}</td>
+              <td style="font-size:.82rem;">{{ p.get_role_display }}</td>
+              <td>
+                <form method="post" action="{% url 'coip:activity_participant_toggle_present' activity.pk p.pk %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm {% if p.present %}btn-success{% else %}btn-outline-secondary{% endif %}">
+                    {% if p.present %}<i class="bi bi-check-lg"></i>{% else %}—{% endif %}
+                  </button>
+                </form>
+              </td>
+              <td>
+                <form method="post" action="{% url 'coip:activity_participant_remove' activity.pk p.pk %}" onsubmit="return confirm('Retirer ce participant ?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-action delete" title="Retirer"><i class="bi bi-trash"></i></button>
+                </form>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Aucun participant inscrit.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

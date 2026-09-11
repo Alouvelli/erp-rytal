@@ -1,0 +1,117 @@
+{% extends 'base/base.html' %}
+{% block title %}Années académiques{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academic_structure:index' %}">Structure</a></li>
+<li class="breadcrumb-item active">Années académiques</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:var(--navy);"><i class="bi bi-calendar3"></i></span>Années académiques</h1>
+  {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalYear"><i class="bi bi-plus-lg"></i> Nouvelle année</button>
+  {% endif %}
+</div>
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ul"></i></span>Liste des années</h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table" id="tbl-years">
+      <thead><tr><th>Année</th><th>Date début</th><th>Date fin</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for year in years %}
+        <tr>
+          <td style="font-weight:600;font-size:.85rem;">{{ year.name }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ year.start_date|date:"d/m/Y"|default:"—" }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ year.end_date|date:"d/m/Y"|default:"—" }}</td>
+          <td>{% if year.is_current %}<span class="badge-statut-inscrit">En cours</span>{% else %}<span class="badge-statut-en_cours">Archivée</span>{% endif %}</td>
+          <td>
+            {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+            <div class="d-flex gap-1">
+              <button class="btn-action edit" title="Modifier"
+                onclick="openEditYear({{ year.pk }},'{{ year.label|escapejs }}','{{ year.start_date|date:'Y-m-d' }}','{{ year.end_date|date:'Y-m-d' }}',{{ year.is_current|lower }})">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <form method="post" style="display:inline;" onsubmit="return confirm('Supprimer cette année académique ?');">
+                {% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="pk" value="{{ year.pk }}">
+                <button type="submit" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+<!-- Modal création -->
+<div class="modal fade" id="modalYear" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nouvelle année académique</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'academic_structure:year_create' %}">
+        {% csrf_token %}<input type="hidden" name="action" value="create">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label">Nom <span class="text-danger">*</span></label><input type="text" name="name" class="form-control" placeholder="ex: 2024-2025" required></div>
+          <div class="row g-3">
+            <div class="col-6"><label class="form-label">Date début</label><input type="date" name="start_date" class="form-control"></div>
+            <div class="col-6"><label class="form-label">Date fin</label><input type="date" name="end_date" class="form-control"></div>
+          </div>
+          <div class="form-check mt-3"><input class="form-check-input" type="checkbox" name="is_current" id="isCurrent"><label class="form-check-label" for="isCurrent">Année en cours</label></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal édition -->
+<div class="modal fade" id="modalEditYear" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-pencil me-2"></i>Modifier l'année</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post">
+        {% csrf_token %}<input type="hidden" name="action" value="edit"><input type="hidden" name="pk" id="eyPk">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label">Nom <span class="text-danger">*</span></label><input type="text" name="name" id="eyName" class="form-control" required></div>
+          <div class="row g-3">
+            <div class="col-6"><label class="form-label">Date début</label><input type="date" name="start_date" id="eyStart" class="form-control"></div>
+            <div class="col-6"><label class="form-label">Date fin</label><input type="date" name="end_date" id="eyEnd" class="form-control"></div>
+          </div>
+          <div class="form-check mt-3"><input class="form-check-input" type="checkbox" name="is_current" id="eyIsCurrent"><label class="form-check-label" for="eyIsCurrent">Année en cours</label></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+$(document).ready(function(){ $('#tbl-years').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}}); });
+function openEditYear(pk, name, start, end, isCurrent) {
+  document.getElementById('eyPk').value = pk;
+  document.getElementById('eyName').value = name;
+  document.getElementById('eyStart').value = start !== 'None' ? start : '';
+  document.getElementById('eyEnd').value = end !== 'None' ? end : '';
+  document.getElementById('eyIsCurrent').checked = isCurrent;
+  new bootstrap.Modal(document.getElementById('modalEditYear')).show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Suivi budgétaire — {{ direction.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-bar-chart-steps me-2"></i>Suivi budgétaire — {{ direction.name }}
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Suivi quotidien du budget de la direction</p>
+  </div>
+  <div class="d-flex gap-2">
+    {% if can_manage_budget %}
+    <a href="{% url 'accounting:suivi_budget_directions' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    <a href="{% url 'accounting:ligne_budgetaire_list' %}?direction={{ direction.pk }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-list-columns-reverse me-1"></i>Lignes budgétaires de cette direction
+    </a>
+    <a href="{% url 'accounting:caisse_movement_list' %}?direction={{ direction.pk }}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-arrow-left-right me-1"></i>Mouvements de caisse de cette direction
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Filtres -->
+<div class="card-section mb-3" style="padding:16px 20px;">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Exercice</label>
+      <select name="annee" class="form-select form-select-sm">
+        {% for y in academic_years %}
+        <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Date début</label>
+      <input type="date" name="from" value="{{ date_from|date:'Y-m-d' }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Date fin</label>
+      <input type="date" name="to" value="{{ date_to|date:'Y-m-d' }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+    </div>
+  </form>
+</div>
+
+<!-- Cartes résumé (exercice complet) -->
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:1.25rem;font-weight:800;color:var(--navy);">{{ budget|floatformat:0|intcomma }} F</div>
+      <div class="text-muted" style="font-size:.78rem;">Budget alloué (exercice)</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:1.25rem;font-weight:800;color:#991b1b;">{{ total_sorties_annee|floatformat:0|intcomma }} F</div>
+      <div class="text-muted" style="font-size:.78rem;">Sorties caisse (exercice)</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:1.25rem;font-weight:800;{% if restant_annee < 0 %}color:#991b1b;{% else %}color:#166534;{% endif %}">{{ restant_annee|floatformat:0|intcomma }} F</div>
+      <div class="text-muted" style="font-size:.78rem;">Restant (exercice)</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    {% widthratio taux_annee 1 100 as taux_annee_pct %}
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:1.4rem;font-weight:800;{% if taux_annee_pct >= 100 %}color:#991b1b;{% elif taux_annee_pct >= 80 %}color:#92400e;{% else %}color:#166534;{% endif %}">{{ taux_annee_pct }}%</div>
+      <div class="text-muted" style="font-size:.78rem;">Taux de consommation (exercice)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Détail quotidien -->
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Date</th>
+          <th class="text-end">Sorties du jour</th>
+          <th class="text-end">Cumul (depuis le début de l'exercice)</th>
+          <th class="text-end">Restant sur budget</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for j in jours %}
+        <tr>
+          <td style="padding:8px 16px;font-weight:700;color:var(--navy);">{{ j.date|date:"d/m/Y" }}</td>
+          <td class="text-end" style="color:#991b1b;">{{ j.montant_jour|floatformat:0|intcomma }} F</td>
+          <td class="text-end">{{ j.cumul|floatformat:0|intcomma }} F</td>
+          <td class="text-end fw-bold" style="{% if j.restant < 0 %}color:#991b1b;{% else %}color:#166534;{% endif %}">
+            {{ j.restant|floatformat:0|intcomma }} F
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:40px;">Aucune sortie de caisse rattachée à cette direction sur la période.</td></tr>
+        {% endfor %}
+      </tbody>
+      {% if jours %}
+      <tfoot>
+        <tr style="background:#f8fafc;border-top:2px solid #e2e8f0;font-weight:700;">
+          <td style="padding:10px 16px;">Total (période)</td>
+          <td class="text-end" style="color:#991b1b;">{{ total_periode|floatformat:0|intcomma }} F</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% endblock %}

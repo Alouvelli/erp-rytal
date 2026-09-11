@@ -1,0 +1,65 @@
+{% extends "base/base.html" %}
+{% block title %}Évaluations{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-statut { display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:.73rem;font-weight:600; }
+.be-A_FAIRE      { background:#f1f5f9;color:#475569; }
+.be-AUTO_EVALUEE { background:#e0f2fe;color:#0369a1; }
+.be-EVALUEE      { background:#dbeafe;color:#1e40af; }
+.be-FINALISEE    { background:#dcfce7;color:#15803d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'hr:dashboard' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+      <div>
+        <h5 class="mb-0 fw-bold">Évaluations</h5>
+        <small class="text-muted">{% if vue == 'toutes' %}Toutes les évaluations{% else %}Mes évaluations{% endif %}</small>
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      {% if is_manager %}
+      <a href="?vue=mine" class="btn btn-sm {% if vue != 'toutes' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Les miennes</a>
+      <a href="?vue=toutes" class="btn btn-sm {% if vue == 'toutes' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Toutes</a>
+      <a href="{% url 'hr:evaluation_campaign_list' %}" class="btn btn-sm btn-outline-primary fw-semibold">
+        <i class="bi bi-gear me-1"></i>Campagnes
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead style="background:#f8fafc;">
+            <tr style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">
+              {% if vue == 'toutes' %}<th class="px-3">Employé</th>{% endif %}
+              <th class="{% if vue != 'toutes' %}px-3{% endif %}">Campagne</th><th>Statut</th><th>Note</th><th class="text-end px-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in evaluations %}
+            <tr>
+              {% if vue == 'toutes' %}<td class="px-3 fw-semibold" style="font-size:.87rem;">{{ e.user.get_full_name }}</td>{% endif %}
+              <td class="{% if vue != 'toutes' %}px-3{% endif %}" style="font-size:.83rem;">{{ e.campaign.label }} ({{ e.campaign.annee }})</td>
+              <td><span class="badge-statut be-{{ e.statut }}">{{ e.get_statut_display }}</span></td>
+              <td style="font-size:.83rem;">{% if e.note_globale %}{{ e.note_globale }}/5{% else %}—{% endif %}</td>
+              <td class="text-end px-3">
+                <a href="{% url 'hr:evaluation_detail' pk=e.pk %}" class="btn btn-xs btn-outline-secondary" style="padding:4px 10px;font-size:.73rem;"><i class="bi bi-eye"></i> Voir</a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center py-5 text-muted">Aucune évaluation.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

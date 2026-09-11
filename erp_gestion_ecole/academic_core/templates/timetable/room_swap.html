@@ -1,0 +1,357 @@
+{% extends 'base/base.html' %}
+{% block title %}Permutation de salles{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'timetable:index' %}">Emploi du temps</a></li>
+<li class="breadcrumb-item active">Permutation de salles</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.entry-card {
+  padding:12px 14px;border:2px solid var(--border);border-radius:10px;cursor:pointer;
+  transition:all .15s;background:#fff;user-select:none;
+}
+.entry-card:hover { border-color:var(--navy); background:#f8fafc; }
+.entry-card.selected-1 { border-color:var(--navy); background:#eff6ff; }
+.entry-card.selected-2 { border-color:#7c3aed; background:#f5f3ff; }
+.day-label {
+  font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:#94a3b8;padding:10px 0 6px;
+}
+.swap-arrow {
+  display:flex;align-items:center;justify-content:center;gap:20px;
+  padding:20px;margin:16px 0;
+  background:linear-gradient(135deg,#eff6ff,#f5f3ff);
+  border-radius:14px;border:2px dashed var(--border);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-arrow-left-right"></i></span>
+    Permutation de salles
+  </h1>
+  <a href="{% url 'timetable:index' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<!-- ── Explication ──────────────────────────────────────────────────────────── -->
+<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;gap:10px;align-items:flex-start;">
+  <i class="bi bi-info-circle-fill" style="color:#d97706;flex-shrink:0;margin-top:2px;"></i>
+  <div style="font-size:.84rem;color:#92400e;">
+    <strong>Comment ça marche :</strong> Sélectionnez deux créneaux ci-dessous.
+    Leurs salles seront échangées si aucun conflit n'est détecté.
+    Les salles sont partagées entre tous les départements — une permutation s'applique globalement.
+  </div>
+</div>
+
+<!-- ── Zone de sélection et aperçu swap ───────────────────────────────────── -->
+<form method="post" id="swapForm">
+  {% csrf_token %}
+  <input type="hidden" name="entry1_id" id="entry1_id">
+  <input type="hidden" name="entry2_id" id="entry2_id">
+
+  <div class="row g-3 mb-3">
+    <!-- Créneau 1 -->
+    <div class="col-md-5">
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:24px;height:24px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;color:#fff;font-weight:700;">1</span>
+            Premier créneau
+          </h6>
+        </div>
+        <div id="preview1" style="padding:14px 16px;min-height:80px;display:flex;align-items:center;justify-content:center;">
+          <div style="color:#cbd5e1;font-size:.84rem;text-align:center;">
+            <i class="bi bi-hand-index d-block mb-1" style="font-size:1.5rem;"></i>
+            Cliquez sur un créneau
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Icône swap -->
+    <div class="col-md-2 d-flex align-items-center justify-content-center">
+      <div style="width:48px;height:48px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;" id="swapIcon">
+        <i class="bi bi-arrow-left-right" style="color:#94a3b8;font-size:1.2rem;"></i>
+      </div>
+    </div>
+
+    <!-- Créneau 2 -->
+    <div class="col-md-5">
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:24px;height:24px;border-radius:6px;background:#7c3aed;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;color:#fff;font-weight:700;">2</span>
+            Deuxième créneau
+          </h6>
+        </div>
+        <div id="preview2" style="padding:14px 16px;min-height:80px;display:flex;align-items:center;justify-content:center;">
+          <div style="color:#cbd5e1;font-size:.84rem;text-align:center;">
+            <i class="bi bi-hand-index d-block mb-1" style="font-size:1.5rem;"></i>
+            Cliquez sur un créneau
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bouton permuter -->
+  <div class="text-center mb-4">
+    <button type="submit" id="btnSwap" class="btn btn-primary" disabled
+      style="padding:10px 30px;border-radius:10px;font-weight:700;">
+      <i class="bi bi-arrow-left-right me-2"></i>Permuter les salles
+    </button>
+  </div>
+</form>
+
+<!-- ── Liste des créneaux ────────────────────────────────────────────────────── -->
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-calendar-week"></i></span>
+      Créneaux disponibles
+    </h6>
+    <div style="font-size:.78rem;color:#94a3b8;"><span id="selCount">0</span>/2 sélectionné(s)</div>
+  </div>
+
+  <div style="padding:0 12px 16px;">
+    {% if grouped_dept %}
+      {% for dg in grouped_dept %}
+      {% with di=forloop.counter %}
+      <!-- ═══ Niveau 1 : Département ═══ -->
+      <div style="border:2px solid #e2e8f0;border-radius:12px;margin-bottom:12px;overflow:hidden;">
+
+        <!-- En-tête département -->
+        <button type="button" onclick="toggleAcc('dept-{{ di }}')"
+                style="width:100%;display:flex;align-items:center;justify-content:space-between;
+                       background:var(--navy);border:none;padding:12px 16px;cursor:pointer;text-align:left;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.15);
+                         display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="bi bi-building" style="color:#fff;font-size:.85rem;"></i>
+            </span>
+            <div>
+              <div style="font-weight:700;font-size:.92rem;color:#fff;">{{ dg.dept.name }}</div>
+              <div style="font-size:.72rem;color:rgba(255,255,255,.65);">
+                {{ dg.semesters|length }} semestre{{ dg.semesters|length|pluralize }}
+              </div>
+            </div>
+          </div>
+          <i class="bi bi-chevron-down acc-icon-dept-{{ di }}" style="color:rgba(255,255,255,.8);transition:transform .25s;"></i>
+        </button>
+
+        <div id="dept-{{ di }}" style="display:none;">
+          {% for sg in dg.semesters %}
+          {% with si=forloop.counter %}
+          <!-- ═══ Niveau 2 : Semestre ═══ -->
+          <div style="border-top:1px solid #e2e8f0;">
+            <button type="button" onclick="toggleAcc('sem-{{ di }}-{{ si }}')"
+                    style="width:100%;display:flex;align-items:center;justify-content:space-between;
+                           background:#f8fafc;border:none;padding:10px 20px;cursor:pointer;text-align:left;border-bottom:1px solid #e2e8f0;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="width:24px;height:24px;border-radius:6px;background:#e0e7ff;
+                             display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <i class="bi bi-calendar3" style="color:#4338ca;font-size:.75rem;"></i>
+                </span>
+                <span style="font-weight:700;font-size:.85rem;color:#334155;">{{ sg.semester.label }}</span>
+                <span style="font-size:.72rem;color:#94a3b8;">— {{ sg.classes|length }} classe{{ sg.classes|length|pluralize }}</span>
+              </div>
+              <i class="bi bi-chevron-down acc-icon-sem-{{ di }}-{{ si }}" style="color:#94a3b8;transition:transform .25s;font-size:.8rem;"></i>
+            </button>
+
+            <div id="sem-{{ di }}-{{ si }}" style="display:none;padding:10px 16px;">
+              {% for cg_item in sg.classes %}
+              {% with ci=forloop.counter %}
+              <!-- ═══ Niveau 3 : Classe ═══ -->
+              <div style="border:1.5px solid #e2e8f0;border-radius:9px;margin-bottom:8px;overflow:hidden;">
+
+                <button type="button" onclick="toggleAcc('cls-{{ di }}-{{ si }}-{{ ci }}')"
+                        style="width:100%;display:flex;align-items:center;justify-content:space-between;
+                               background:#fff;border:none;padding:9px 14px;cursor:pointer;text-align:left;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="width:22px;height:22px;border-radius:5px;background:#eff6ff;
+                                 display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+                      <i class="bi bi-people-fill" style="color:var(--navy);font-size:.68rem;"></i>
+                    </span>
+                    <span style="font-weight:700;font-size:.83rem;color:#1e293b;">{{ cg_item.class_group.name }}</span>
+                    {% if cg_item.class_group.level %}
+                    <span style="background:#eff6ff;color:var(--navy);border-radius:8px;padding:1px 7px;font-size:.68rem;font-weight:600;">{{ cg_item.class_group.level }}</span>
+                    {% endif %}
+                    <span style="font-size:.72rem;color:#94a3b8;">{{ cg_item.entries|length }} créneau{{ cg_item.entries|length|pluralize }}</span>
+                  </div>
+                  <i class="bi bi-chevron-down acc-icon-cls-{{ di }}-{{ si }}-{{ ci }}" style="color:#94a3b8;transition:transform .25s;font-size:.75rem;"></i>
+                </button>
+
+                <!-- Créneaux horizontaux -->
+                <div id="cls-{{ di }}-{{ si }}-{{ ci }}" style="display:none;padding:8px 10px 10px;overflow-x:auto;">
+                  <div style="display:flex;gap:8px;min-width:max-content;">
+                    {% for entry in cg_item.entries %}
+                    <div class="entry-card" style="width:170px;flex-shrink:0;"
+                      data-id="{{ entry.pk }}"
+                      data-subject="{{ entry.subject.code }}"
+                      data-title="{{ entry.subject.title }}"
+                      data-teacher="{{ entry.teacher.full_name }}"
+                      data-room="{{ entry.room.name|default:'Sans salle' }}"
+                      data-room-id="{{ entry.room.pk|default:'' }}"
+                      data-time="{{ entry.start_time|time:'H:i' }}–{{ entry.end_time|time:'H:i' }}"
+                      data-class="{{ entry.class_group.name }}"
+                      data-color="{{ entry.color }}"
+                      onclick="selectEntry(this)">
+                      <div style="display:flex;align-items:flex-start;gap:7px;">
+                        <span style="width:9px;height:9px;border-radius:50%;background:{{ entry.color }};flex-shrink:0;margin-top:4px;"></span>
+                        <div style="flex:1;min-width:0;">
+                          <div style="font-size:.65rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;">
+                            {{ entry.get_day_of_week_display }}
+                          </div>
+                          <div style="font-weight:700;font-size:.8rem;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            {{ entry.subject.code }}
+                          </div>
+                          <div style="font-size:.72rem;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                            {{ entry.subject.title|truncatechars:20 }}
+                          </div>
+                          <div style="font-size:.7rem;color:#94a3b8;margin-top:3px;">
+                            <i class="bi bi-clock me-1"></i>{{ entry.start_time|time:"H:i" }}–{{ entry.end_time|time:"H:i" }}
+                          </div>
+                          <div style="font-size:.7rem;margin-top:2px;">
+                            <span style="background:#eff6ff;color:var(--navy);padding:1px 5px;border-radius:4px;font-weight:600;font-size:.68rem;">
+                              <i class="bi bi-door-open me-1"></i>{{ entry.room.name|default:"—" }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {% endfor %}
+                  </div>
+                </div>
+              </div>
+              {% endwith %}
+              {% endfor %}
+            </div>
+          </div>
+          {% endwith %}
+          {% endfor %}
+        </div>
+      </div>
+      {% endwith %}
+      {% endfor %}
+
+    {% else %}
+    <div style="text-align:center;padding:40px;color:#94a3b8;">
+      <i class="bi bi-calendar-x d-block mb-2" style="font-size:2rem;color:#cbd5e1;"></i>
+      Aucun créneau disponible
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleAcc(id) {
+  var body = document.getElementById(id);
+  var icon = document.querySelector('.acc-icon-' + id);
+  var open = body.style.display === 'block';
+  body.style.display = open ? 'none' : 'block';
+  if (icon) icon.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+let sel = [null, null];  // [entry1_data, entry2_data]
+
+function selectEntry(el) {
+  const data = {
+    id:      el.dataset.id,
+    subject: el.dataset.subject,
+    title:   el.dataset.title,
+    teacher: el.dataset.teacher,
+    room:    el.dataset.room,
+    time:    el.dataset.time,
+    cls:     el.dataset.class,
+    color:   el.dataset.color,
+    el:      el,
+  };
+
+  // Déjà sélectionné ? → désélectionner
+  if (sel[0] && sel[0].id === data.id) {
+    sel[0].el.classList.remove('selected-1');
+    sel[0] = null;
+    updateUI();
+    return;
+  }
+  if (sel[1] && sel[1].id === data.id) {
+    sel[1].el.classList.remove('selected-2');
+    sel[1] = null;
+    updateUI();
+    return;
+  }
+
+  // Remplir slot 1 puis slot 2
+  if (!sel[0]) {
+    sel[0] = data;
+    el.classList.add('selected-1');
+  } else if (!sel[1]) {
+    sel[1] = data;
+    el.classList.add('selected-2');
+  } else {
+    // Les deux déjà pris → remplacer le slot 1
+    sel[0].el.classList.remove('selected-1');
+    sel[0] = data;
+    el.classList.add('selected-1');
+  }
+  updateUI();
+}
+
+function updateUI() {
+  const count = (sel[0] ? 1 : 0) + (sel[1] ? 1 : 0);
+  document.getElementById('selCount').textContent = count;
+
+  renderPreview('preview1', sel[0], 'var(--navy)', '#eff6ff');
+  renderPreview('preview2', sel[1], '#7c3aed', '#f5f3ff');
+
+  const btn = document.getElementById('btnSwap');
+  const icon = document.getElementById('swapIcon');
+  if (sel[0] && sel[1]) {
+    btn.disabled = false;
+    document.getElementById('entry1_id').value = sel[0].id;
+    document.getElementById('entry2_id').value = sel[1].id;
+    icon.style.background = 'linear-gradient(135deg, var(--navy), #7c3aed)';
+    icon.querySelector('i').style.color = '#fff';
+  } else {
+    btn.disabled = true;
+    icon.style.background = 'var(--border)';
+    icon.querySelector('i').style.color = '#94a3b8';
+  }
+}
+
+function renderPreview(containerId, data, color, bg) {
+  const el = document.getElementById(containerId);
+  if (!data) {
+    el.innerHTML = `<div style="color:#cbd5e1;font-size:.84rem;text-align:center;">
+      <i class="bi bi-hand-index d-block mb-1" style="font-size:1.5rem;"></i>
+      Cliquez sur un créneau</div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div style="width:100%;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+        <span style="width:12px;height:12px;border-radius:50%;background:${data.color};flex-shrink:0;"></span>
+        <span style="font-weight:700;font-size:.9rem;">${data.subject}</span>
+        <span style="font-size:.78rem;color:#64748b;">${data.title}</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:.8rem;">
+        <div><i class="bi bi-clock me-1" style="color:${color};"></i>${data.time}</div>
+        <div><i class="bi bi-mortarboard me-1" style="color:${color};"></i>${data.cls}</div>
+        <div><i class="bi bi-person me-1" style="color:${color};"></i>${data.teacher}</div>
+        <div style="margin-top:4px;">
+          <span style="padding:3px 9px;border-radius:6px;background:${bg};color:${color};font-weight:700;font-size:.78rem;border:1.5px solid ${color}20;">
+            <i class="bi bi-door-open me-1"></i>${data.room}
+          </span>
+        </div>
+      </div>
+    </div>`;
+}
+</script>
+{% endblock %}

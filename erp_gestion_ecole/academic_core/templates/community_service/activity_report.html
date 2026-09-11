@@ -1,0 +1,128 @@
+{% extends 'base/base.html' %}
+{% block title %}Rapport d'activités — Service à la Communauté{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'community_service:list' %}">Service à la Communauté</a></li>
+<li class="breadcrumb-item active">Rapport d'activités</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  @media print {
+    .no-print { display: none !important; }
+    .sidebar, .app-sidebar, .topbar { display: none !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header no-print">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0d9488;"><i class="bi bi-file-earmark-bar-graph"></i></span>
+    Rapport d'activités
+  </h1>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'community_service:report_export_excel' %}?{{ request.GET.urlencode }}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
+    <a href="{% url 'community_service:report_export_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-outline-danger btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</a>
+    <a href="{% url 'community_service:report_export_word' %}?{{ request.GET.urlencode }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-earmark-word me-1"></i>Word</a>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="bi bi-printer me-1"></i>Imprimer</button>
+    <a href="{% url 'community_service:list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+  </div>
+</div>
+
+<div class="card-section mb-3 no-print">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Du</label>
+        <input type="date" name="from" class="form-control form-control-sm" value="{{ date_from|date:'Y-m-d' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Au</label>
+        <input type="date" name="to" class="form-control form-control-sm" value="{{ date_to|date:'Y-m-d' }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Catégorie</label>
+        <select name="categorie" class="form-select form-select-sm">
+          <option value="">Toutes</option>
+          {% for code, label in categorie_choices %}
+          <option value="{{ code }}" {% if categorie == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div style="text-align:center;margin-bottom:16px;">
+  <h5 style="color:#00173B;font-weight:800;">Rapport d'activités — Service à la Communauté</h5>
+  <div style="color:#64748b;font-size:.85rem;">
+    Période : {{ date_from|date:"d/m/Y" }} — {{ date_to|date:"d/m/Y" }}
+    {% if categorie_label %} · Catégorie : {{ categorie_label }}{% endif %}
+    {% if statut_label %} · Statut : {{ statut_label }}{% endif %}
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <div style="background:#00173B;border-radius:10px;padding:16px;color:#fff;text-align:center;">
+      <div style="font-size:1.6rem;font-weight:800;">{{ total_activites }}</div>
+      <div style="font-size:.75rem;color:#93c5fd;">Activité{{ total_activites|pluralize }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div style="background:#0d9488;border-radius:10px;padding:16px;color:#fff;text-align:center;">
+      <div style="font-size:1.6rem;font-weight:800;">{{ total_participants }}</div>
+      <div style="font-size:.75rem;color:#99f6e4;">Participant{{ total_participants|pluralize }}</div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;">
+      <div style="font-size:.72rem;color:#94a3b8;font-weight:700;text-transform:uppercase;margin-bottom:6px;">Répartition par catégorie</div>
+      {% for cat, count in par_categorie %}
+      <span class="badge" style="background:#e2e8f0;color:#1e293b;margin:2px;">{{ cat }} : {{ count }}</span>
+      {% empty %}
+      <span style="color:#94a3b8;font-size:.82rem;">—</span>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="table-responsive">
+    <table class="table" style="margin:0;font-size:.83rem;">
+      <thead style="background:#1e3a5f;color:#fff;">
+        <tr>
+          <th>Date</th><th>Titre</th><th>Catégorie</th><th>Lieu</th>
+          <th>Bénéficiaires</th><th class="text-center">Participants</th><th>Statut</th><th>Responsable</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in activities %}
+        <tr>
+          <td>{{ a.date_debut|date:"d/m/Y" }}</td>
+          <td style="font-weight:600;">{{ a.titre }}</td>
+          <td>{{ a.get_categorie_display }}</td>
+          <td>{{ a.lieu|default:"—" }}</td>
+          <td>{{ a.beneficiaires|default:"—" }}</td>
+          <td class="text-center">{{ a.nombre_participants|default:"—" }}</td>
+          <td><span class="badge bg-{{ a.statut_color }}">{{ a.get_statut_display }}</span></td>
+          <td>{{ a.responsable.get_full_name|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-4">Aucune activité sur cette période.</td></tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background:#dcfce7;">
+          <td colspan="5" style="text-align:right;font-weight:800;color:#166534;">TOTAL</td>
+          <td class="text-center" style="font-weight:800;color:#166534;">{{ total_participants }}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endblock %}

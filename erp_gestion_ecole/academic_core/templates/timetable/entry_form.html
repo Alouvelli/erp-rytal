@@ -1,0 +1,486 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if form.instance.pk %}Modifier le créneau{% else %}Nouveau créneau{% endif %}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'timetable:index' %}">Emploi du temps</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Modifier{% else %}Nouveau créneau{% endif %}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .conflict-alert { background:#fff1f2; border:1px solid #fecaca; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:.83rem; color:#dc2626; }
+  .conflict-alert i { margin-right:6px; }
+  .room-status { font-size:.74rem; margin-top:5px; padding:6px 10px; border-radius:6px; display:none; }
+  .room-status.available  { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+  .room-status.occupied   { background:#fff1f2; color:#dc2626; border:1px solid #fecaca; }
+  .room-status.loading    { background:#f8fafc; color:#64748b; border:1px solid #e2e8f0; }
+  select option:disabled  { color:#94a3b8; font-style:italic; }
+  /* Searchable select */
+  .ss-wrapper { position: relative; }
+  .ss-input { cursor: pointer; }
+  .ss-dropdown {
+    display: none; position: absolute; z-index: 9999;
+    background: #fff; border: 1px solid #cbd5e1; border-radius: 10px;
+    max-height: 230px; overflow-y: auto; width: 100%;
+    box-shadow: 0 6px 20px rgba(0,0,0,.12); margin-top: 3px;
+  }
+  .ss-option {
+    padding: 8px 14px; cursor: pointer; font-size: .87rem; color: #1e293b;
+  }
+  .ss-option:hover, .ss-option.active { background: #f1f5f9; }
+  .ss-option.empty { color: #94a3b8; font-style: italic; cursor: default; }
+  .ss-highlight { background: #fef9c3; border-radius: 2px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-calendar-plus"></i></span>
+    {% if form.instance.pk %}Modifier le créneau{% else %}Nouveau créneau{% endif %}
+  </h1>
+</div>
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-pencil"></i></span>
+          Informations du créneau
+        </h6>
+      </div>
+      <div class="p-4">
+        <form method="post" id="timetable-form">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+          <div class="conflict-alert">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            {% for err in form.non_field_errors %}{{ err }}<br>{% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Semestre <span class="text-danger">*</span></label>
+              {{ form.semester }}
+              {% if form.semester.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.semester.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Classe <span class="text-danger">*</span></label>
+              {{ form.class_group }}
+              {% if form.class_group.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.class_group.errors.0 }}</div>{% endif %}
+            </div>
+
+            <!-- Niveau (déduit automatiquement de la classe) -->
+            <div class="col-md-6">
+              <label class="form-label">Niveau</label>
+              <div id="niveau-display" style="padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:.85rem;min-height:38px;display:flex;align-items:center;gap:10px;">
+                <span id="niveau-badge" style="display:none;padding:3px 10px;background:#eff6ff;color:var(--navy);border-radius:20px;font-weight:600;font-size:.78rem;"></span>
+                <span id="niveau-rate" style="display:none;font-size:.78rem;color:#16a34a;font-weight:600;"></span>
+                <span id="niveau-empty" style="color:#94a3b8;font-size:.82rem;">— sélectionnez une classe —</span>
+                <span id="niveau-no-rate" style="display:none;font-size:.78rem;color:#f59e0b;">Aucun taux horaire défini pour ce niveau</span>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">
+                {{ form.taux_horaire.label }}
+                <span style="font-size:.7rem;color:#94a3b8;font-weight:400;">optionnel — laisser vide pour ne pas modifier</span>
+              </label>
+              {{ form.taux_horaire }}
+              {% if form.taux_horaire.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.taux_horaire.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Module (EC) <span class="text-danger">*</span></label>
+              {{ form.subject }}
+              {% if form.subject.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.subject.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Enseignant <span class="text-danger">*</span></label>
+              {{ form.teacher }}
+              {% if form.teacher.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.teacher.errors.0 }}</div>{% endif %}
+              <div class="form-text" style="font-size:.72rem;">
+                <i class="bi bi-info-circle me-1"></i>Pré-rempli avec l'enseignant responsable du module choisi ; modifiable si besoin.
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Jour de la semaine <span class="text-danger">*</span></label>
+              {{ form.day_of_week }}
+              {% if form.day_of_week.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.day_of_week.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Récurrence <span class="text-danger">*</span></label>
+              {{ form.recurrence }}
+              {% if form.recurrence.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.recurrence.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Heure de début <span class="text-danger">*</span></label>
+              {{ form.start_time }}
+              {% if form.start_time.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.start_time.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Heure de fin <span class="text-danger">*</span></label>
+              {{ form.end_time }}
+              {% if form.end_time.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.end_time.errors.0 }}</div>{% endif %}
+            </div>
+
+            <!-- Salle avec filtrage dynamique -->
+            <div class="col-md-6">
+              <label class="form-label">
+                Salle <span class="text-danger">*</span>
+                <span id="room-spinner" style="display:none;font-size:.7rem;color:#64748b;margin-left:4px;">
+                  <i class="bi bi-arrow-repeat"></i> vérification…
+                </span>
+              </label>
+              {{ form.room }}
+              {% if form.room.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.room.errors.0 }}</div>{% endif %}
+              <div id="room-status" class="room-status"></div>
+
+            </div>
+
+            <div class="col-md-6" id="specific-date-row">
+              <label class="form-label">Date spécifique <small class="text-muted">(si ponctuel)</small></label>
+              {{ form.specific_date }}
+              {% if form.specific_date.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.specific_date.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label">Couleur <span class="text-danger">*</span></label>
+              {{ form.color }}
+              {% if form.color.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.color.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end border-top pt-3 mt-3">
+            <a href="{% url 'timetable:index' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Niveau dynamique ────────────────────────────────────────────────────────
+const CLASS_LEVEL_MAP = {{ class_level_map|safe }};
+const elClass      = document.getElementById('id_class_group');
+const elNiveauBadge  = document.getElementById('niveau-badge');
+const elNiveauRate   = document.getElementById('niveau-rate');
+const elNiveauEmpty  = document.getElementById('niveau-empty');
+const elNiveauNoRate = document.getElementById('niveau-no-rate');
+const elTauxHoraire  = document.getElementById('id_taux_horaire');
+
+function updateNiveau() {
+  const classId = elClass ? elClass.value : '';
+  const info = CLASS_LEVEL_MAP[classId];
+  if (!classId || !info || !info.level) {
+    elNiveauBadge.style.display  = 'none';
+    elNiveauRate.style.display   = 'none';
+    elNiveauNoRate.style.display = 'none';
+    elNiveauEmpty.style.display  = '';
+    if (elTauxHoraire) elTauxHoraire.placeholder = '— sélectionnez une classe —';
+    return;
+  }
+  elNiveauEmpty.style.display = 'none';
+  elNiveauBadge.textContent   = info.level;
+  elNiveauBadge.style.display = '';
+  if (info.rate) {
+    elNiveauRate.textContent   = '→ ' + info.rate.toLocaleString('fr-FR') + ' FCFA/h';
+    elNiveauRate.style.display = '';
+    elNiveauNoRate.style.display = 'none';
+    if (elTauxHoraire) elTauxHoraire.placeholder = 'Actuel : ' + info.rate.toLocaleString('fr-FR') + ' FCFA/h';
+  } else {
+    elNiveauRate.style.display   = 'none';
+    elNiveauNoRate.style.display = '';
+    if (elTauxHoraire) elTauxHoraire.placeholder = 'Aucun taux défini — en saisir un';
+  }
+}
+
+if (elClass) {
+  elClass.addEventListener('change', updateNiveau);
+  updateNiveau();
+}
+
+// ── Salles ──────────────────────────────────────────────────────────────────
+const ROOMS_API    = "{% url 'timetable:available_rooms_api' %}";
+const SUBJECTS_API = "{% url 'timetable:subjects_by_semester_api' %}";
+const ENTRY_PK     = "{{ form.instance.pk|default:'' }}";
+const CURRENT_SUBJECT = "{{ form.instance.subject_id|default:'' }}";
+
+const elDay      = document.getElementById('id_day_of_week');
+const elStart    = document.getElementById('id_start_time');
+const elEnd      = document.getElementById('id_end_time');
+const elSemester = document.getElementById('id_semester');
+const elSubject  = document.getElementById('id_subject');
+const elRoom     = document.getElementById('id_room');
+const elRecur    = document.getElementById('id_recurrence');
+const elSpecific = document.getElementById('specific-date-row');
+const elSpinner  = document.getElementById('room-spinner');
+const elStatus   = document.getElementById('room-status');
+
+// ── Filtrage dynamique des matières par semestre + classe ───────────────────
+function updateSubjects() {
+  const semId  = elSemester ? elSemester.value : '';
+  const classId = elClass   ? elClass.value    : '';
+  if (!semId && !classId) return;
+  if (!elSubject) return;
+
+  const params = new URLSearchParams();
+  if (semId)   params.append('semester_id',    semId);
+  if (classId) params.append('class_group_id', classId);
+
+  fetch(`${SUBJECTS_API}?${params}`)
+    .then(r => r.json())
+    .then(subjects => {
+      const prev = elSubject.value;
+      elSubject.innerHTML = '';
+      const empty = document.createElement('option');
+      empty.value = '';
+      empty.textContent = '---------';
+      elSubject.appendChild(empty);
+
+      window.SUBJECT_TEACHER_MAP = {};
+      subjects.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.ue ? `[${s.ue}] ${s.code} — ${s.title}` : `${s.code} — ${s.title}`;
+        if (String(s.id) === String(prev) || String(s.id) === String(CURRENT_SUBJECT)) opt.selected = true;
+        elSubject.appendChild(opt);
+        window.SUBJECT_TEACHER_MAP[String(s.id)] = { teacher_id: s.teacher_id, teacher_name: s.teacher_name };
+      });
+
+      if (subjects.length === 0) {
+        const none = document.createElement('option');
+        none.value = '';
+        none.textContent = '— Aucun module (EC) pour cette sélection —';
+        none.disabled = true;
+        elSubject.appendChild(none);
+      }
+
+      // Rafraîchir le cache d'options du champ de recherche « Module (EC) »
+      // (rempli dynamiquement ici, après l'initialisation du widget).
+      if (window.__subjectSS) window.__subjectSS.syncFromSelect();
+    });
+}
+
+if (elSemester) elSemester.addEventListener('change', updateSubjects);
+if (elClass)    elClass.addEventListener('change',    updateSubjects);
+
+// Déclencher au chargement si des valeurs sont déjà présentes
+if ((elSemester && elSemester.value) || (elClass && elClass.value)) updateSubjects();
+
+// Afficher champ date spécifique selon récurrence
+function toggleSpecificDate() {
+  if (!elRecur) return;
+  elSpecific.style.display = elRecur.value === 'ONCE' ? '' : 'none';
+}
+if (elRecur) { elRecur.addEventListener('change', toggleSpecificDate); toggleSpecificDate(); }
+
+// ── Filtrage dynamique des salles ──────────────────────────────────────────
+let debounceTimer = null;
+
+function updateRooms() {
+  const day   = elDay   ? elDay.value   : '';
+  const start = elStart ? elStart.value : '';
+  const end   = elEnd   ? elEnd.value   : '';
+
+  if (!day || !start || !end) {
+    elStatus.className = 'room-status';
+    elStatus.style.display = 'none';
+    return;
+  }
+
+  elSpinner.style.display = '';
+  elStatus.style.display = 'none';
+
+  const previousValue = elRoom.value;
+  const params = new URLSearchParams({ day, start, end });
+  if (ENTRY_PK) params.append('exclude', ENTRY_PK);
+
+  fetch(`${ROOMS_API}?${params}`)
+    .then(r => r.json())
+    .then(rooms => {
+      elSpinner.style.display = 'none';
+
+      const available = rooms.filter(r => !r.occupied);
+      const occupied  = rooms.filter(r => r.occupied);
+
+      // Reconstruire le select avec seulement les salles disponibles
+      const emptyOpt = elRoom.querySelector('option[value=""]');
+      elRoom.innerHTML = '';
+      if (emptyOpt) elRoom.appendChild(emptyOpt.cloneNode(true));
+
+      available.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.id;
+        opt.textContent = r.name;
+        if (String(r.id) === String(previousValue)) opt.selected = true;
+        elRoom.appendChild(opt);
+      });
+
+      // Message de statut
+      elStatus.style.display = '';
+      if (occupied.length > 0 && available.length === 0) {
+        elStatus.className = 'room-status occupied';
+        elStatus.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i>'
+          + '<strong>Aucune salle disponible</strong> sur ce créneau. '
+          + 'Occupée(s) : ' + occupied.map(r => '<strong>' + r.name + '</strong>').join(', ') + '.';
+      } else if (occupied.length > 0) {
+        elStatus.className = 'room-status occupied';
+        elStatus.innerHTML = '<i class="bi bi-exclamation-circle-fill me-1"></i>'
+          + available.length + ' disponible(s) · '
+          + '<strong>' + occupied.map(r => r.name).join(', ') + '</strong>'
+          + ' déjà occupée(s) et retirée(s) de la liste.';
+      } else {
+        elStatus.className = 'room-status available';
+        elStatus.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>'
+          + 'Toutes les salles sont disponibles sur ce créneau (' + available.length + ').';
+      }
+    })
+    .catch(() => { elSpinner.style.display = 'none'; });
+}
+
+function scheduleUpdate() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(updateRooms, 250);
+}
+
+if (elDay)   elDay.addEventListener('change', scheduleUpdate);
+if (elStart) elStart.addEventListener('change', scheduleUpdate);
+if (elEnd)   elEnd.addEventListener('change', scheduleUpdate);
+
+// Déclencher immédiatement si les champs sont déjà remplis (mode édition ou re-render)
+document.addEventListener('DOMContentLoaded', function() {
+  if (elDay && elDay.value && elStart && elStart.value && elEnd && elEnd.value) {
+    updateRooms();
+  }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  function makeSearchableSelect(selectId, placeholder, onChangeCb) {
+    const select = document.getElementById(selectId);
+    if (!select) return null;
+
+    // Récupérer les options avant de cacher le select (réassigné par syncFromSelect()
+    // quand les options natives sont repeuplées dynamiquement, ex. via AJAX).
+    let opts = Array.from(select.options).map(o => ({ value: o.value, text: o.text.trim() }));
+
+    // Cacher le select natif
+    select.style.display = 'none';
+
+    // Wrapper
+    const wrapper = document.createElement('div');
+    wrapper.className = 'ss-wrapper';
+    select.parentNode.insertBefore(wrapper, select);
+    wrapper.appendChild(select);
+
+    // Input de recherche
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'form-control ss-input';
+    input.placeholder = placeholder;
+    input.autocomplete = 'off';
+    wrapper.insertBefore(input, select);
+
+    // Dropdown
+    const dropdown = document.createElement('div');
+    dropdown.className = 'ss-dropdown';
+    wrapper.appendChild(dropdown);
+
+    // Pré-remplir si valeur existante (mode édition)
+    if (select.value) {
+      const cur = opts.find(o => o.value === select.value);
+      if (cur) input.value = cur.text;
+    }
+
+    function render(q) {
+      dropdown.innerHTML = '';
+      const lq = (q || '').toLowerCase();
+      let count = 0;
+      opts.forEach(o => {
+        if (!o.value) return; // ignorer ligne vide
+        if (lq && !o.text.toLowerCase().includes(lq)) return;
+        const div = document.createElement('div');
+        div.className = 'ss-option';
+        // Surligner la correspondance
+        if (lq) {
+          const idx = o.text.toLowerCase().indexOf(lq);
+          div.innerHTML = o.text.slice(0, idx)
+            + '<span class="ss-highlight">' + o.text.slice(idx, idx + lq.length) + '</span>'
+            + o.text.slice(idx + lq.length);
+        } else {
+          div.textContent = o.text;
+        }
+        div.addEventListener('mousedown', e => {
+          e.preventDefault();
+          select.value = o.value;
+          input.value = o.text;
+          dropdown.style.display = 'none';
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          if (onChangeCb) onChangeCb();
+        });
+        dropdown.appendChild(div);
+        count++;
+      });
+      if (count === 0) {
+        const div = document.createElement('div');
+        div.className = 'ss-option empty';
+        div.textContent = 'Aucun résultat';
+        dropdown.appendChild(div);
+      }
+    }
+
+    input.addEventListener('focus', () => { render(input.value); dropdown.style.display = 'block'; });
+    input.addEventListener('input', () => { render(input.value); dropdown.style.display = 'block'; });
+    input.addEventListener('blur',  () => { setTimeout(() => { dropdown.style.display = 'none'; }, 160); });
+
+    // Re-capture les options depuis le <select> natif (repeuplé dynamiquement,
+    // ex. via AJAX) et resynchronise le texte affiché sur la sélection courante.
+    function syncFromSelect() {
+      opts = Array.from(select.options).map(o => ({ value: o.value, text: o.text.trim() }));
+      const cur = opts.find(o => o.value === select.value);
+      input.value = (cur && cur.value) ? cur.text : '';
+    }
+
+    return { select, input, syncFromSelect };
+  }
+
+  // ── Classe ─────────────────────────────────────────────────────────────────
+  makeSearchableSelect('id_class_group', '— Sélectionnez une classe —', function() {
+    updateNiveau();
+    updateSubjects();
+  });
+  // Déclencher updateNiveau si valeur déjà présente
+  const selClass = document.getElementById('id_class_group');
+  if (selClass && selClass.value) { updateNiveau(); }
+
+  // ── Enseignant ─────────────────────────────────────────────────────────────
+  const teacherSS = makeSearchableSelect('id_teacher', '— Recherchez un enseignant —', null);
+  window.__teacherSS = teacherSS;
+
+  // ── Module (EC) ──────────────────────────────────────────────────────────────
+  // Dès qu'un module est choisi, l'enseignant qui lui est attribué (responsable
+  // du module) est automatiquement pré-rempli dans le champ Enseignant — modifiable
+  // ensuite si besoin (ex. module encore sans enseignant assigné, ou remplacement).
+  function autoFillTeacherFromSubject() {
+    const subjectSelect = document.getElementById('id_subject');
+    const teacherSelect = document.getElementById('id_teacher');
+    if (!subjectSelect || !teacherSelect) return;
+    const map = window.SUBJECT_TEACHER_MAP || {};
+    const info = map[String(subjectSelect.value)];
+    if (!info || !info.teacher_id) return;
+    teacherSelect.value = String(info.teacher_id);
+    teacherSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    if (teacherSS) teacherSS.syncFromSelect();
+  }
+
+  const subjectSS = makeSearchableSelect('id_subject', '— Recherchez un module (EC) —', autoFillTeacherFromSubject);
+  window.__subjectSS = subjectSS;
+
+});
+</script>
+{% endblock %}

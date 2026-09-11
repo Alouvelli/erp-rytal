@@ -1,0 +1,59 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ teacher.full_name }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'teachers:list' %}">Enseignants</a></li>
+<li class="breadcrumb-item active">{{ teacher.full_name }}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:var(--navy);"><i class="bi bi-person-badge-fill"></i></span>{{ teacher.full_name }}</h1>
+  <a href="{% url 'teachers:edit' teacher.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i>Modifier</a>
+</div>
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-person"></i></span>Profil</h6>
+      </div>
+      <div class="p-3">
+        <div class="text-center py-3">
+          <div style="width:70px;height:70px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.5rem;font-weight:800;margin:0 auto 10px;">{{ teacher.full_name|slice:":1"|upper }}</div>
+          <div style="font-weight:700;font-size:1rem;">{{ teacher.full_name }}</div>
+          <div style="font-size:.8rem;color:#64748b;">{{ teacher.grade|default:"Enseignant" }}</div>
+        </div>
+        <div class="border-top pt-2">
+          <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;"><span style="color:#64748b;font-weight:600;">Spécialité</span><span>{{ teacher.speciality|default:"—" }}</span></div>
+          <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;"><span style="color:#64748b;font-weight:600;">Email</span><span>{{ teacher.user.email|default:"—" }}</span></div>
+          <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;"><span style="color:#64748b;font-weight:600;">Heures contractuelles</span><span style="font-weight:700;">{{ teacher.contractual_hours }}h</span></div>
+          <div class="d-flex justify-content-between py-2" style="font-size:.83rem;"><span style="color:#64748b;font-weight:600;">Heures effectuées</span><span style="font-weight:700;color:#16a34a;">{{ teacher.get_total_hours_taught|floatformat:1 }}h</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-calendar3-week"></i></span>Cours assignés</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Module (EC)</th><th>Classe</th><th>Jour</th><th>Créneau</th><th>Salle</th></tr></thead>
+          <tbody>
+            {% for entry in teacher.timetable_entries.all %}
+            <tr>
+              <td style="font-weight:600;font-size:.84rem;">{{ entry.subject.title }}</td>
+              <td style="font-size:.83rem;">{{ entry.class_group.name }}</td>
+              <td style="font-size:.83rem;">{{ entry.get_day_of_week_display }}</td>
+              <td style="font-size:.82rem;color:#64748b;">{{ entry.start_time|time:"H:i" }} – {{ entry.end_time|time:"H:i" }}</td>
+              <td style="font-size:.83rem;">{{ entry.room|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-3" style="font-size:.83rem;">Aucun cours assigné</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

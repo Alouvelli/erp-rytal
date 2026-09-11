@@ -1,0 +1,81 @@
+{% extends "base/base.html" %}
+{% block title %}Campagnes d'évaluation{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-statut { display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:.73rem;font-weight:600; }
+.be-BROUILLON { background:#f1f5f9;color:#475569; }
+.be-OUVERTE   { background:#dcfce7;color:#15803d; }
+.be-CLOTUREE  { background:#e0f2fe;color:#0369a1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'hr:evaluation_list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+      <div>
+        <h5 class="mb-0 fw-bold">Campagnes d'évaluation</h5>
+        <small class="text-muted">Gestion des campagnes annuelles</small>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-sm fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#form-campaign">
+      <i class="bi bi-plus-lg me-1"></i>Nouvelle campagne
+    </button>
+  </div>
+
+  <div class="collapse mb-4" id="form-campaign">
+    <form method="post" class="card border-0 shadow-sm p-3">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3"><input type="number" name="annee" class="form-control form-control-sm" placeholder="Année" required></div>
+        <div class="col-md-6"><input type="text" name="label" class="form-control form-control-sm" placeholder="Libellé" required></div>
+        <div class="col-md-3"><button class="btn btn-primary btn-sm w-100 fw-semibold">Créer</button></div>
+      </div>
+    </form>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead style="background:#f8fafc;">
+            <tr style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">
+              <th class="px-3">Campagne</th><th>Statut</th><th>Évaluations</th><th class="text-end px-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in campaigns %}
+            <tr>
+              <td class="px-3 fw-semibold" style="font-size:.87rem;">{{ c.label }} ({{ c.annee }})</td>
+              <td><span class="badge-statut be-{{ c.statut }}">{{ c.get_statut_display }}</span></td>
+              <td style="font-size:.83rem;">{{ c.evaluations.count }}</td>
+              <td class="text-end px-3">
+                <div class="d-flex gap-1 justify-content-end">
+                  {% if c.statut == 'BROUILLON' %}
+                  <form method="post"><input type="hidden" name="action" value="open">{% csrf_token %}<input type="hidden" name="campaign_id" value="{{ c.pk }}">
+                    <button class="btn btn-xs btn-success" style="font-size:.72rem;padding:3px 9px;" onclick="return confirm('Ouvrir la campagne et créer les évaluations pour tout le personnel ?')">Ouvrir</button>
+                  </form>
+                  {% elif c.statut == 'OUVERTE' %}
+                  <form method="post"><input type="hidden" name="action" value="close">{% csrf_token %}<input type="hidden" name="campaign_id" value="{{ c.pk }}">
+                    <button class="btn btn-xs btn-outline-secondary" style="font-size:.72rem;padding:3px 9px;">Clôturer</button>
+                  </form>
+                  {% endif %}
+                  <form method="post" onsubmit="return confirm('Supprimer cette campagne ?');"><input type="hidden" name="action" value="delete">{% csrf_token %}<input type="hidden" name="campaign_id" value="{{ c.pk }}">
+                    <button class="btn btn-xs btn-outline-danger" style="font-size:.72rem;padding:3px 9px;"><i class="bi bi-trash"></i></button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center py-5 text-muted">Aucune campagne.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

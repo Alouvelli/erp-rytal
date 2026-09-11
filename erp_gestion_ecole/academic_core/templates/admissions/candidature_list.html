@@ -1,0 +1,35 @@
+{% extends 'base/base.html' %}
+{% block title %}Candidatures à valider{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003d82;"><i class="bi bi-inbox-fill"></i></span>
+    Candidatures en attente
+  </h1>
+</div>
+
+<div class="card-section">
+  {% if candidatures %}
+  <div class="table-responsive">
+    <table class="table" style="margin:0;font-size:.85rem;">
+      <thead>
+        <tr><th>Candidat</th><th>Email</th><th>Filière</th><th>Déposée le</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for c in candidatures %}
+        <tr>
+          <td>{{ c.user.get_full_name }}</td>
+          <td>{{ c.user.email }}</td>
+          <td>{{ c.program }}</td>
+          <td>{{ c.submitted_at|date:"d/m/Y H:i" }}</td>
+          <td><a href="{% url 'admissions:candidature_detail' c.pk %}" class="btn btn-sm btn-outline-primary">Examiner</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted p-3 mb-0">Aucune candidature en attente.</p>
+  {% endif %}
+</div>
+{% endblock %}

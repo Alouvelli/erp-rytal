@@ -1,0 +1,1655 @@
+{% extends 'base/base.html' %}
+{% load humanize static %}
+
+{% block title %}Tableau de bord — Institut Supérieur d'Informatique - ISI{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Tableau de bord</li>
+{% endblock %}
+
+{% block content %}
+
+{% if dashboard_role == 'tresorier' %}
+<!-- ══════════════ TRÉSORIER GÉNÉRAL ══════════════════════════════ -->
+
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0369a1;">
+      <i class="bi bi-safe2-fill"></i>
+    </span>
+    Tableau de bord — Trésorier Général
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounting:validation_inscription_list' %}" class="btn btn-warning btn-sm">
+      <i class="bi bi-person-check me-1"></i> Valider inscriptions
+      {% if nb_pending > 0 %}<span class="badge bg-danger ms-1">{{ nb_pending }}</span>{% endif %}
+    </a>
+    <a href="{% url 'accounting:clotures_list' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-lock me-1"></i> Clôtures
+    </a>
+  </div>
+</div>
+
+<!-- KPI row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3" style="border-left:4px solid #f59e0b;">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#fffbeb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-hourglass-split" style="font-size:1.3rem;color:#f59e0b;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#f59e0b;">{{ nb_pending }}</div>
+          <div class="text-muted" style="font-size:.72rem;font-weight:600;">En attente de validation</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3" style="border-left:4px solid #16a34a;">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-person-check-fill" style="font-size:1.3rem;color:#16a34a;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#16a34a;">{{ nb_validated }}</div>
+          <div class="text-muted" style="font-size:.72rem;font-weight:600;">Inscrits validés</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3" style="border-left:4px solid #0369a1;">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-cash-stack" style="font-size:1.3rem;color:#0369a1;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.2rem;color:#0369a1;">{{ total_collected|floatformat:0 }}</div>
+          <div class="text-muted" style="font-size:.72rem;font-weight:600;">Total encaissé (FCFA)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3" style="border-left:4px solid #dc2626;">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#fef2f2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-exclamation-circle-fill" style="font-size:1.3rem;color:#dc2626;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.2rem;color:#dc2626;">{{ total_remaining|floatformat:0 }}</div>
+          <div class="text-muted" style="font-size:.72rem;font-weight:600;">Restant dû (FCFA)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Inscriptions en attente -->
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#f59e0b;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-hourglass-split"></i>
+          </span>
+          Inscriptions en attente de validation
+        </h6>
+        <a href="{% url 'accounting:validation_inscription_list' %}" class="btn btn-outline-warning btn-sm">Voir tout</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Étudiant</th><th>Classe</th><th>Type</th><th>Date</th><th></th></tr></thead>
+          <tbody>
+            {% for enr in pending_enrollments %}
+            <tr>
+              <td style="font-size:.83rem;font-weight:600;">{{ enr.student.full_name }}</td>
+              <td style="font-size:.78rem;color:#64748b;">{{ enr.class_group.name }}</td>
+              <td style="font-size:.75rem;">
+                <span class="badge" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;">
+                  {{ enr.get_enrollment_type_display }}
+                </span>
+              </td>
+              <td style="font-size:.78rem;color:#64748b;">{{ enr.created_at|date:"d/m/Y" }}</td>
+              <td>
+                <a href="{% url 'accounting:validation_inscription_detail' enr.pk %}"
+                   class="btn btn-sm" style="padding:2px 10px;font-size:.75rem;background:#0369a1;color:#fff;border-radius:6px;">
+                  Traiter
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-3" style="font-size:.82rem;">
+              <i class="bi bi-check-circle text-success me-1"></i> Aucune inscription en attente
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Colonne droite -->
+  <div class="col-lg-5 d-flex flex-column gap-3">
+    <!-- Dernières clôtures -->
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#0369a1;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-lock-fill"></i>
+          </span>
+          Dernières clôtures
+        </h6>
+        <a href="{% url 'accounting:clotures_list' %}" class="btn btn-outline-secondary btn-sm">Voir tout</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Date</th><th>Encaissé</th><th>Validés</th></tr></thead>
+          <tbody>
+            {% for cl in recent_closures %}
+            <tr>
+              <td style="font-size:.82rem;font-weight:600;">{{ cl.closure_date|date:"d/m/Y" }}</td>
+              <td style="font-size:.82rem;color:#16a34a;font-weight:700;">{{ cl.total_collected|floatformat:0 }}</td>
+              <td style="font-size:.78rem;color:#64748b;">{{ cl.nb_validated }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-muted py-2" style="font-size:.82rem;">Aucune clôture</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Raccourcis -->
+    <div class="card-section p-3">
+      <h6 class="card-section-title mb-3" style="font-size:.8rem;">
+        <i class="bi bi-lightning-fill text-warning me-1"></i> Accès rapides
+      </h6>
+      <div class="d-flex flex-column gap-2">
+        <a href="{% url 'accounting:validation_inscription_list' %}" class="btn btn-sm text-start" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;">
+          <i class="bi bi-person-badge me-2"></i>Liste des inscriptions
+        </a>
+        <a href="{% url 'accounting:etat_journalier' %}" class="btn btn-sm text-start" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;">
+          <i class="bi bi-file-earmark-bar-graph me-2"></i>État journalier
+        </a>
+        <a href="{% url 'accounting:clotures_list' %}" class="btn btn-sm text-start" style="background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;">
+          <i class="bi bi-lock me-2"></i>Gérer les clôtures
+        </a>
+        <a href="{% url 'accounting:validation_inscription_list' %}?status=validated" class="btn btn-sm text-start" style="background:#f8fafc;color:#475569;border:1px solid #e2e8f0;">
+          <i class="bi bi-people me-2"></i>Étudiants validés ({{ nb_validated }})
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% elif dashboard_role == 'caissier' %}
+<!-- ══════════════ CAISSIER ════════════════════════════════════════ -->
+
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#16a34a;">
+      <i class="bi bi-cash-register"></i>
+    </span>
+    Tableau de bord — Caisse
+  </h1>
+  <a href="{% url 'accounting:caisse_dashboard' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-receipt me-1"></i> Aller à la caisse
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3" style="border-left:4px solid #16a34a;">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-cash-stack" style="font-size:1.3rem;color:#16a34a;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.5rem;color:#16a34a;">{{ encaisse_jour|default:"0"|floatformat:0 }}</div>
+          <div class="text-muted" style="font-size:.72rem;font-weight:600;">Encaissé aujourd'hui (FCFA)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3" style="border-left:4px solid #0369a1;">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-calendar-month" style="font-size:1.3rem;color:#0369a1;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.5rem;color:#0369a1;">{{ encaisse_mois|default:"0"|floatformat:0 }}</div>
+          <div class="text-muted" style="font-size:.72rem;font-weight:600;">Encaissé ce mois (FCFA)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3" style="border-left:4px solid #7c3aed;">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-receipt-cutoff" style="font-size:1.3rem;color:#7c3aed;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#7c3aed;">{{ nb_transactions_jour|default:"0" }}</div>
+          <div class="text-muted" style="font-size:.72rem;font-weight:600;">Transactions aujourd'hui</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3 d-flex align-items-center gap-3" style="border-left:4px solid #ea580c;">
+      <div style="width:46px;height:46px;border-radius:10px;background:#fff7ed;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-bar-chart-fill" style="font-size:1.3rem;color:#ea580c;"></i>
+      </div>
+      <div>
+        <a href="{% url 'accounting:etat_journalier' %}" class="btn btn-sm" style="background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;font-size:.78rem;">
+          <i class="bi bi-file-earmark-bar-graph me-1"></i>État journalier
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtres Classe / Niveau -->
+<form method="get" class="d-flex flex-wrap gap-2 align-items-end mb-3">
+  <div>
+    <label class="form-label mb-1" style="font-size:.74rem;font-weight:600;color:#64748b;">Niveau</label>
+    <select name="level" class="form-select form-select-sm" onchange="this.form.submit()" style="border-radius:8px;min-width:140px;">
+      <option value="">— Tous les niveaux —</option>
+      {% for lv in dash_levels %}
+      <option value="{{ lv.pk }}" {% if dash_level_filter == lv.pk|stringformat:"s" %}selected{% endif %}>{{ lv.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="form-label mb-1" style="font-size:.74rem;font-weight:600;color:#64748b;">Classe</label>
+    <select name="classe" class="form-select form-select-sm" onchange="this.form.submit()" style="border-radius:8px;min-width:150px;">
+      <option value="">— Toutes les classes —</option>
+      {% for cl in dash_classes %}
+      <option value="{{ cl.pk }}" {% if dash_class_filter == cl.pk|stringformat:"s" %}selected{% endif %}>{{ cl.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% if dash_class_filter or dash_level_filter %}
+  <a href="{% url 'dashboard:index' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+    <i class="bi bi-x me-1"></i>Réinitialiser
+  </a>
+  {% endif %}
+</form>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-receipt"></i>
+          </span>
+          Derniers paiements caisse
+        </h6>
+        <a href="{% url 'accounting:caisse_dashboard' %}" class="btn btn-outline-secondary btn-sm">Voir tout</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table" style="font-size:.8rem;">
+          <thead>
+            <tr style="background:#f1f5f9;">
+              <th style="font-size:.74rem;">Classe</th>
+              <th style="font-size:.74rem;">Étudiant</th>
+              <th style="font-size:.74rem;">Type</th>
+              <th style="font-size:.74rem;">Mois</th>
+              <th style="font-size:.74rem;" class="text-end">Montant</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in recent_caisse %}
+            <tr>
+              <td style="color:#64748b;">
+                {% if c.student.current_class %}{{ c.student.current_class.name }}{% else %}—{% endif %}
+              </td>
+              <td style="font-weight:600;">{{ c.student.user.get_full_name|default:c.student }}</td>
+              <td>{{ c.get_payment_type_display }}</td>
+              <td>
+                {% if c.payment_month %}{{ c.get_month_label }}{% else %}<span class="text-muted">—</span>{% endif %}
+              </td>
+              <td class="text-end fw-bold" style="color:#16a34a;">{{ c.amount|floatformat:0 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-3">Aucun paiement</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-calendar-check"></i>
+          </span>
+          Dernières mensualités reçues
+        </h6>
+        <a href="{% url 'accounting:etat_journalier' %}" class="btn btn-outline-secondary btn-sm">État journalier</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table" style="font-size:.8rem;">
+          <thead>
+            <tr style="background:#f1f5f9;">
+              <th style="font-size:.74rem;">Classe</th>
+              <th style="font-size:.74rem;">Étudiant</th>
+              <th style="font-size:.74rem;">Mois</th>
+              <th style="font-size:.74rem;" class="text-end">Montant</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for i in recent_inst %}
+            <tr>
+              <td style="color:#64748b;">{{ i.enrollment.class_group.name }}</td>
+              <td style="font-weight:600;">{{ i.enrollment.student.user.get_full_name|default:i.enrollment.student }}</td>
+              <td>
+                {% if i.due_date %}{{ i.due_date|date:"M Y" }}{% else %}<span class="text-muted">—</span>{% endif %}
+              </td>
+              <td class="text-end fw-bold" style="color:#16a34a;">{{ i.amount_paid|floatformat:0 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Aucune mensualité</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% elif user.is_comptable %}
+<!-- ══════════════ COMPTABLE ═══════════════════════════════════ -->
+
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#16a34a;">
+      <i class="bi bi-cash-coin"></i>
+    </span>
+    Tableau de bord — Direction Administrative Financière
+  </h1>
+  <a href="{% url 'accounting:caisse_dashboard' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-receipt me-1"></i> Aller à la caisse
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-cash-stack" style="font-size:1.3rem;color:#16a34a;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.5rem;color:#16a34a;">{{ encaisse_jour|default:"0"|floatformat:0 }}</div>
+          <div class="text-muted" style="font-size:.72rem;font-weight:600;">Encaissé aujourd'hui (FCFA)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-calendar-month" style="font-size:1.3rem;color:var(--navy);"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.5rem;color:var(--navy);">{{ encaisse_mois|default:"0"|floatformat:0 }}</div>
+          <div class="text-muted" style="font-size:.72rem;font-weight:600;">Encaissé ce mois (FCFA)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-receipt-cutoff" style="font-size:1.3rem;color:#16a34a;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#16a34a;">{{ nb_transactions_jour|default:"0" }}</div>
+          <div class="text-muted" style="font-size:.72rem;font-weight:600;">Transactions aujourd'hui</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3 d-flex align-items-center gap-3">
+      <div style="width:46px;height:46px;border-radius:10px;background:#fff7ed;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-bar-chart-fill" style="font-size:1.3rem;color:#ea580c;"></i>
+      </div>
+      <div>
+        <a href="{% url 'accounting:etat_journalier' %}" class="btn btn-sm" style="background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;font-size:.78rem;">
+          <i class="bi bi-file-earmark-bar-graph me-1"></i>État journalier
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-receipt"></i>
+          </span>
+          Derniers paiements caisse
+        </h6>
+        <a href="{% url 'accounting:caisse_dashboard' %}" class="btn btn-outline-secondary btn-sm">Voir tout</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Étudiant</th><th>Type</th><th>Montant</th><th>Date</th></tr></thead>
+          <tbody>
+            {% for c in recent_caisse %}
+            <tr>
+              <td style="font-size:.83rem;font-weight:600;">{{ c.student }}</td>
+              <td style="font-size:.78rem;">{{ c.get_payment_type_display }}</td>
+              <td style="font-size:.83rem;color:#16a34a;font-weight:700;">{{ c.amount|floatformat:0 }}</td>
+              <td style="font-size:.78rem;color:#64748b;">{{ c.payment_date|date:"d/m/Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3" style="font-size:.82rem;">Aucun paiement</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-calendar-check"></i>
+          </span>
+          Dernières mensualités reçues
+        </h6>
+        <a href="{% url 'accounting:etat_journalier' %}" class="btn btn-outline-secondary btn-sm">État journalier</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Étudiant</th><th>Classe</th><th>Montant</th><th>Date</th></tr></thead>
+          <tbody>
+            {% for i in recent_inst %}
+            <tr>
+              <td style="font-size:.83rem;font-weight:600;">{{ i.enrollment.student }}</td>
+              <td style="font-size:.78rem;color:#64748b;">{{ i.enrollment.class_group.name }}</td>
+              <td style="font-size:.83rem;color:#16a34a;font-weight:700;">{{ i.amount_paid|floatformat:0 }}</td>
+              <td style="font-size:.78rem;color:#64748b;">{{ i.paid_date|date:"d/m/Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3" style="font-size:.82rem;">Aucune mensualité</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% elif user.is_controleur %}
+<!-- ══════════════ CONTRÔLEUR INTERNE ══════════════════════════ -->
+
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;">
+      <i class="bi bi-shield-check"></i>
+    </span>
+    Tableau de bord — Contrôle interne
+  </h1>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-people-fill" style="font-size:1.3rem;color:var(--navy);"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:var(--navy);">{{ total_students|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Étudiants</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-person-badge-fill" style="font-size:1.3rem;color:#16a34a;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#16a34a;">{{ total_teachers|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Enseignants</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0f9ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-check2-circle" style="font-size:1.3rem;color:#0284c7;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#0284c7;">{{ sheets_validated|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Émargements validés</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-diagram-3-fill" style="font-size:1.3rem;color:#7c3aed;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#7c3aed;">{{ total_directions|default:"0" }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Directions</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#7c3aed;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-diagram-3"></i>
+          </span>
+          Directions de l'institut
+        </h6>
+      </div>
+      {% for d in directions %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid #f1f5f9;">
+        <div>
+          <div style="font-weight:600;font-size:.84rem;color:#1e293b;">{{ d.direction.name }}</div>
+          {% if d.direction.code %}<div style="font-size:.72rem;color:#94a3b8;">{{ d.direction.code }}</div>{% endif %}
+        </div>
+        <span style="font-size:.75rem;background:#eff6ff;color:var(--navy);padding:2px 8px;border-radius:10px;">{{ d.staff }} agent{{ d.staff|pluralize }}</span>
+      </div>
+      {% empty %}
+      <div class="text-center py-4 text-muted" style="font-size:.83rem;">Aucune direction configurée</div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-pencil-square"></i>
+          </span>
+          Derniers émargements
+        </h6>
+        <a href="{% url 'attendance:sheet_list' %}" class="btn btn-outline-secondary btn-sm">Voir tout</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Module (EC)</th><th>Enseignant</th><th>Date</th><th>Statut</th></tr></thead>
+          <tbody>
+            {% for sheet in recent_sheets %}
+            <tr>
+              <td>
+                <div style="font-weight:600;font-size:.84rem;">{{ sheet.timetable_entry.subject.title }}</div>
+                <div style="font-size:.74rem;color:#64748b;">{{ sheet.timetable_entry.class_group.name }}</div>
+              </td>
+              <td style="font-size:.83rem;">{{ sheet.timetable_entry.teacher.full_name }}</td>
+              <td style="font-size:.82rem;color:#64748b;">{{ sheet.session_date|date:"d/m/Y" }}</td>
+              <td>
+                <span class="badge-statut-{% if sheet.status == 'PENDING' %}nouveau{% elif sheet.status == 'SIGNED' %}en_cours{% elif sheet.status == 'VALIDATED' %}inscrit{% else %}non_retenu{% endif %}">
+                  {{ sheet.get_status_display }}
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-4" style="font-size:.83rem;">Aucun émargement</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% elif user.is_ciaq %}
+<!-- ══════════════ CIAQ ═════════════════════════════════════════ -->
+
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0284c7;">
+      <i class="bi bi-mortarboard-fill"></i>
+    </span>
+    Tableau de bord — Qualité académique (CIAQ)
+  </h1>
+  <a href="{% url 'timetable:cahier_texte_list' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-journal-richtext me-1"></i> Cahier de texte
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0f9ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-check2-circle" style="font-size:1.3rem;color:#0284c7;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#0284c7;">{{ sheets_validated|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Émargements validés</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#fffbeb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-hourglass-split" style="font-size:1.3rem;color:#d97706;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#d97706;">{{ sheets_pending|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Émargements en attente</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-building" style="font-size:1.3rem;color:var(--navy);"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:var(--navy);">{{ total_depts|default:"0" }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Départements</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0f9ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-calendar3-week" style="font-size:1.3rem;color:#0284c7;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#0284c7;">{{ sheets_today|default:"0" }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Émargements aujourd'hui</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#0284c7;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-building"></i>
+          </span>
+          Départements
+        </h6>
+      </div>
+      {% for d in dept_data %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid #f1f5f9;">
+        <div>
+          <div style="font-weight:600;font-size:.84rem;color:#1e293b;">{{ d.dept.name }}</div>
+          <div style="font-size:.72rem;color:#94a3b8;">{{ d.teachers }} ens. · {{ d.students }} ét.</div>
+        </div>
+        <div class="d-flex gap-1 align-items-center">
+          <span style="font-size:.72rem;background:#dcfce7;color:#166534;padding:2px 7px;border-radius:10px;">{{ d.sheets }} émarg.</span>
+          {% if d.logs_filled %}
+          <span style="font-size:.72rem;background:#eff6ff;color:var(--navy);padding:2px 7px;border-radius:10px;">{{ d.logs_filled }} cahier</span>
+          {% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <div class="text-center py-4 text-muted" style="font-size:.83rem;">Aucun département</div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-pencil-square"></i>
+          </span>
+          Derniers émargements
+        </h6>
+        <a href="{% url 'attendance:sheet_list' %}" class="btn btn-outline-secondary btn-sm">Voir tout</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Module (EC) / Classe</th><th>Enseignant</th><th>Date</th><th>Statut</th></tr></thead>
+          <tbody>
+            {% for sheet in recent_sheets %}
+            <tr>
+              <td>
+                <div style="font-weight:600;font-size:.84rem;">{{ sheet.timetable_entry.subject.title }}</div>
+                <div style="font-size:.74rem;color:#64748b;">{{ sheet.timetable_entry.class_group.name }}</div>
+              </td>
+              <td style="font-size:.83rem;">{{ sheet.timetable_entry.teacher.full_name }}</td>
+              <td style="font-size:.82rem;color:#64748b;">{{ sheet.session_date|date:"d/m/Y" }}</td>
+              <td>
+                <span class="badge-statut-{% if sheet.status == 'PENDING' %}nouveau{% elif sheet.status == 'SIGNED' %}en_cours{% elif sheet.status == 'VALIDATED' %}inscrit{% else %}non_retenu{% endif %}">
+                  {{ sheet.get_status_display }}
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-4" style="font-size:.83rem;">Aucun émargement</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% elif user.is_admin_direction %}
+<!-- ══════════════ ADMIN / ASSISTANTE DE DIRECTION ══════════════ -->
+
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0284c7;">
+      <i class="bi bi-diagram-2-fill"></i>
+    </span>
+    {% if direction %}{{ direction.name }}{% else %}Ma Direction{% endif %}
+  </h1>
+  <a href="{% url 'timetable:index' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-calendar3-week-fill"></i> Emplois du temps
+  </a>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-people-fill" style="font-size:1.3rem;color:var(--navy);"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:var(--navy);">{{ total_students|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Étudiants</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-person-badge-fill" style="font-size:1.3rem;color:#16a34a;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#16a34a;">{{ total_teachers|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Enseignants</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0f9ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-check2-circle" style="font-size:1.3rem;color:#0284c7;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#0284c7;">{{ sheets_validated|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Émargements validés</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#fffbeb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-clock-history" style="font-size:1.3rem;color:#d97706;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#d97706;">{{ cancellations_pending|default:"0" }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Annulations en attente</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#0284c7;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-building"></i>
+          </span>
+          Départements
+        </h6>
+      </div>
+      {% for d in dept_data %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid #f1f5f9;">
+        <div>
+          <div style="font-weight:600;font-size:.84rem;color:#1e293b;">{{ d.dept.name }}</div>
+          <div style="font-size:.72rem;color:#94a3b8;">{{ d.teachers }} ens. · {{ d.students }} ét.</div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="text-center py-4 text-muted" style="font-size:.83rem;">Aucun département dans cette direction</div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card-section mb-3">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-pencil-square"></i>
+          </span>
+          Derniers émargements
+        </h6>
+        <a href="{% url 'attendance:sheet_list' %}" class="btn btn-outline-secondary btn-sm">Voir tout</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Module (EC)</th><th>Enseignant</th><th>Date</th><th>Statut</th></tr></thead>
+          <tbody>
+            {% for sheet in recent_sheets %}
+            <tr>
+              <td>
+                <div style="font-weight:600;font-size:.84rem;">{{ sheet.timetable_entry.subject.title }}</div>
+                <div style="font-size:.74rem;color:#64748b;">{{ sheet.timetable_entry.class_group.name }}</div>
+              </td>
+              <td style="font-size:.83rem;">{{ sheet.timetable_entry.teacher.full_name }}</td>
+              <td style="font-size:.82rem;color:#64748b;">{{ sheet.session_date|date:"d/m/Y" }}</td>
+              <td>
+                <span class="badge-statut-{% if sheet.status == 'PENDING' %}nouveau{% elif sheet.status == 'SIGNED' %}en_cours{% elif sheet.status == 'VALIDATED' %}inscrit{% else %}non_retenu{% endif %}">
+                  {{ sheet.get_status_display }}
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3" style="font-size:.83rem;">Aucun émargement</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% if recent_cancellations %}
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#d97706;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-exclamation-triangle"></i>
+          </span>
+          Annulations en attente
+        </h6>
+        <a href="{% url 'cancellations:list' %}" class="btn btn-outline-secondary btn-sm">Gérer</a>
+      </div>
+      {% for cancel in recent_cancellations %}
+      <a href="{% url 'cancellations:review' cancel.pk %}" class="d-flex align-items-start gap-3 px-4 py-3 text-decoration-none" style="border-bottom:1px solid #f1f5f9;">
+        <div style="min-width:0;flex:1;">
+          <div style="font-weight:600;font-size:.84rem;color:#1e293b;">{{ cancel.timetable_entry.subject.title }}</div>
+          <div style="font-size:.75rem;color:#64748b;">{{ cancel.get_request_type_display }} — {{ cancel.session_date|date:"d/m/Y" }}</div>
+        </div>
+        <i class="bi bi-chevron-right" style="color:#cbd5e1;font-size:.8rem;margin-top:6px;flex-shrink:0;"></i>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+
+{% elif user.is_responsable %}
+<!-- ══════════════ RESPONSABLE / ASSISTANTE DE DÉPARTEMENT ══════ -->
+
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);">
+      <i class="bi bi-building-fill"></i>
+    </span>
+    {% if department %}{{ department.name }}{% else %}Mon Département{% endif %}
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'timetable:index' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-calendar3-week-fill"></i> Emplois du temps
+    </a>
+    <a href="{% url 'cancellations:list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-clock-history"></i> Annulations
+    </a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-people-fill" style="font-size:1.3rem;color:var(--navy);"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:var(--navy);">{{ total_students|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Étudiants du département</div>
+        </div>
+      </div>
+      <div class="mt-2 pt-2 border-top" style="font-size:.72rem;color:#64748b;">
+        <a href="{% url 'students:list' %}" style="color:var(--navy);text-decoration:none;font-weight:600;">Voir la liste</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-person-badge-fill" style="font-size:1.3rem;color:#16a34a;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#16a34a;">{{ total_teachers|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Enseignants du département</div>
+        </div>
+      </div>
+      <div class="mt-2 pt-2 border-top" style="font-size:.72rem;color:#64748b;">
+        <a href="{% url 'teachers:list' %}" style="color:#16a34a;text-decoration:none;font-weight:600;">Voir la liste</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0f9ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-check2-circle" style="font-size:1.3rem;color:#0284c7;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#0284c7;">{{ sheets_validated|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Émargements validés</div>
+        </div>
+      </div>
+      <div class="mt-2 pt-2 border-top" style="font-size:.72rem;color:#64748b;">
+        <a href="{% url 'attendance:sheet_list' %}" style="color:#0284c7;text-decoration:none;font-weight:600;">Voir les feuilles</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#fffbeb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-clock-history" style="font-size:1.3rem;color:#d97706;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#d97706;">{{ cancellations_pending|default:"0" }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Annulations en attente</div>
+        </div>
+      </div>
+      <div class="mt-2 pt-2 border-top" style="font-size:.72rem;color:#64748b;">
+        <a href="{% url 'cancellations:list' %}" style="color:#d97706;text-decoration:none;font-weight:600;">Traiter les demandes</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-pencil-square"></i>
+          </span>
+          Derniers émargements — {{ department }}
+        </h6>
+        <a href="{% url 'attendance:sheet_list' %}" class="btn btn-outline-secondary btn-sm">Voir tout</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Module (EC)</th><th>Enseignant</th><th>Date</th><th>Statut</th></tr></thead>
+          <tbody>
+            {% for sheet in recent_sheets %}
+            <tr>
+              <td>
+                <div style="font-weight:600;font-size:.84rem;">{{ sheet.timetable_entry.subject.title }}</div>
+                <div style="font-size:.74rem;color:#64748b;">{{ sheet.timetable_entry.class_group.name }}</div>
+              </td>
+              <td style="font-size:.83rem;">{{ sheet.timetable_entry.teacher.full_name }}</td>
+              <td style="font-size:.82rem;color:#64748b;">{{ sheet.session_date|date:"d/m/Y" }}</td>
+              <td>
+                <span class="badge-statut-{% if sheet.status == 'PENDING' %}nouveau{% elif sheet.status == 'SIGNED' %}en_cours{% elif sheet.status == 'VALIDATED' %}inscrit{% else %}non_retenu{% endif %}">
+                  {{ sheet.get_status_display }}
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-4" style="font-size:.83rem;">
+              <i class="bi bi-inbox d-block mb-1" style="font-size:1.5rem;color:#cbd5e1;"></i>
+              Aucun émargement enregistré
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card-section h-100">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#d97706;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-exclamation-triangle"></i>
+          </span>
+          Demandes en attente
+          {% if cancellations_pending %}
+          <span class="badge ms-1" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;font-size:.68rem;">{{ cancellations_pending }}</span>
+          {% endif %}
+        </h6>
+        <a href="{% url 'cancellations:list' %}" class="btn btn-outline-secondary btn-sm">Gérer</a>
+      </div>
+      {% for cancel in recent_cancellations %}
+      <a href="{% url 'cancellations:review' cancel.pk %}"
+         class="d-flex align-items-start gap-3 px-4 py-3 text-decoration-none"
+         style="border-bottom:1px solid #f1f5f9;">
+        <div style="width:34px;height:34px;border-radius:8px;background:#fff1f2;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+          <i class="bi bi-x-circle" style="color:#dc2626;font-size:.9rem;"></i>
+        </div>
+        <div style="min-width:0;flex:1;">
+          <div style="font-weight:600;font-size:.84rem;color:#1e293b;" class="text-truncate">{{ cancel.timetable_entry.subject.title }}</div>
+          <div style="font-size:.75rem;color:#64748b;">{{ cancel.get_request_type_display }} — {{ cancel.session_date|date:"d/m/Y" }}</div>
+          <div style="font-size:.72rem;color:#94a3b8;">par {{ cancel.requested_by.get_full_name }}</div>
+        </div>
+        <i class="bi bi-chevron-right" style="color:#cbd5e1;font-size:.8rem;margin-top:6px;flex-shrink:0;"></i>
+      </a>
+      {% empty %}
+      <div class="text-center py-5" style="color:#94a3b8;">
+        <i class="bi bi-check-circle-fill d-block mb-2" style="font-size:2rem;color:#bbf7d0;"></i>
+        <div style="font-size:.83rem;font-weight:600;">Aucune demande en attente</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+
+{% elif user.role_name == 'ADMIN' or user.is_inst_admin %}
+<!-- ══════════════ ADMIN / INST_ADMIN ═══════════════════════════ -->
+
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);">
+      <i class="bi bi-speedometer2"></i>
+    </span>
+    Vue d'ensemble
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'timetable:index' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-calendar3-week-fill"></i> Emplois du temps
+    </a>
+    {% if user.role_name == 'ADMIN' %}
+    <a href="{% url 'reports:index' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-bar-chart-line"></i> Rapports
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-people-fill" style="font-size:1.3rem;color:var(--navy);"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:var(--navy);">{{ total_students|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Étudiants</div>
+        </div>
+      </div>
+      <div class="mt-2 pt-2 border-top" style="font-size:.72rem;color:#64748b;">
+        <i class="bi bi-arrow-right-circle me-1" style="color:var(--navy);"></i>
+        <a href="{% url 'students:list' %}" style="color:var(--navy);text-decoration:none;font-weight:600;">Voir la liste</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-person-badge-fill" style="font-size:1.3rem;color:#16a34a;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#16a34a;">{{ total_teachers|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Enseignants</div>
+        </div>
+      </div>
+      <div class="mt-2 pt-2 border-top" style="font-size:.72rem;color:#64748b;">
+        <i class="bi bi-arrow-right-circle me-1" style="color:#16a34a;"></i>
+        <a href="{% url 'teachers:list' %}" style="color:#16a34a;text-decoration:none;font-weight:600;">Voir la liste</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0f9ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-check2-circle" style="font-size:1.3rem;color:#0284c7;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#0284c7;">{{ sheets_validated|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Émargements validés</div>
+        </div>
+      </div>
+      <div class="mt-2 pt-2 border-top" style="font-size:.72rem;color:#64748b;">
+        <i class="bi bi-arrow-right-circle me-1" style="color:#0284c7;"></i>
+        <a href="{% url 'attendance:sheet_list' %}" style="color:#0284c7;text-decoration:none;font-weight:600;">Voir les feuilles</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#fffbeb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-clock-history" style="font-size:1.3rem;color:#d97706;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#d97706;">{{ cancellations_pending|default:"0"|intcomma }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Annulations en attente</div>
+        </div>
+      </div>
+      <div class="mt-2 pt-2 border-top" style="font-size:.72rem;color:#64748b;">
+        <i class="bi bi-arrow-right-circle me-1" style="color:#d97706;"></i>
+        <a href="{% url 'cancellations:list' %}" style="color:#d97706;text-decoration:none;font-weight:600;">Traiter les demandes</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tableaux -->
+<div class="row g-3">
+
+  <!-- Derniers émargements -->
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-pencil-square"></i>
+          </span>
+          Derniers émargements
+        </h6>
+        <a href="{% url 'attendance:sheet_list' %}" class="btn btn-outline-secondary btn-sm">
+          Voir tout <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Module (EC)</th>
+              <th>Enseignant</th>
+              <th>Date</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sheet in recent_sheets %}
+            <tr>
+              <td>
+                <div style="font-weight:600;font-size:.84rem;">{{ sheet.timetable_entry.subject.title }}</div>
+                <div style="font-size:.74rem;color:#64748b;">{{ sheet.timetable_entry.class_group.name }}</div>
+              </td>
+              <td style="font-size:.83rem;">{{ sheet.timetable_entry.teacher.full_name }}</td>
+              <td style="font-size:.82rem;color:#64748b;">{{ sheet.session_date|date:"d/m/Y" }}</td>
+              <td>
+                <span class="badge-statut-{% if sheet.status == 'PENDING' %}nouveau{% elif sheet.status == 'SIGNED' %}en_cours{% elif sheet.status == 'VALIDATED' %}inscrit{% else %}non_retenu{% endif %}">
+                  {{ sheet.get_status_display }}
+                </span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-4" style="font-size:.83rem;">
+                <i class="bi bi-inbox d-block mb-1" style="font-size:1.5rem;color:#cbd5e1;"></i>
+                Aucun émargement enregistré
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Demandes en attente -->
+  <div class="col-lg-5">
+    <div class="card-section h-100">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#d97706;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-exclamation-triangle"></i>
+          </span>
+          Demandes en attente
+          {% if cancellations_pending %}
+          <span class="badge ms-1" style="background:#fffbeb;color:#92400e;border:1px solid #fde68a;font-size:.68rem;">{{ cancellations_pending }}</span>
+          {% endif %}
+        </h6>
+        <a href="{% url 'cancellations:list' %}" class="btn btn-outline-secondary btn-sm">Gérer</a>
+      </div>
+      {% for cancel in recent_cancellations %}
+      <a href="{% url 'cancellations:review' cancel.pk %}"
+         class="d-flex align-items-start gap-3 px-4 py-3 text-decoration-none"
+         style="border-bottom:1px solid #f1f5f9;transition:background .15s;"
+         onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+        <div style="width:34px;height:34px;border-radius:8px;background:#fff1f2;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
+          <i class="bi bi-x-circle" style="color:#dc2626;font-size:.9rem;"></i>
+        </div>
+        <div style="min-width:0;flex:1;">
+          <div style="font-weight:600;font-size:.84rem;color:#1e293b;" class="text-truncate">{{ cancel.timetable_entry.subject.title }}</div>
+          <div style="font-size:.75rem;color:#64748b;">{{ cancel.get_request_type_display }} — {{ cancel.session_date|date:"d/m/Y" }}</div>
+          <div style="font-size:.72rem;color:#94a3b8;">par {{ cancel.requested_by.get_full_name }}</div>
+        </div>
+        <i class="bi bi-chevron-right" style="color:#cbd5e1;font-size:.8rem;margin-top:6px;flex-shrink:0;"></i>
+      </a>
+      {% empty %}
+      <div class="text-center py-5" style="color:#94a3b8;">
+        <i class="bi bi-check-circle-fill d-block mb-2" style="font-size:2rem;color:#bbf7d0;"></i>
+        <div style="font-size:.83rem;font-weight:600;">Aucune demande en attente</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+</div>
+
+
+{% elif user.role_name == 'ENSEIGNANT' %}
+<!-- ══════════════ ENSEIGNANT ════════════════════════════════════ -->
+
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);">
+      <i class="bi bi-person-badge-fill"></i>
+    </span>
+    Mon espace enseignant
+  </h1>
+  <a href="{% url 'timetable:index' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-calendar3-week-fill"></i> Mon planning
+  </a>
+</div>
+
+<!-- Stat cards enseignant -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-calendar-check-fill" style="font-size:1.3rem;color:var(--navy);"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:var(--navy);">{{ today_entries.count|default:"0" }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Cours aujourd'hui</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-hourglass-split" style="font-size:1.3rem;color:#16a34a;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#16a34a;">{{ hours_done|default:"0"|floatformat:0 }}h</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Heures effectuées</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#fffbeb;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-pencil-fill" style="font-size:1.3rem;color:#d97706;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#d97706;">{{ pending_sheets|default:"0" }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Émargements en attente</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#f5f3ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-bar-chart-fill" style="font-size:1.3rem;color:#7c3aed;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#7c3aed;">{{ contractual_hours|default:"0"|floatformat:0 }}h</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Volume contractuel</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cours du jour -->
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+        <i class="bi bi-calendar3"></i>
+      </span>
+      Cours du jour — {% now "l j F Y" %}
+    </h6>
+    <a href="{% url 'attendance:sheet_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-pencil-square me-1"></i>Feuilles d'émargement
+    </a>
+  </div>
+  <div class="p-3">
+    {% if today_entries %}
+    <div class="row g-3">
+      {% for entry in today_entries %}
+      <div class="col-md-6 col-xl-4">
+        <div style="border:1px solid #e2e8f0;border-left:4px solid {{ entry.color|default:'var(--navy)' }};border-radius:10px;padding:1rem;background:#fff;transition:box-shadow .18s;"
+             onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''">
+          <div class="d-flex align-items-start justify-content-between mb-2">
+            <div style="min-width:0;">
+              <div style="font-weight:700;font-size:.9rem;color:#1e293b;" class="text-truncate">{{ entry.subject.title }}</div>
+              <div style="font-size:.76rem;color:#64748b;">{{ entry.class_group.name }}</div>
+            </div>
+          </div>
+          <div class="d-flex flex-column gap-1 mb-3" style="font-size:.78rem;color:#64748b;">
+            <div><i class="bi bi-clock me-1" style="color:var(--navy);"></i>{{ entry.start_time|time:"H:i" }} — {{ entry.end_time|time:"H:i" }}</div>
+            {% if entry.room %}<div><i class="bi bi-geo-alt me-1" style="color:#7c3aed;"></i>{{ entry.room.name }}</div>{% endif %}
+          </div>
+          <a href="{% url 'attendance:sheet_list' %}?entry={{ entry.pk }}"
+             class="btn btn-primary btn-sm w-100" style="font-size:.78rem;">
+            <i class="bi bi-pencil-square me-1"></i>Émarger ce cours
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5" style="color:#94a3b8;">
+      <i class="bi bi-calendar-x d-block mb-2" style="font-size:2.5rem;color:#cbd5e1;"></i>
+      <div style="font-weight:600;font-size:.9rem;">Aucun cours prévu aujourd'hui</div>
+      <div style="font-size:.78rem;margin-top:4px;">Consultez votre planning pour les prochains jours.</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+
+{% else %}
+<!-- ══════════════ ÉTUDIANT ══════════════════════════════════════ -->
+
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);">
+      <i class="bi bi-mortarboard-fill"></i>
+    </span>
+    Mon espace étudiant
+  </h1>
+  <div class="d-flex align-items-center gap-2">
+    {% if available_years|length > 1 %}
+    <form method="get" class="d-flex align-items-center gap-2">
+      <label for="student-year-select" class="text-muted" style="font-size:.78rem;font-weight:600;">Année académique</label>
+      <select id="student-year-select" name="annee" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        {% for y in available_years %}
+        <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y.label }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    {% endif %}
+    <a href="{% url 'timetable:index' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-calendar3-week-fill"></i> Mon planning
+    </a>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="stat-card p-3">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-calendar3-week" style="font-size:1.3rem;color:var(--navy);"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:var(--navy);">{{ today_entries.count|default:"0" }}</div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">Cours aujourd'hui</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'attendance:my_absences' %}" class="text-decoration-none">
+    <div class="stat-card p-3" style="{% if absence_seuil and absence_count >= absence_seuil %}border:1px solid #fecaca;{% endif %}">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:46px;height:46px;border-radius:10px;background:#fff1f2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-person-dash-fill" style="font-size:1.3rem;color:#dc2626;"></i>
+        </div>
+        <div>
+          <div class="stat-number" style="font-size:1.75rem;color:#dc2626;">
+            {{ absence_count|default:"0" }}{% if absence_seuil %}<span style="font-size:1rem;color:#cbd5e1;"> / {{ absence_seuil }}</span>{% endif %}
+          </div>
+          <div class="text-muted" style="font-size:.75rem;font-weight:600;">
+            Absences non justifiées
+            {% if absence_seuil and absence_count >= absence_seuil %}
+            <span style="color:#dc2626;"><i class="bi bi-exclamation-triangle-fill"></i></span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <div style="font-size:.68rem;color:#94a3b8;margin-top:8px;line-height:1.3;">
+        Au-delà du seuil, un email est envoyé à votre <strong style="color:#64748b;">PARENT</strong> pour l'informer de vos absences.
+      </div>
+    </div>
+    </a>
+  </div>
+  {% if enrollment %}
+  <div class="col-12 col-lg-6">
+    <div class="stat-card p-3 h-100">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <div style="width:46px;height:46px;border-radius:10px;background:#fff1f2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-file-earmark-pdf-fill" style="font-size:1.3rem;color:#dc2626;"></i>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:.88rem;color:#1e293b;">Mes documents</div>
+          <div style="font-size:.75rem;color:#64748b;">Téléchargez vos documents officiels</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;">
+          <a href="{% url 'accounting:mon_certificat_inscription_pdf' %}"
+             target="_blank"
+             style="display:inline-flex;align-items:center;gap:7px;padding:8px 18px;background:#dc2626;color:#fff;border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none;white-space:nowrap;">
+            <i class="bi bi-download"></i>Certificat d'inscription
+          </a>
+          <a href="{% url 'students:my_presence_card' %}"
+             style="display:inline-flex;align-items:center;gap:7px;padding:8px 18px;background:var(--navy);color:#fff;border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none;white-space:nowrap;">
+            <i class="bi bi-qr-code"></i>Ma carte Présence
+          </a>
+          <a href="{% url 'hr:ma_carte_pointage' %}"
+             style="display:inline-flex;align-items:center;gap:7px;padding:8px 18px;background:#0ea5e9;color:#fff;border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none;white-space:nowrap;">
+            <i class="bi bi-qr-code-scan"></i>Pointage à l'accueil
+          </a>
+          <a href="{% url 'accounting:diploma_supplement_pdf' 'licence' %}"
+             target="_blank"
+             style="display:inline-flex;align-items:center;gap:7px;padding:8px 18px;background:#7c3aed;color:#fff;border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none;white-space:nowrap;">
+            <i class="bi bi-award"></i>Supplément diplôme (Licence)
+          </a>
+          <a href="{% url 'accounting:diploma_supplement_pdf' 'master' %}"
+             target="_blank"
+             style="display:inline-flex;align-items:center;gap:7px;padding:8px 18px;background:#6d28d9;color:#fff;border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none;white-space:nowrap;">
+            <i class="bi bi-award-fill"></i>Supplément diplôme (Master)
+          </a>
+          {% if show_non_soutenance %}
+          <a href="{% url 'accounting:attestation_non_soutenance_pdf' %}"
+             target="_blank"
+             style="display:inline-flex;align-items:center;gap:7px;padding:8px 18px;background:#0f766e;color:#fff;border-radius:8px;font-size:.82rem;font-weight:700;text-decoration:none;white-space:nowrap;">
+            <i class="bi bi-file-earmark-check-fill"></i>Attestation de non soutenance
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  <!-- Cours du jour -->
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-calendar3"></i>
+          </span>
+          Cours du jour
+        </h6>
+        <a href="{% url 'timetable:index' %}" class="btn btn-outline-secondary btn-sm">Planning complet</a>
+      </div>
+      <div class="p-3">
+        {% if today_entries %}
+        <div class="d-flex flex-column gap-2">
+          {% for entry in today_entries %}
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid #e2e8f0;border-left:4px solid {{ entry.color|default:'var(--navy)' }};border-radius:10px;">
+            <div style="min-width:52px;text-align:center;">
+              <div style="font-weight:700;font-size:.82rem;color:{{ entry.color|default:'var(--navy)' }};">{{ entry.start_time|time:"H:i" }}</div>
+              <div style="font-size:.7rem;color:#94a3b8;">{{ entry.end_time|time:"H:i" }}</div>
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:700;font-size:.87rem;color:#1e293b;" class="text-truncate">{{ entry.subject.title }}</div>
+              <div style="font-size:.75rem;color:#64748b;">
+                {{ entry.teacher.full_name }}{% if entry.room %} · {{ entry.room.name }}{% endif %}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4" style="color:#94a3b8;">
+          <i class="bi bi-calendar-x d-block mb-2" style="font-size:2rem;color:#cbd5e1;"></i>
+          <div style="font-size:.83rem;">Aucun cours aujourd'hui</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Dernières notes par semestre -->
+  <div class="col-lg-5">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-award-fill"></i>
+          </span>
+          Mes notes
+        </h6>
+        <a href="{% url 'grades:student_grades' %}" class="btn btn-outline-secondary btn-sm">Toutes</a>
+      </div>
+
+      {% if grades_by_semester %}
+        {% for semester, grades in grades_by_semester %}
+        <div class="dash-sem-group">
+          <!-- Header semestre accordéon -->
+          <button type="button"
+                  onclick="toggleDashSem('dsem-{{ forloop.counter }}')"
+                  style="width:100%;background:#f8fafc;border:none;border-bottom:1px solid #e2e8f0;cursor:pointer;padding:9px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <div class="d-flex align-items-center gap-2">
+              <span style="width:22px;height:22px;border-radius:5px;background:#16a34a;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.65rem;flex-shrink:0;">
+                <i class="bi bi-calendar3"></i>
+              </span>
+              <span style="font-weight:700;font-size:.82rem;color:#1e293b;">
+                {% if semester %}{{ semester.label }}{% else %}Sans semestre{% endif %}
+              </span>
+              <span style="font-size:.7rem;font-weight:600;background:#dcfce7;color:#166534;padding:1px 8px;border-radius:10px;">
+                {{ grades|length }} note{{ grades|length|pluralize }}
+              </span>
+            </div>
+            <i class="bi bi-chevron-down dsem-arrow" id="darrow-{{ forloop.counter }}"
+               style="color:#64748b;font-size:.8rem;transition:transform .2s;"></i>
+          </button>
+
+          <!-- Corps déroulant -->
+          <div id="dsem-{{ forloop.counter }}" style="display:none;">
+            {% for grade in grades %}
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid #f1f5f9;">
+              <div style="min-width:0;flex:1;">
+                <div style="font-weight:600;font-size:.84rem;color:#1e293b;" class="text-truncate">
+                  {{ grade.evaluation.subject.title }}
+                </div>
+                <div style="font-size:.73rem;color:#64748b;">{{ grade.evaluation.title }}</div>
+              </div>
+              <div style="text-align:right;flex-shrink:0;margin-left:12px;">
+                <div style="font-size:1.1rem;font-weight:800;{% if grade.score >= 10 %}color:#16a34a;{% else %}color:#dc2626;{% endif %}">
+                  {{ grade.score|floatformat:2 }}
+                </div>
+                <div style="font-size:.7rem;color:#94a3b8;">/ {{ grade.evaluation.max_score }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="text-center py-4" style="color:#94a3b8;">
+        <i class="bi bi-award d-block mb-2" style="font-size:2rem;color:#cbd5e1;"></i>
+        <div style="font-size:.83rem;">Aucune note disponible</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleDashSem(id) {
+  const body  = document.getElementById(id);
+  const num   = id.replace('dsem-', '');
+  const arrow = document.getElementById('darrow-' + num);
+  const open  = body.style.display !== 'none';
+  body.style.display    = open ? 'none' : 'block';
+  arrow.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+// Ouvrir le premier semestre par défaut
+document.addEventListener('DOMContentLoaded', function () {
+  const first = document.getElementById('dsem-1');
+  const arrow = document.getElementById('darrow-1');
+  if (first) {
+    first.style.display    = 'block';
+    if (arrow) arrow.style.transform = 'rotate(180deg)';
+  }
+});
+</script>
+{% endblock %}

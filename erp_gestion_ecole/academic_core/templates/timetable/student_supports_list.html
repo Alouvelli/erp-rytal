@@ -1,0 +1,301 @@
+{% extends 'base/base.html' %}
+{% block title %}Mes Supports de Cours{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Mes Supports de Cours</li>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.support-accordion-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 20px; cursor:pointer; user-select:none;
+  background:#fff; border:none; width:100%; text-align:left;
+  border-radius:0;
+}
+.support-accordion-header:hover { background:#f8fafc; }
+.support-accordion-header .chevron {
+  transition:transform .25s; color:#94a3b8; font-size:.85rem;
+}
+.support-accordion-header.open .chevron { transform:rotate(180deg); color:#1d4ed8; }
+.support-accordion-body { display:none; }
+.support-accordion-body.show { display:block; }
+
+.support-row {
+  display:flex; align-items:flex-start; gap:14px;
+  padding:12px 20px 12px 28px;
+  border-top:1px solid #f1f5f9;
+  transition:background .15s;
+}
+.support-row:hover { background:#f8fafc; }
+
+.support-icon-box {
+  width:40px; height:40px; border-radius:10px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:1.1rem;
+}
+.support-meta { flex:1; min-width:0; }
+.support-title { font-weight:700; font-size:.88rem; color:#1e293b; }
+.support-sub { font-size:.76rem; color:#64748b; margin-top:2px; }
+.support-actions { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+
+.badge-cm  { background:#7c3aed; color:#fff; }
+.badge-td  { background:#0891b2; color:#fff; }
+.badge-tp  { background:#059669; color:#fff; }
+.badge-autre { background:#6b7280; color:#fff; }
+.type-badge {
+  display:inline-block; border-radius:6px; padding:2px 9px;
+  font-size:.71rem; font-weight:700; letter-spacing:.04em;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- En-tête -->
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0891b2;"><i class="bi bi-folder2-open"></i></span>
+    Mes Supports de Cours
+  </h1>
+  <span class="text-muted small">{{ total }} support{{ total|pluralize }} disponible{{ total|pluralize }}</span>
+</div>
+
+{% if messages %}
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+{% endif %}
+
+<!-- Filtres -->
+<div class="d-flex gap-2 flex-wrap mb-4">
+  <a href="{% url 'timetable:student_supports_list' %}"
+     class="btn btn-sm {% if not filter_type %}btn-dark{% else %}btn-outline-secondary{% endif %}">
+    <i class="bi bi-grid me-1"></i>Tous
+  </a>
+  {% for val, label in support_types %}
+  <a href="?type={{ val }}"
+     class="btn btn-sm {% if filter_type == val %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+    {{ label|truncatechars:20 }}
+  </a>
+  {% endfor %}
+</div>
+
+{% if not by_subject %}
+<div style="text-align:center;padding:70px 20px;">
+  <i class="bi bi-folder-x d-block mb-3" style="font-size:3rem;color:#cbd5e1;"></i>
+  <div style="font-size:.95rem;font-weight:600;color:#64748b;">Aucun support disponible pour le moment.</div>
+  <div style="font-size:.82rem;color:#94a3b8;margin-top:6px;">
+    Vos enseignants n'ont pas encore partagé de supports pour vos classes.
+  </div>
+</div>
+
+{% else %}
+{% for group in by_subject %}
+{% with gid=forloop.counter %}
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:12px;
+            box-shadow:0 1px 4px rgba(0,0,0,.05);">
+
+  <!-- En-tête de la matière (cliquable) -->
+  <button class="support-accordion-header {% if forloop.first %}open{% endif %}"
+          onclick="toggleAccordion({{ gid }})" id="hdr-{{ gid }}">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="width:36px;height:36px;border-radius:9px;background:#eff6ff;
+                  display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-book" style="color:#1d4ed8;font-size:.9rem;"></i>
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:.92rem;color:#1e293b;">{{ group.subject.title }}</div>
+        <div style="font-size:.74rem;color:#64748b;">
+          {{ group.subject.code }}
+          {% with cnt=group.supports|length %}
+          &nbsp;·&nbsp;
+          <span style="color:#1d4ed8;font-weight:600;">{{ cnt }} support{{ cnt|pluralize }}</span>
+          {% endwith %}
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      {% for s in group.supports %}{% if forloop.first %}
+        <span class="type-badge badge-{{ s.support_type|lower }}">{{ s.support_type }}</span>
+      {% endif %}{% endfor %}
+      <i class="bi bi-chevron-down chevron"></i>
+    </div>
+  </button>
+
+  <!-- Corps accordéon -->
+  <div class="support-accordion-body {% if forloop.first %}show{% endif %}" id="body-{{ gid }}">
+
+    {% for s in group.supports %}
+    <div class="support-row">
+      <!-- Icône type -->
+      <div class="support-icon-box"
+           style="background:{% if s.support_type == 'CM' %}#f5f3ff{% elif s.support_type == 'TD' %}#ecfeff{% elif s.support_type == 'TP' %}#f0fdf4{% else %}#f8fafc{% endif %};">
+        {% if s.file_extension == 'pdf' %}
+          <i class="bi bi-file-earmark-pdf" style="color:{% if s.support_type == 'CM' %}#7c3aed{% elif s.support_type == 'TD' %}#0891b2{% elif s.support_type == 'TP' %}#059669{% else %}#6b7280{% endif %};"></i>
+        {% elif s.file_extension in 'doc,docx' %}
+          <i class="bi bi-file-earmark-word" style="color:#2563eb;"></i>
+        {% elif s.file_extension in 'ppt,pptx' %}
+          <i class="bi bi-file-earmark-slides" style="color:#ea580c;"></i>
+        {% elif s.file_extension in 'xls,xlsx' %}
+          <i class="bi bi-file-earmark-excel" style="color:#16a34a;"></i>
+        {% elif s.file_extension in 'png,jpg,jpeg,gif' %}
+          <i class="bi bi-file-earmark-image" style="color:#0891b2;"></i>
+        {% else %}
+          <i class="bi bi-file-earmark-zip" style="color:#6b7280;"></i>
+        {% endif %}
+      </div>
+
+      <!-- Infos -->
+      <div class="support-meta">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <span class="type-badge badge-{{ s.support_type|lower }}">{{ s.support_type }}</span>
+          <span class="support-title">{{ s.title }}</span>
+        </div>
+        {% if s.description %}
+        <div class="support-sub">{{ s.description|truncatechars:90 }}</div>
+        {% endif %}
+        <div class="support-sub mt-1">
+          <i class="bi bi-person me-1"></i>{{ s.teacher.full_name }}
+          &nbsp;·&nbsp;
+          <i class="bi bi-calendar3 me-1"></i>{{ s.shared_at|date:"d/m/Y" }}
+          &nbsp;·&nbsp;
+          <i class="bi bi-file-earmark me-1"></i>
+          <span style="font-style:italic;">{{ s.filename|truncatechars:30 }}</span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="support-actions">
+        {% if s.file_extension == 'pdf' %}
+        <!-- PDF : ouvrir en ligne dans un modal -->
+        <button type="button"
+                onclick="openViewer('{% url 'timetable:support_download' s.pk %}?view=1', '{{ s.title|escapejs }}')"
+                class="btn btn-sm"
+                style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:.76rem;padding:5px 12px;font-weight:600;">
+          <i class="bi bi-eye me-1"></i>Ouvrir
+        </button>
+        {% elif s.file_extension in 'png,jpg,jpeg,gif' %}
+        <!-- Image : aperçu modal -->
+        <button type="button"
+                onclick="openImgViewer('{% url 'timetable:support_download' s.pk %}?view=1', '{{ s.title|escapejs }}')"
+                class="btn btn-sm"
+                style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:.76rem;padding:5px 12px;font-weight:600;">
+          <i class="bi bi-eye me-1"></i>Aperçu
+        </button>
+        {% else %}
+        <!-- Autres formats : ouvrir dans un nouvel onglet -->
+        <a href="{% url 'timetable:support_download' s.pk %}?view=1" target="_blank"
+           class="btn btn-sm"
+           style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:.76rem;padding:5px 12px;font-weight:600;">
+          <i class="bi bi-box-arrow-up-right me-1"></i>Ouvrir
+        </a>
+        {% endif %}
+
+        <a href="{% url 'timetable:support_download' s.pk %}"
+           class="btn btn-sm"
+           style="background:#f0fdf4;color:#15803d;border:1px solid #86efac;font-size:.76rem;padding:5px 12px;font-weight:600;"
+           title="Télécharger {{ s.filename }}">
+          <i class="bi bi-download me-1"></i>Télécharger
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+
+  </div>
+</div>
+{% endwith %}
+{% endfor %}
+{% endif %}
+
+<!-- ── Modal visionneuse PDF ────────────────────────────────────────────── -->
+<div id="pdfModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);
+     z-index:1050;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;width:92vw;max-width:960px;height:88vh;
+              display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.35);">
+    <!-- Barre du modal -->
+    <div style="display:flex;align-items:center;justify-content:space-between;
+                padding:12px 20px;border-bottom:1px solid #e2e8f0;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <i class="bi bi-file-earmark-pdf" style="color:#dc2626;font-size:1.1rem;"></i>
+        <span id="pdfTitle" style="font-weight:700;font-size:.9rem;color:#1e293b;"></span>
+      </div>
+      <button onclick="closeViewer()" style="border:none;background:none;font-size:1.2rem;
+              color:#64748b;cursor:pointer;padding:4px 8px;border-radius:6px;"
+              title="Fermer">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <!-- iFrame PDF -->
+    <iframe id="pdfFrame" src="" style="flex:1;border:none;width:100%;"></iframe>
+  </div>
+</div>
+
+<!-- ── Modal visionneuse Image ──────────────────────────────────────────── -->
+<div id="imgModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);
+     z-index:1050;align-items:center;justify-content:center;">
+  <div style="position:relative;max-width:92vw;max-height:92vh;">
+    <button onclick="closeImgViewer()"
+            style="position:absolute;top:-12px;right:-12px;z-index:1;border:none;
+                   background:#fff;border-radius:50%;width:32px;height:32px;
+                   display:flex;align-items:center;justify-content:center;
+                   cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25);">
+      <i class="bi bi-x-lg" style="font-size:.8rem;color:#1e293b;"></i>
+    </button>
+    <img id="imgPreview" src="" alt="" style="max-width:90vw;max-height:88vh;
+         border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.4);">
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleAccordion(id) {
+  const hdr  = document.getElementById('hdr-'  + id);
+  const body = document.getElementById('body-' + id);
+  const open = body.classList.contains('show');
+  body.classList.toggle('show', !open);
+  hdr.classList.toggle('open',  !open);
+}
+
+function openViewer(url, title) {
+  document.getElementById('pdfTitle').textContent = title;
+  document.getElementById('pdfFrame').src = url;
+  const modal = document.getElementById('pdfModal');
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeViewer() {
+  document.getElementById('pdfModal').style.display = 'none';
+  document.getElementById('pdfFrame').src = '';
+  document.body.style.overflow = '';
+}
+
+function openImgViewer(url, title) {
+  document.getElementById('imgPreview').src = url;
+  document.getElementById('imgPreview').alt = title;
+  const modal = document.getElementById('imgModal');
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeImgViewer() {
+  document.getElementById('imgModal').style.display = 'none';
+  document.getElementById('imgPreview').src = '';
+  document.body.style.overflow = '';
+}
+
+// Fermer les modals en cliquant hors du contenu
+document.getElementById('pdfModal').addEventListener('click', function(e){
+  if (e.target === this) closeViewer();
+});
+document.getElementById('imgModal').addEventListener('click', function(e){
+  if (e.target === this) closeImgViewer();
+});
+
+// Fermeture avec Échap
+document.addEventListener('keydown', function(e){
+  if (e.key === 'Escape') { closeViewer(); closeImgViewer(); }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Fiche de dépense{% endblock %}
+
+{% block content %}
+<style>
+@media print {
+  .no-print { display: none !important; }
+  .fiche-card { border: none !important; box-shadow: none !important; }
+}
+.fiche-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: .88rem; }
+.fiche-row:last-child { border-bottom: none; }
+.fiche-label { color: #64748b; font-weight: 600; }
+.fiche-value { font-weight: 600; color: var(--navy); text-align: right; }
+</style>
+
+<!-- En-tête page -->
+<div class="d-flex align-items-center justify-content-between mb-3 no-print">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-receipt-cutoff me-2" style="color:#dc2626;"></i>
+      {% if m.movement_type == 'SORTIE' %}Fiche de dépense{% else %}Fiche d'entrée de caisse{% endif %} N°{{ m.pk }}
+    </h5>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounting:caisse_movement_list' %}" class="btn btn-sm" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    <button onclick="window.print()" class="btn btn-sm" style="background:#0891b2;color:#fff;">
+      <i class="bi bi-printer-fill me-1"></i>Imprimer
+    </button>
+    <a href="{% url 'accounting:fiche_depense_pdf' m.pk %}" target="_blank" class="btn btn-sm" style="background:#dc2626;color:#fff;">
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>Télécharger PDF
+    </a>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card-section fiche-card" style="padding:28px 32px;">
+      <div class="text-center mb-4">
+        <h5 class="fw-bold mb-0" style="color:var(--navy);">
+          {% if m.movement_type == 'SORTIE' %}FICHE DE DÉPENSE{% else %}FICHE D'ENTRÉE DE CAISSE{% endif %}
+        </h5>
+        <p class="text-muted mb-0" style="font-size:.82rem;">N°{{ m.pk }} — {{ m.movement_date|date:"d/m/Y" }}</p>
+      </div>
+
+      <div class="fiche-row"><span class="fiche-label">Date</span><span class="fiche-value">{{ m.movement_date|date:"d/m/Y" }}</span></div>
+      <div class="fiche-row"><span class="fiche-label">Type</span><span class="fiche-value">{{ m.get_movement_type_display }}</span></div>
+      {% if m.beneficiaire %}
+      <div class="fiche-row"><span class="fiche-label">Bénéficiaire / Fournisseur</span><span class="fiche-value">{{ m.beneficiaire }}</span></div>
+      {% endif %}
+      {% if m.categorie %}
+      <div class="fiche-row"><span class="fiche-label">Catégorie</span><span class="fiche-value">{{ m.get_categorie_display }}</span></div>
+      {% endif %}
+      <div class="fiche-row"><span class="fiche-label">Motif</span><span class="fiche-value">{{ m.motif }}</span></div>
+      {% if m.piece_justificative %}
+      <div class="fiche-row"><span class="fiche-label">Pièce justificative</span><span class="fiche-value">{{ m.piece_justificative }}</span></div>
+      {% endif %}
+      <div class="fiche-row"><span class="fiche-label">Montant</span><span class="fiche-value" style="font-size:1.1rem;color:#166534;">{{ m.amount|floatformat:0|intcomma }} FCFA</span></div>
+      {% if m.notes %}
+      <div class="fiche-row"><span class="fiche-label">Observations</span><span class="fiche-value">{{ m.notes }}</span></div>
+      {% endif %}
+      <div class="fiche-row"><span class="fiche-label">Saisi par (Trésorier Général)</span><span class="fiche-value">{{ m.created_by.get_full_name|default:"—" }}</span></div>
+      <div class="fiche-row"><span class="fiche-label">Saisi le</span><span class="fiche-value">{{ m.created_at|date:"d/m/Y H:i" }}</span></div>
+      <div class="fiche-row">
+        <span class="fiche-label">Statut</span>
+        <span class="fiche-value">
+          {% if m.is_executed %}
+          <span class="badge" style="background:#dcfce7;color:#166534;">Décaissé / Exécuté</span>
+          {% else %}
+          <span class="badge" style="background:#fef3c7;color:#92400e;">En attente de décaissement</span>
+          {% endif %}
+        </span>
+      </div>
+      {% if m.is_executed %}
+      <div class="fiche-row"><span class="fiche-label">Décaissé par (Caissier)</span><span class="fiche-value">{{ m.executed_by.get_full_name|default:"—" }}</span></div>
+      <div class="fiche-row"><span class="fiche-label">Décaissé le</span><span class="fiche-value">{{ m.executed_at|date:"d/m/Y H:i" }}</span></div>
+      {% endif %}
+
+      <div class="row mt-5 text-center" style="font-size:.85rem;">
+        <div class="col-6">
+          <p class="fw-bold mb-5">Le Trésorier Général</p>
+          <p>_________________________</p>
+        </div>
+        <div class="col-6">
+          <p class="fw-bold mb-5">Le Caissier</p>
+          <p>_________________________</p>
+        </div>
+      </div>
+
+      {% if not m.is_executed and m.movement_type == 'SORTIE' %}
+      <div class="alert alert-warning no-print mt-3" style="border-radius:10px;font-size:.82rem;">
+        <i class="bi bi-info-circle-fill me-1"></i>
+        Cette sortie est en attente de décaissement. Rendez-vous sur <a href="{% url 'accounting:caisse_movement_list' %}">Entrée & Sortie Caisse</a> pour la décaisser.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

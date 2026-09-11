@@ -1,0 +1,60 @@
+{% extends 'base/base.html' %}
+{% block title %}Tableau de Conseil{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Tableau de Conseil</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-table"></i></span>
+    Tableau de Conseil
+  </h1>
+</div>
+
+<div class="card-section" style="max-width:680px;">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#7c3aed;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;">
+        <i class="bi bi-funnel"></i>
+      </span>Sélectionner la classe et le semestre
+    </h6>
+  </div>
+  <div class="p-4">
+    <form method="get" action="." class="d-flex flex-column gap-3">
+      <div>
+        <label class="form-label fw-semibold" style="font-size:.82rem;">Année académique</label>
+        <select name="year" class="form-select" onchange="this.form.submit()">
+          {% for y in academic_years %}
+          <option value="{{ y.pk }}" {% if selected_year_param == y.pk|stringformat:"s" or not selected_year_param and y.is_current %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+          {% endfor %}
+          <option value="all" {% if selected_year_param == 'all' %}selected{% endif %}>Toutes les années</option>
+        </select>
+      </div>
+      <div>
+        <label class="form-label fw-semibold" style="font-size:.82rem;">Classe <span class="text-danger">*</span></label>
+        <select name="class_id" class="form-select" required>
+          <option value="">— Choisir une classe —</option>
+          {% for cls in classes %}
+          <option value="{{ cls.pk }}">{{ cls.name }}{% if cls.program %} — {{ cls.program.name }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="form-label fw-semibold" style="font-size:.82rem;">Semestre <span class="text-danger">*</span></label>
+        <select name="semester_id" class="form-select" required>
+          <option value="">— Choisir un semestre —</option>
+          {% for sem in semesters %}
+          <option value="{{ sem.pk }}">{{ sem.label }} — {{ sem.academic_year }}{% if sem.is_locked %} 🔒 verrouillé{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-table me-1"></i>Afficher le tableau de conseil
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

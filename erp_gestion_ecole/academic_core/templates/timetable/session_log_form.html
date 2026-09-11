@@ -1,0 +1,173 @@
+{% extends 'base/base.html' %}
+{% block title %}Cahier de Texte — {{ entry.subject.title }} — {{ session_date|date:"d/m/Y" }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ back_url }}">Mes Séances</a></li>
+<li class="breadcrumb-item active">Séance du {{ session_date|date:"d/m/Y" }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-journal-richtext"></i></span>
+    Cahier de Texte
+  </h1>
+  <a href="{{ back_url }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<!-- Info séance -->
+<div style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+  <div class="row g-3">
+    <div class="col-sm-6 col-md-3">
+      <div style="font-size:.7rem;color:#6366f1;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Date</div>
+      <div style="font-weight:800;color:#1e3a5f;font-size:.95rem;">{{ session_date|date:"l d F Y" }}</div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div style="font-size:.7rem;color:#6366f1;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">EC / Module</div>
+      <div style="font-weight:700;color:#1e3a5f;">{{ entry.subject.code }} — {{ entry.subject.title }}</div>
+      {% if entry.subject.ue %}
+      <div style="font-size:.72rem;background:#ede9fe;color:#7c3aed;display:inline-block;padding:1px 7px;border-radius:10px;margin-top:3px;">
+        UE : {{ entry.subject.ue.code }} — {{ entry.subject.ue.title }}
+      </div>
+      {% endif %}
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div style="font-size:.7rem;color:#6366f1;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Classe</div>
+      <div style="font-weight:700;color:#1e3a5f;">{{ entry.class_group.name }}</div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+      <div style="font-size:.7rem;color:#6366f1;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">Horaire</div>
+      <div style="font-weight:700;color:#1e3a5f;">{{ entry.start_time|time:"H\hi" }} – {{ entry.end_time|time:"H\hi" }}</div>
+      {% if entry.room %}
+      <div style="font-size:.72rem;color:#64748b;margin-top:2px;"><i class="bi bi-geo-alt me-1"></i>{{ entry.room }}</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if messages %}
+{% for msg in messages %}
+<div class="alert alert-{% if msg.tags == 'error' %}danger{% else %}{{ msg.tags }}{% endif %} mb-3" role="alert" style="font-size:.85rem;">
+  {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
+
+{% if log.is_validated %}
+<div class="alert mb-3" style="font-size:.85rem;background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd;">
+  <i class="bi bi-patch-check-fill me-1"></i>
+  Ce cahier de texte a été <strong>validé</strong> par {{ log.validated_by.get_full_name }} le {{ log.validated_at|date:"d/m/Y H:i" }} — consultation uniquement.
+</div>
+{% endif %}
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ back_url }}">
+
+  <div class="row g-3">
+    <!-- Objectifs (obligatoires) -->
+    <div class="col-12">
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <i class="bi bi-bullseye me-2" style="color:#dc2626;"></i>
+            Objectifs de la séance <span class="text-danger">*</span>
+          </h6>
+        </div>
+        <div style="padding:16px;">
+          <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:.8rem;color:#92400e;">
+            <i class="bi bi-info-circle-fill me-1"></i>
+            Les objectifs sont <strong>obligatoires</strong>. Décrivez ce que les étudiants devront savoir ou savoir-faire à l'issue de cette séance.
+          </div>
+          <textarea id="id_objectives" name="objectives" rows="5" required {% if log.is_validated %}readonly{% endif %}
+                    class="form-control"
+                    placeholder="Ex : À la fin de cette séance, l'étudiant devra être capable de…&#10;– Comprendre les concepts de…&#10;– Appliquer la méthode…&#10;– Analyser et résoudre…"
+                    style="font-size:.85rem;resize:vertical;">{{ log.objectives }}</textarea>
+          <div id="obj-counter" style="text-align:right;font-size:.72rem;color:#94a3b8;margin-top:4px;">
+            <span id="obj-len">{{ log.objectives|length }}</span> caractères
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenu réalisé -->
+    <div class="col-12">
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <i class="bi bi-text-paragraph me-2" style="color:#0891b2;"></i>
+            Contenu réalisé
+          </h6>
+        </div>
+        <div style="padding:16px;">
+          <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:.8rem;color:#0c4a6e;">
+            <i class="bi bi-info-circle-fill me-1"></i>
+            Décrivez les points du cours abordés, les exercices traités, les documents distribués…
+          </div>
+          <textarea id="id_content" name="content" rows="6" {% if log.is_validated %}readonly{% endif %}
+                    class="form-control"
+                    placeholder="Ex :&#10;– Présentation du plan de cours&#10;– Cours magistral sur…&#10;– Exercices d'application : …&#10;– Travaux dirigés : …"
+                    style="font-size:.85rem;resize:vertical;">{{ log.content }}</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Observations -->
+    <div class="col-12">
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <i class="bi bi-chat-left-text me-2" style="color:#d97706;"></i>
+            Observations / Remarques
+          </h6>
+        </div>
+        <div style="padding:16px;">
+          <textarea id="id_remarks" name="remarks" rows="3" {% if log.is_validated %}readonly{% endif %}
+                    class="form-control"
+                    placeholder="Difficultés rencontrées, points à reprendre, absences notables, matériel manquant…"
+                    style="font-size:.85rem;resize:vertical;">{{ log.remarks }}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 justify-content-end mt-3">
+    <a href="{{ back_url }}" class="btn btn-outline-secondary">
+      <i class="bi bi-x me-1"></i>{% if log.is_validated %}Retour{% else %}Annuler{% endif %}
+    </a>
+    {% if not log.is_validated %}
+    <button type="submit" class="btn btn-primary" style="padding:8px 28px;" id="save-btn">
+      <i class="bi bi-journal-check me-2"></i>Enregistrer dans le cahier de texte
+    </button>
+    {% endif %}
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Compteur de caractères objectifs
+const objArea = document.getElementById('id_objectives');
+const objLen  = document.getElementById('obj-len');
+if (objArea && objLen) {
+  objArea.addEventListener('input', () => {
+    objLen.textContent = objArea.value.length;
+  });
+}
+
+// Validation côté client : objectifs obligatoires
+document.querySelector('form').addEventListener('submit', function(e) {
+  const val = document.getElementById('id_objectives').value.trim();
+  if (!val) {
+    e.preventDefault();
+    const ta = document.getElementById('id_objectives');
+    ta.style.borderColor = '#dc2626';
+    ta.focus();
+    ta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => { ta.style.borderColor = ''; }, 3000);
+  }
+});
+</script>
+{% endblock %}

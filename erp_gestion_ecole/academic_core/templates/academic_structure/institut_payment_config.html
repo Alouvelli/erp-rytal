@@ -1,0 +1,137 @@
+{% extends 'base/base.html' %}
+{% block title %}Paiement en ligne — {{ institut_config.nom }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0f766e;"><i class="bi bi-credit-card-2-front-fill"></i></span>
+    Paiement en ligne — {{ institut_config.nom|default:institut_config.sigle }}
+  </h1>
+</div>
+
+<p class="text-muted small" style="max-width:700px;">
+  Ces paramètres permettent au candidat de régler ses frais d'inscription en ligne directement
+  depuis le portail (Wave, Orange Money) ou par virement bancaire — chaque moyen est activable
+  indépendamment. Sans aucun moyen actif et exploitable, le portail reste en mode dépôt manuel de
+  preuve de paiement (comportement inchangé).
+</p>
+<div class="alert alert-warning small" style="max-width:700px;">
+  <i class="bi bi-exclamation-triangle-fill me-1"></i>
+  Utilisez d'abord vos identifiants de test avant de passer en Production, et validez un paiement
+  de bout en bout avec un compte de test réel avant toute mise en service.
+</div>
+
+<form method="post">
+  {% csrf_token %}
+
+  <!-- Wave -->
+  <div class="card-section mb-3" style="max-width:700px;">
+    <div class="card-section-header">
+      <h6 class="card-section-title">
+        <span style="width:26px;height:26px;border-radius:6px;background:#0d6efd;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-phone-fill"></i></span>
+        Wave
+      </h6>
+    </div>
+    <div class="p-4">
+      <div class="form-check mb-3">
+        <input type="checkbox" name="wave_active" value="1" class="form-check-input" id="id_wave_active"
+               {% if payment_config.wave_active %}checked{% endif %}>
+        <label class="form-check-label fw-semibold" for="id_wave_active">Activer Wave</label>
+      </div>
+      <div class="mb-1">
+        <label class="form-label small fw-semibold">Clé API Wave</label>
+        <input type="password" name="wave_api_key" class="form-control" autocomplete="new-password"
+               placeholder="{% if payment_config.wave_api_key %}•••••••• (laisser vide pour ne pas changer){% else %}Non défini{% endif %}">
+      </div>
+    </div>
+  </div>
+
+  <!-- Orange Money -->
+  <div class="card-section mb-3" style="max-width:700px;">
+    <div class="card-section-header">
+      <h6 class="card-section-title">
+        <span style="width:26px;height:26px;border-radius:6px;background:#f97316;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-phone-fill"></i></span>
+        Orange Money
+      </h6>
+    </div>
+    <div class="p-4">
+      <div class="form-check mb-3">
+        <input type="checkbox" name="om_active" value="1" class="form-check-input" id="id_om_active"
+               {% if payment_config.om_active %}checked{% endif %}>
+        <label class="form-check-label fw-semibold" for="id_om_active">Activer Orange Money</label>
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Client ID</label>
+        <input type="text" name="om_client_id" class="form-control" value="{{ payment_config.om_client_id }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Client Secret</label>
+        <input type="password" name="om_client_secret" class="form-control" autocomplete="new-password"
+               placeholder="{% if payment_config.om_client_secret %}•••••••• (laisser vide pour ne pas changer){% else %}Non défini{% endif %}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Merchant Key</label>
+        <input type="password" name="om_merchant_key" class="form-control" autocomplete="new-password"
+               placeholder="{% if payment_config.om_merchant_key %}•••••••• (laisser vide pour ne pas changer){% else %}Non défini{% endif %}">
+      </div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Mode</label>
+          <select name="om_mode" class="form-select">
+            <option value="TEST" {% if payment_config.om_mode == 'TEST' %}selected{% endif %}>Test / Sandbox</option>
+            <option value="LIVE" {% if payment_config.om_mode == 'LIVE' %}selected{% endif %}>Production</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Code pays</label>
+          <input type="text" name="om_region" class="form-control" value="{{ payment_config.om_region|default:'sn' }}" maxlength="5">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Virement bancaire -->
+  <div class="card-section mb-3" style="max-width:700px;">
+    <div class="card-section-header">
+      <h6 class="card-section-title">
+        <span style="width:26px;height:26px;border-radius:6px;background:#1e3a5f;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-bank"></i></span>
+        Virement bancaire
+      </h6>
+    </div>
+    <div class="p-4">
+      <div class="form-check mb-3">
+        <input type="checkbox" name="virement_active" value="1" class="form-check-input" id="id_virement_active"
+               {% if payment_config.virement_active %}checked{% endif %}>
+        <label class="form-check-label fw-semibold" for="id_virement_active">Activer le virement bancaire</label>
+      </div>
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Nom de la banque</label>
+          <input type="text" name="banque_nom" class="form-control" value="{{ payment_config.banque_nom }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Titulaire du compte</label>
+          <input type="text" name="banque_titulaire" class="form-control" value="{{ payment_config.banque_titulaire }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">IBAN</label>
+          <input type="text" name="banque_iban" class="form-control" value="{{ payment_config.banque_iban }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">RIB</label>
+          <input type="text" name="banque_rib" class="form-control" value="{{ payment_config.banque_rib }}">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Code SWIFT/BIC</label>
+          <input type="text" name="banque_swift" class="form-control" value="{{ payment_config.banque_swift }}">
+        </div>
+      </div>
+      <div class="mb-1">
+        <label class="form-label small fw-semibold">Instructions complémentaires</label>
+        <textarea name="virement_instructions" class="form-control" rows="3">{{ payment_config.virement_instructions }}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Enregistrer</button>
+</form>
+{% endblock %}

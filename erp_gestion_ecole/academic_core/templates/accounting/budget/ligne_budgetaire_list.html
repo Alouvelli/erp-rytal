@@ -1,0 +1,194 @@
+{% extends "base/base.html" %}
+
+{% block title %}Lignes budgétaires{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-list-columns-reverse me-2"></i>Lignes budgétaires
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Pilotage et Suivi Budgétaire</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounting:budget_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('ligneModal')).show()">
+      <i class="bi bi-plus-lg me-1"></i>Nouvelle ligne
+    </button>
+  </div>
+</div>
+
+<!-- Filtres -->
+<div class="card-section mb-3" style="padding:16px 20px;">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Exercice</label>
+      <select name="annee" class="form-select form-select-sm">
+        {% for y in academic_years %}
+        <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Direction</label>
+      <select name="direction" class="form-select form-select-sm">
+        <option value="">Toutes</option>
+        {% for d in directions %}
+        <option value="{{ d.pk }}" {% if direction_filter == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Nature</label>
+      <select name="nature" class="form-select form-select-sm">
+        <option value="">Toutes</option>
+        {% for val, label in NATURE_CHOICES %}
+        <option value="{{ val }}" {% if nature_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+    </div>
+  </form>
+</div>
+
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Direction</th>
+          <th>Compte comptable</th>
+          <th>Source</th>
+          <th>Nature</th>
+          <th class="text-end">Révisé</th>
+          <th class="text-end">Engagé</th>
+          <th class="text-end">Exécuté</th>
+          <th class="text-end">Disponible</th>
+          <th class="text-center">Taux</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in lignes %}
+        <tr style="cursor:pointer;" onclick="window.location='{% url 'accounting:ligne_budgetaire_detail' l.pk %}'">
+          <td style="padding:8px 16px;font-weight:600;color:var(--navy);">{{ l.direction.name }}</td>
+          <td style="font-size:.78rem;">{{ l.compte_comptable }}</td>
+          <td style="font-size:.78rem;">{{ l.source_financement.libelle }}</td>
+          <td style="font-size:.78rem;">{{ l.get_nature_display }}</td>
+          <td class="text-end">{{ l.montant_revise|floatformat:0 }}</td>
+          <td class="text-end" style="color:#7c3aed;">{{ l.montant_engage|floatformat:0 }}</td>
+          <td class="text-end" style="color:#0ea5e9;">{{ l.montant_execute|floatformat:0 }}</td>
+          <td class="text-end" style="font-weight:700;color:#16a34a;">{{ l.montant_disponible|floatformat:0 }}</td>
+          <td class="text-center">
+            <span class="badge-kpi-{{ l.statut_kpi }}" style="border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:700;">
+              {{ l.taux_execution|floatformat:0 }}%
+            </span>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:40px;">Aucune ligne budgétaire pour cet exercice.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+.badge-kpi-vert   { background:#dcfce7; color:#166534; }
+.badge-kpi-orange { background:#ffedd5; color:#c2410c; }
+.badge-kpi-rouge  { background:#fee2e2; color:#991b1b; }
+</style>
+
+<!-- Modal création -->
+<div class="modal fade" id="ligneModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nouvelle ligne budgétaire</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'accounting:ligne_budgetaire_create' %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Exercice (année académique) <span class="text-danger">*</span></label>
+            <select name="academic_year" class="form-select" required>
+              {% for y in academic_years %}
+              <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Direction <span class="text-danger">*</span></label>
+            <select name="direction" class="form-select" required>
+              <option value="">— Sélectionner —</option>
+              {% for d in directions %}
+              <option value="{{ d.pk }}">{{ d.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Compte comptable <span class="text-danger">*</span></label>
+            <select name="compte_comptable" class="form-select" required>
+              <option value="">— Sélectionner —</option>
+              {% for c in comptes %}
+              <option value="{{ c.pk }}">{{ c.matricule }} — {{ c.libelle }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Source de financement <span class="text-danger">*</span></label>
+              <select name="source_financement" class="form-select" required>
+                <option value="">— Sélectionner —</option>
+                {% for s in sources %}
+                <option value="{{ s.pk }}">{{ s.libelle }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Nature</label>
+              <select name="nature" class="form-select">
+                {% for val, label in NATURE_CHOICES %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Montant initial (FCFA) <span class="text-danger">*</span></label>
+            <input type="number" name="montant_initial" class="form-control" min="0" step="1000" required>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Axe stratégique</label>
+              <select name="axe_strategique" class="form-select">
+                <option value="">— Aucun —</option>
+                {% for a in axes %}<option value="{{ a.pk }}">{{ a.code }} — {{ a.libelle }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Projet</label>
+              <select name="projet" class="form-select">
+                <option value="">— Aucun —</option>
+                {% for p in projets %}<option value="{{ p.pk }}">{{ p.code }} — {{ p.libelle }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Notes</label>
+            <textarea name="notes" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

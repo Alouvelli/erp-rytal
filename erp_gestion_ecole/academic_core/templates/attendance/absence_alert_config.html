@@ -1,0 +1,69 @@
+{% extends 'base/base.html' %}
+{% block title %}Seuil d'alerte absences{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_list' %}">Émargements</a></li>
+<li class="breadcrumb-item active">Seuil d'alerte absences</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#dc2626;"><i class="bi bi-bell-fill"></i></span>
+    Seuil d'alerte absences — {{ dept.name }}
+  </h1>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px 18px;margin-bottom:20px;font-size:.84rem;color:#1e40af;">
+      <i class="bi bi-info-circle-fill me-2"></i>
+      Chaque jour, si un étudiant de votre département atteint ce nombre de séances
+      d'absence <strong>non justifiées</strong> sur le semestre en cours, un email
+      automatique est envoyé au <strong>tuteur</strong> (pour lui demander les raisons
+      des absences répétées) ainsi qu'au <strong>chef de département</strong> et à
+      <strong>l'assistante</strong>. Une seule alerte est envoyée par étudiant et par
+      semestre, même si le nombre d'absences continue d'augmenter ensuite.
+    </div>
+
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-sliders"></i></span>
+          Configuration du seuil
+        </h6>
+      </div>
+      <div class="p-4">
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-4">
+            <label class="form-label" style="font-weight:600;font-size:.85rem;">
+              Nombre de séances d'absence déclenchant l'alerte <span style="color:#ef4444;">*</span>
+            </label>
+            <div class="d-flex align-items-center gap-2" style="max-width:220px;">
+              <input type="number" name="seuil_absences" min="1" step="1"
+                     value="{{ config.seuil_absences }}"
+                     class="form-control" required
+                     style="font-size:1.4rem;font-weight:800;text-align:center;color:var(--navy);">
+              <span style="font-size:.82rem;color:#64748b;white-space:nowrap;">séance(s)</span>
+            </div>
+          </div>
+
+          {% if config.updated_at %}
+          <div style="font-size:.78rem;color:#94a3b8;margin-bottom:20px;">
+            <i class="bi bi-clock-history me-1"></i>
+            Dernière mise à jour : {{ config.updated_at|date:"d/m/Y à H:i" }}
+            {% if config.updated_by %} par {{ config.updated_by.get_full_name }}{% endif %}
+          </div>
+          {% endif %}
+
+          <div class="d-flex justify-content-end">
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-check-lg me-1"></i>Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

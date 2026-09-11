@@ -1,0 +1,389 @@
+{% extends 'base/base.html' %}
+{% block title %}Annulations & Reports{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Annulations / Reports</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#f59e0b;"><i class="bi bi-x-circle-fill"></i></span>
+    Annulations &amp; Reports
+  </h1>
+</div>
+
+<!-- ══ Navigation semaine ══════════════════════════════════════════════════ -->
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+  <a href="?week={{ week_offset|add:'-1' }}"
+     style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #e2e8f0;border-radius:9px;padding:7px 16px;font-size:.84rem;font-weight:600;color:#475569;text-decoration:none;">
+    <i class="bi bi-chevron-left"></i> Semaine précédente
+  </a>
+
+  <div style="text-align:center;">
+    <div style="font-size:.95rem;font-weight:700;color:#1e293b;">
+      Semaine du {{ monday|date:"d/m/Y" }} au {{ sunday|date:"d/m/Y" }}
+    </div>
+    {% if week_offset != 0 %}
+    <a href="?" style="font-size:.75rem;color:#0ea5e9;text-decoration:none;">
+      <i class="bi bi-arrow-clockwise me-1"></i>Semaine en cours
+    </a>
+    {% endif %}
+  </div>
+
+  <a href="?week={{ week_offset|add:'1' }}"
+     style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #e2e8f0;border-radius:9px;padding:7px 16px;font-size:.84rem;font-weight:600;color:#475569;text-decoration:none;">
+    Semaine suivante <i class="bi bi-chevron-right"></i>
+  </a>
+</div>
+
+<!-- ══ Séances de la semaine ════════════════════════════════════════════════ -->
+<div class="card-section mb-4">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#f59e0b;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-calendar-week"></i></span>
+      Séances de la semaine
+    </h6>
+  </div>
+
+  <div class="p-2">
+    {% if classes_list %}
+      {% for cl in classes_list %}
+      {% with cg=cl.class_group idx=forloop.counter %}
+      <!-- Accordéon par classe -->
+      <div style="border:1.5px solid {% if cl.has_cancellation %}#fed7aa{% else %}#e2e8f0{% endif %};border-radius:12px;margin-bottom:10px;overflow:hidden;">
+
+        <!-- En-tête cliquable -->
+        <button type="button" onclick="toggleAccordion('acc-{{ idx }}')"
+                style="width:100%;display:flex;align-items:center;justify-content:space-between;
+                       background:{% if cl.has_cancellation %}#fff7ed{% else %}#f8fafc{% endif %};
+                       border:none;padding:13px 16px;cursor:pointer;text-align:left;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <span style="width:36px;height:36px;border-radius:9px;background:var(--navy);
+                         display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i class="bi bi-people-fill" style="color:#fff;font-size:.85rem;"></i>
+            </span>
+            <div>
+              <div style="font-weight:700;font-size:.92rem;color:#1e293b;">{{ cg.name }}</div>
+              <div style="font-size:.74rem;color:#64748b;margin-top:1px;">
+                {% if cg.level %}<span style="background:#eff6ff;color:var(--navy);border-radius:8px;padding:1px 7px;font-weight:600;">{{ cg.level }}</span>&nbsp;{% endif %}
+                {{ cl.sessions|length }} séance{{ cl.sessions|length|pluralize }} cette semaine
+                {% if cl.has_cancellation %}
+                &nbsp;<span style="background:#fef3c7;color:#b45309;border-radius:8px;padding:1px 7px;font-size:.7rem;font-weight:600;"><i class="bi bi-exclamation-triangle-fill me-1"></i>Modifications</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          <i class="bi bi-chevron-down acc-icon-{{ idx }}" style="color:#64748b;transition:transform .25s;font-size:.85rem;flex-shrink:0;"></i>
+        </button>
+
+        <!-- Corps déroulant -->
+        <div id="acc-{{ idx }}" style="display:none;">
+          <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+            <thead>
+              <tr style="background:#f1f5f9;border-top:1px solid #e2e8f0;">
+                <th style="padding:8px 14px;font-weight:600;color:#475569;text-align:left;">Jour / Date</th>
+                <th style="padding:8px 14px;font-weight:600;color:#475569;text-align:left;">Module (EC)</th>
+                {% if is_admin %}<th style="padding:8px 14px;font-weight:600;color:#475569;text-align:left;">Enseignant</th>{% endif %}
+                <th style="padding:8px 14px;font-weight:600;color:#475569;text-align:left;">Horaire</th>
+                <th style="padding:8px 14px;font-weight:600;color:#475569;text-align:left;">Salle</th>
+                <th style="padding:8px 14px;font-weight:600;color:#475569;text-align:left;">Statut</th>
+                <th style="padding:8px 14px;font-weight:600;color:#475569;text-align:left;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in cl.sessions %}
+              {% with entry=s.entry c=s.cancellation %}
+              <tr style="border-top:1px solid #f1f5f9;background:{% if c %}{% if c.request_type == 'CANCEL' %}#fff8f8{% else %}#fffbf2{% endif %}{% elif s.is_today %}#f0f6ff{% else %}#fff{% endif %};">
+
+                <!-- Jour -->
+                <td style="padding:10px 14px;white-space:nowrap;">
+                  <div style="font-weight:700;color:{% if s.is_today %}var(--navy){% else %}#334155{% endif %};">
+                    {{ s.day_name }}
+                    {% if s.is_today %}<span style="background:#dbeafe;color:var(--navy);border-radius:8px;padding:1px 6px;font-size:.67rem;margin-left:4px;">Auj.</span>{% endif %}
+                  </div>
+                  <div style="font-size:.74rem;color:#94a3b8;">{{ s.date|date:"d/m/Y" }}</div>
+                </td>
+
+                <!-- Matière -->
+                <td style="padding:10px 14px;">
+                  <span style="font-weight:600;color:{% if c %}#94a3b8{% else %}#1e293b{% endif %};{% if c %}text-decoration:line-through;{% endif %}">
+                    {{ entry.subject.title }}
+                  </span>
+                </td>
+
+                {% if is_admin %}
+                <!-- Enseignant -->
+                <td style="padding:10px 14px;color:#475569;">{{ entry.teacher.user.get_full_name }}</td>
+                {% endif %}
+
+                <!-- Horaire -->
+                <td style="padding:10px 14px;white-space:nowrap;color:#475569;">
+                  {{ entry.start_time|time:"H:i" }} – {{ entry.end_time|time:"H:i" }}
+                </td>
+
+                <!-- Salle -->
+                <td style="padding:10px 14px;color:#475569;">
+                  {% if entry.room %}{{ entry.room.name }}{% else %}—{% endif %}
+                </td>
+
+                <!-- Statut -->
+                <td style="padding:10px 14px;">
+                  {% if c %}
+                    {% if c.request_type == 'CANCEL' %}
+                    <span style="background:#fee2e2;color:#dc2626;border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:700;">
+                      <i class="bi bi-x-circle-fill me-1"></i>Annulé
+                    </span>
+                    {% else %}
+                    <span style="background:#fef3c7;color:#b45309;border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:700;">
+                      <i class="bi bi-arrow-right-circle-fill me-1"></i>Reporté
+                    </span>
+                    {% if c.rescheduled_date %}
+                    <div style="font-size:.7rem;color:#b45309;margin-top:3px;">
+                      → {{ c.rescheduled_date|date:"d/m/Y" }}{% if c.rescheduled_start %} {{ c.rescheduled_start|time:"H:i" }}{% endif %}{% if c.rescheduled_room %} · {{ c.rescheduled_room.name }}{% endif %}
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                  {% else %}
+                  <span style="background:#f0fdf4;color:#16a34a;border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:700;">
+                    <i class="bi bi-check-circle-fill me-1"></i>Planifiée
+                  </span>
+                  {% endif %}
+                </td>
+
+                <!-- Actions -->
+                <td style="padding:10px 14px;">
+                  <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                    {% if not c %}
+                    <button type="button"
+                            onclick="openModal('cancel','{{ entry.pk }}','{{ s.date|date:'Y-m-d' }}','{{ entry.subject.title|escapejs }}','{{ cg.name|escapejs }}')"
+                            style="background:#dc2626;color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+                      <i class="bi bi-x-circle me-1"></i>Annuler
+                    </button>
+                    <button type="button"
+                            onclick="openModal('postpone','{{ entry.pk }}','{{ s.date|date:'Y-m-d' }}','{{ entry.subject.title|escapejs }}','{{ cg.name|escapejs }}')"
+                            style="background:#f59e0b;color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">
+                      <i class="bi bi-arrow-right-circle me-1"></i>Reporter
+                    </button>
+                    {% else %}
+                    <a href="{% url 'cancellations:restore' c.pk %}?week={{ week_offset }}"
+                       onclick="return confirm('Rétablir cette séance ?')"
+                       style="background:#16a34a;color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:.75rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;">
+                      <i class="bi bi-arrow-counterclockwise"></i>Rétablir
+                    </a>
+                    <button type="button"
+                            onclick="openModal('{% if c.request_type == 'CANCEL' %}cancel{% else %}postpone{% endif %}','{{ entry.pk }}','{{ s.date|date:'Y-m-d' }}','{{ entry.subject.title|escapejs }}','{{ cg.name|escapejs }}')"
+                            style="background:#64748b;color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:.75rem;font-weight:600;cursor:pointer;white-space:nowrap;">
+                      <i class="bi bi-pencil me-1"></i>Modifier
+                    </button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% endwith %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {% endwith %}
+      {% endfor %}
+
+    {% else %}
+    <div style="text-align:center;padding:48px 20px;color:#94a3b8;">
+      <i class="bi bi-calendar-x d-block mb-2" style="font-size:2.2rem;color:#cbd5e1;"></i>
+      <div style="font-weight:600;font-size:.9rem;">Aucune séance cette semaine</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ══ Historique ══════════════════════════════════════════════════════════ -->
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-clock-history"></i></span>
+      Historique
+    </h6>
+  </div>
+  {% if history %}
+  <div class="table-responsive">
+    <table class="table" style="margin:0;font-size:.82rem;">
+      <thead>
+        <tr>
+          <th>Module (EC)</th>
+          <th>Classe</th>
+          {% if is_admin %}<th>Enseignant</th>{% endif %}
+          <th>Date séance</th>
+          <th>Type</th>
+          <th>Motif</th>
+          <th>Nouveau créneau</th>
+          <th>Par</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in history %}
+        {% with entry=c.timetable_entry %}
+        <tr>
+          <td style="font-weight:600;">{{ entry.subject.title }}</td>
+          <td>{{ entry.class_group.name }}</td>
+          {% if is_admin %}<td>{{ entry.teacher.user.get_full_name }}</td>{% endif %}
+          <td style="white-space:nowrap;">{{ c.session_date|date:"d/m/Y" }}</td>
+          <td>
+            {% if c.request_type == 'CANCEL' %}
+            <span style="background:#fff1f2;color:#dc2626;border-radius:20px;padding:2px 9px;font-size:.7rem;font-weight:700;">Annulé</span>
+            {% else %}
+            <span style="background:#fff7ed;color:#ea580c;border-radius:20px;padding:2px 9px;font-size:.7rem;font-weight:700;">Reporté</span>
+            {% endif %}
+          </td>
+          <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ c.reason }}">{{ c.reason }}</td>
+          <td style="white-space:nowrap;">
+            {% if c.rescheduled_date %}
+            {{ c.rescheduled_date|date:"d/m/Y" }}
+            {% if c.rescheduled_start %}{{ c.rescheduled_start|time:"H:i" }}{% endif %}
+            {% if c.rescheduled_room %}<br><span style="font-size:.72rem;color:#64748b;">{{ c.rescheduled_room.name }}</span>{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ c.requested_by.get_full_name }}</td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:30px;color:#94a3b8;font-size:.85rem;">
+    <i class="bi bi-inbox d-block mb-2" style="font-size:1.8rem;color:#cbd5e1;"></i>Aucun historique
+  </div>
+  {% endif %}
+</div>
+
+<!-- ══ Modal annulation / report ══════════════════════════════════════════ -->
+<div id="action-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:28px 24px;max-width:520px;width:92%;box-shadow:0 8px 40px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;">
+      <span id="modal-icon" style="width:38px;height:38px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:1.1rem;"></span>
+      <div>
+        <div id="modal-title" style="font-weight:700;font-size:.98rem;color:#1e293b;"></div>
+        <div id="modal-subtitle" style="font-size:.76rem;color:#64748b;"></div>
+      </div>
+    </div>
+
+    <form id="action-form" method="post" action="">
+      {% csrf_token %}
+      <input type="hidden" name="request_type" id="modal-req-type">
+      <input type="hidden" name="week_offset" value="{{ week_offset }}">
+
+      <div style="margin-bottom:14px;">
+        <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:5px;">
+          Motif <span style="color:#dc2626;">*</span>
+        </label>
+        <textarea name="reason" id="modal-reason" rows="3" required
+                  style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px 10px;font-size:.84rem;resize:vertical;outline:none;"
+                  placeholder="Expliquez la raison de l'annulation ou du report…"></textarea>
+      </div>
+
+      <!-- Champs report (masqués pour annulation) -->
+      <div id="postpone-fields" style="display:none;">
+        <div style="font-size:.82rem;font-weight:700;color:#f59e0b;margin-bottom:10px;border-top:1px solid #fef3c7;padding-top:12px;">
+          <i class="bi bi-calendar-plus me-1"></i>Nouveau créneau (optionnel)
+        </div>
+        <div class="row g-2">
+          <div class="col-6">
+            <label style="font-size:.78rem;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Nouvelle date</label>
+            <input type="date" name="rescheduled_date" id="modal-rescheduled-date"
+                   style="width:100%;border:1.5px solid #e2e8f0;border-radius:7px;padding:6px 9px;font-size:.83rem;outline:none;">
+          </div>
+          <div class="col-3">
+            <label style="font-size:.78rem;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Début</label>
+            <input type="time" name="rescheduled_start"
+                   style="width:100%;border:1.5px solid #e2e8f0;border-radius:7px;padding:6px 9px;font-size:.83rem;outline:none;">
+          </div>
+          <div class="col-3">
+            <label style="font-size:.78rem;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Fin</label>
+            <input type="time" name="rescheduled_end"
+                   style="width:100%;border:1.5px solid #e2e8f0;border-radius:7px;padding:6px 9px;font-size:.83rem;outline:none;">
+          </div>
+          <div class="col-12">
+            <label style="font-size:.78rem;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Salle</label>
+            <select name="rescheduled_room"
+                    style="width:100%;border:1.5px solid #e2e8f0;border-radius:7px;padding:6px 9px;font-size:.83rem;outline:none;">
+              <option value="">— Salle inchangée ou à définir —</option>
+              {% for room in rooms %}
+              <option value="{{ room.pk }}">{{ room.name }}{% if room.capacity %} ({{ room.capacity }} places){% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:18px;justify-content:flex-end;">
+        <button type="button" onclick="closeModal()"
+                style="background:#f1f5f9;color:#475569;border:none;border-radius:8px;padding:9px 20px;font-size:.85rem;font-weight:600;cursor:pointer;">
+          Annuler
+        </button>
+        <button type="submit" id="modal-submit-btn"
+                style="color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:.85rem;font-weight:700;cursor:pointer;">
+          Confirmer
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function toggleAccordion(id) {
+  var body = document.getElementById(id);
+  var idx  = id.replace('acc-', '');
+  var icon = document.querySelector('.acc-icon-' + idx);
+  var open = body.style.display === 'block';
+  body.style.display = open ? 'none' : 'block';
+  if (icon) icon.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+function openModal(type, entryPk, sessionDate, subject, classGroup) {
+  var modal      = document.getElementById('action-modal');
+  var form       = document.getElementById('action-form');
+  var icon       = document.getElementById('modal-icon');
+  var title      = document.getElementById('modal-title');
+  var subtitle   = document.getElementById('modal-subtitle');
+  var reqType    = document.getElementById('modal-req-type');
+  var submitBtn  = document.getElementById('modal-submit-btn');
+  var postponeF  = document.getElementById('postpone-fields');
+  var reason     = document.getElementById('modal-reason');
+
+  form.action = '/cancellations/' + entryPk + '/' + sessionDate + '/action/';
+  reason.value = '';
+  document.getElementById('modal-rescheduled-date').value = '';
+
+  if (type === 'cancel') {
+    reqType.value    = 'CANCEL';
+    icon.style.background = '#fff1f2';
+    icon.innerHTML   = '<i class="bi bi-x-circle-fill" style="color:#dc2626;"></i>';
+    title.textContent    = 'Annuler la séance';
+    submitBtn.style.background = '#dc2626';
+    submitBtn.textContent      = 'Confirmer l\'annulation';
+    postponeF.style.display    = 'none';
+  } else {
+    reqType.value    = 'POSTPONE';
+    icon.style.background = '#fff7ed';
+    icon.innerHTML   = '<i class="bi bi-arrow-right-circle-fill" style="color:#f59e0b;"></i>';
+    title.textContent    = 'Reporter la séance';
+    submitBtn.style.background = '#f59e0b';
+    submitBtn.textContent      = 'Confirmer le report';
+    postponeF.style.display    = 'block';
+  }
+
+  subtitle.textContent = subject + ' — ' + classGroup;
+  modal.style.display  = 'flex';
+  reason.focus();
+}
+
+function closeModal() {
+  document.getElementById('action-modal').style.display = 'none';
+}
+
+document.getElementById('action-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+{% endblock %}

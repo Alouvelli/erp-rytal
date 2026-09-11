@@ -1,0 +1,167 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ subject.title }} — {{ class_group.name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url back_url %}">{{ back_label }}</a></li>
+<li class="breadcrumb-item active">{{ subject.title }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+  <div class="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
+    <div>
+      <h4 class="mb-1 fw-bold" style="color:var(--navy);">
+        <i class="bi bi-journal-bookmark-fill me-2"></i>{{ subject.title }}
+        {% if subject.code %}<span style="font-size:.8rem;color:#64748b;font-weight:600;">({{ subject.code }})</span>{% endif %}
+      </h4>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <span style="background:#ede9fe;color:#7c3aed;border-radius:20px;padding:3px 12px;font-size:.78rem;font-weight:700;">
+          <i class="bi bi-people-fill me-1"></i>{{ class_group.name }}
+        </span>
+        <span style="background:#e0f2fe;color:#0369a1;border-radius:20px;padding:3px 12px;font-size:.78rem;font-weight:700;">
+          <i class="bi bi-calendar3 me-1"></i>{% if semester %}{{ semester.label }} — {{ semester.academic_year }}{% else %}—{% endif %}
+        </span>
+        {% if teacher %}
+        <span style="background:#eff6ff;color:var(--navy);border-radius:20px;padding:3px 12px;font-size:.78rem;font-weight:700;">
+          <i class="bi bi-person-fill me-1"></i>{{ teacher.full_name }}
+        </span>
+        {% endif %}
+      </div>
+    </div>
+    <a href="{% url back_url %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>{{ back_label }}
+    </a>
+  </div>
+
+  <!-- Stats du module -->
+  <div class="row g-3 mb-3">
+    <div class="col-sm-6 col-lg-3">
+      <div class="card-section" style="padding:14px 18px;">
+        <div style="font-size:.7rem;color:#64748b;font-weight:700;text-transform:uppercase;">Volume total</div>
+        <div style="font-size:1.4rem;font-weight:900;color:#1e3a5f;">{{ volume_total }} h</div>
+        {% if extra_hours > 0 %}
+        <div style="font-size:.7rem;color:#92400e;background:#fef3c7;border-radius:10px;padding:1px 8px;display:inline-block;margin-top:4px;">+{{ extra_hours }}h accordées</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card-section" style="padding:14px 18px;">
+        <div style="font-size:.7rem;color:#64748b;font-weight:700;text-transform:uppercase;">Heures effectuées</div>
+        <div style="font-size:1.4rem;font-weight:900;color:#166534;">{{ hours_done }} h</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card-section" style="padding:14px 18px;">
+        <div style="font-size:.7rem;color:#64748b;font-weight:700;text-transform:uppercase;">Volume restant</div>
+        <div style="font-size:1.4rem;font-weight:900;color:{% if is_complete %}#dc2626{% else %}#1e3a5f{% endif %};">{{ vol_restant|floatformat:2 }} h</div>
+        {% if is_complete and not teacher %}
+        <a href="{% url 'attendance:extra_request_create' %}?subject={{ subject.pk }}&class={{ class_group.pk }}{% if semester.academic_year %}&year={{ semester.academic_year.pk }}{% endif %}"
+           style="font-size:.68rem;color:#7c3aed;text-decoration:underline;">Demander des heures supp.</a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card-section" style="padding:14px 18px;">
+        <div class="d-flex justify-content-between mb-1">
+          <span style="font-size:.7rem;color:#64748b;font-weight:700;text-transform:uppercase;">Avancement</span>
+          <span style="font-size:.82rem;font-weight:800;color:{% if percent >= 100 %}#dc2626{% elif percent >= 75 %}#d97706{% else %}#16a34a{% endif %};">{{ percent|floatformat:0 }}%</span>
+        </div>
+        <div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden;">
+          <div style="height:100%;border-radius:4px;width:{% if percent > 100 %}100{% else %}{{ percent }}{% endif %}%;
+                      background:{% if percent >= 100 %}#dc2626{% elif percent >= 75 %}#d97706{% else %}#16a34a{% endif %};"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Séances déroulées -->
+  <div class="card-section">
+    <div class="card-section-header">
+      <h6 class="card-section-title">
+        <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;">
+          <i class="bi bi-list-check"></i>
+        </span>
+        Séances déroulées
+        <span style="background:#f1f5f9;color:#64748b;border-radius:10px;padding:1px 9px;font-size:.72rem;font-weight:700;margin-left:6px;">{{ sessions|length }}</span>
+      </h6>
+    </div>
+
+    {% if sessions %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:.83rem;">
+        <thead style="background:#f8fafc;">
+          <tr>
+            <th style="font-size:.72rem;color:#64748b;font-weight:700;padding:10px 16px;">Date</th>
+            <th style="font-size:.72rem;color:#64748b;font-weight:700;">Horaire</th>
+            <th style="font-size:.72rem;color:#64748b;font-weight:700;">Salle</th>
+            <th style="font-size:.72rem;color:#64748b;font-weight:700;text-align:center;">Émargement</th>
+            <th style="font-size:.72rem;color:#64748b;font-weight:700;text-align:center;">Cahier de texte</th>
+            <th style="font-size:.72rem;color:#64748b;font-weight:700;text-align:center;">Durée</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sessions %}
+          <tr>
+            <td style="padding:10px 16px;">
+              <div style="font-weight:700;color:#1e3a5f;">{{ s.date|date:"d/m/Y" }}</div>
+              <div style="font-size:.7rem;color:#94a3b8;">{{ s.date|date:"l" }}</div>
+            </td>
+            <td style="white-space:nowrap;color:#475569;">
+              {{ s.entry.start_time|time:"H\hi" }} – {{ s.entry.end_time|time:"H\hi" }}
+            </td>
+            <td style="color:#475569;">{{ s.entry.room.name|default:"—" }}</td>
+            <td style="text-align:center;">
+              {% if s.sheet.status == 'VALIDATED' %}
+              <span style="background:#dcfce7;color:#166534;border-radius:20px;padding:2px 10px;font-size:.7rem;font-weight:700;white-space:nowrap;">
+                <i class="bi bi-check-circle-fill me-1"></i>Validé
+              </span>
+              {% elif s.sheet.status == 'SIGNED' %}
+              <span style="background:#e0f2fe;color:#0369a1;border-radius:20px;padding:2px 10px;font-size:.7rem;font-weight:700;white-space:nowrap;">
+                <i class="bi bi-pen-fill me-1"></i>Signé
+              </span>
+              {% elif s.sheet.status == 'REJECTED' %}
+              <span style="background:#fee2e2;color:#dc2626;border-radius:20px;padding:2px 10px;font-size:.7rem;font-weight:700;white-space:nowrap;">
+                <i class="bi bi-x-circle-fill me-1"></i>Rejeté
+              </span>
+              {% else %}
+              <span style="background:#fef3c7;color:#92400e;border-radius:20px;padding:2px 10px;font-size:.7rem;font-weight:700;white-space:nowrap;">
+                <i class="bi bi-hourglass-split me-1"></i>En attente
+              </span>
+              {% endif %}
+            </td>
+            <td style="text-align:center;">
+              {% if teacher %}
+              {# Vue admin : renvoi vers le cahier de texte de la classe/semestre (pas d'édition directe par séance) #}
+              <a href="{% url 'timetable:cahier_texte_view' class_group.pk semester.pk %}"
+                 style="font-size:.7rem;font-weight:700;{% if s.log and s.log.objectives %}color:#166534;background:#dcfce7;{% else %}color:#dc2626;background:#fee2e2;{% endif %}border-radius:20px;padding:2px 10px;text-decoration:none;white-space:nowrap;display:inline-block;">
+                {% if s.log and s.log.objectives %}<i class="bi bi-check-circle-fill me-1"></i>Renseigné{% else %}<i class="bi bi-exclamation-circle-fill me-1"></i>À remplir{% endif %}
+              </a>
+              {% elif s.log and s.log.objectives %}
+              <a href="{% url 'timetable:session_log_edit' s.entry.pk s.date|date:'Y-m-d' %}?next={{ request.path|urlencode }}"
+                 style="font-size:.7rem;font-weight:700;color:#166534;background:#dcfce7;border-radius:20px;padding:2px 10px;text-decoration:none;white-space:nowrap;display:inline-block;">
+                <i class="bi bi-check-circle-fill me-1"></i>Renseigné
+              </a>
+              {% else %}
+              <a href="{% url 'timetable:session_log_edit' s.entry.pk s.date|date:'Y-m-d' %}?next={{ request.path|urlencode }}"
+                 style="font-size:.7rem;font-weight:700;color:#dc2626;background:#fee2e2;border-radius:20px;padding:2px 10px;text-decoration:none;white-space:nowrap;display:inline-block;">
+                <i class="bi bi-exclamation-circle-fill me-1"></i>À remplir
+              </a>
+              {% endif %}
+            </td>
+            <td style="text-align:center;font-weight:700;color:#1e3a5f;">{{ s.duration|floatformat:1 }} h</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="padding:40px;text-align:center;color:#94a3b8;">
+      <i class="bi bi-calendar-x" style="font-size:2.5rem;color:#e2e8f0;display:block;margin-bottom:10px;"></i>
+      <div style="font-size:.88rem;font-weight:600;color:#64748b;">Aucune séance déroulée pour ce module pour le moment.</div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

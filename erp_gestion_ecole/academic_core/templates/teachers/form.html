@@ -1,0 +1,215 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if is_create %}Nouvel enseignant{% else %}Modifier l'enseignant{% endif %}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'teachers:list' %}">Enseignants</a></li>
+<li class="breadcrumb-item active">{% if is_create %}Nouvel enseignant{% else %}Modifier{% endif %}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-person-plus-fill"></i></span>
+    {% if is_create %}Nouvel enseignant{% else %}Modifier l'enseignant{% endif %}
+  </h1>
+</div>
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-pencil"></i></span>
+          Informations de l'enseignant
+        </h6>
+      </div>
+      <div class="p-4">
+        <form method="post">
+          {% csrf_token %}
+
+          {% if is_create %}
+          <!-- Bloc : Institut d'appartenance -->
+          <p class="fw-semibold mb-2" style="font-size:.85rem;color:var(--navy);border-bottom:1px solid var(--border);padding-bottom:8px;">
+            <i class="bi bi-buildings me-1"></i>Institut d'appartenance
+          </p>
+          <div class="row g-3 mb-4">
+            <div class="col-12">
+              <label class="form-label fw-semibold">
+                Institut <span class="text-danger">*</span>
+              </label>
+              {{ form.target_institut }}
+              {% if form.target_institut.errors %}
+                <div class="text-danger mt-1" style="font-size:.75rem;">{{ form.target_institut.errors.0 }}</div>
+              {% endif %}
+              <div class="form-text" style="font-size:.76rem;">
+                <i class="bi bi-info-circle me-1"></i>
+                L'enseignant sera enregistré dans la base de données de cet institut.
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Département</label>
+              {{ form.department }}
+              {% if form.department.errors %}
+                <div class="text-danger mt-1" style="font-size:.75rem;">{{ form.department.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Bloc compte utilisateur (création uniquement) -->
+          <p class="fw-semibold mb-3" style="font-size:.85rem;color:var(--navy);border-bottom:1px solid var(--border);padding-bottom:8px;">
+            <i class="bi bi-person me-1"></i>Compte utilisateur
+          </p>
+          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:.8rem;color:#713f12;">
+            <i class="bi bi-info-circle-fill me-1"></i>
+            L'identifiant et le mot de passe seront communiqués à l'enseignant.
+            Il devra <strong>changer son mot de passe</strong> dès sa première connexion.
+          </div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label class="form-label">Prénom <span class="text-danger">*</span></label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.first_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Nom <span class="text-danger">*</span></label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.last_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email <span class="text-danger">*</span></label>
+              {{ form.email }}
+              {% if form.email.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.email.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Téléphone <span class="text-danger">*</span></label>
+              {{ form.phone }}
+              {% if form.phone.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.phone.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">
+                Identifiant de connexion <span class="text-danger">*</span>
+                <i class="bi bi-info-circle text-muted ms-1" style="font-size:.75rem;" title="Login utilisé pour se connecter à la plateforme"></i>
+              </label>
+              {{ form.username }}
+              {% if form.username.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.username.errors.0 }}</div>{% endif %}
+              {% if form.username.help_text %}<div class="form-text" style="font-size:.72rem;">{{ form.username.help_text }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">
+                Mot de passe temporaire <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                {{ form.password }}
+                <button class="btn btn-outline-secondary btn-sm" type="button" id="btn-gen-pwd" title="Générer un mot de passe aléatoire">
+                  <i class="bi bi-shuffle"></i>
+                </button>
+              </div>
+              {% if form.password.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.password.errors.0 }}</div>{% endif %}
+              {% if form.password.help_text %}<div class="form-text" style="font-size:.72rem;">{{ form.password.help_text }}</div>{% endif %}
+            </div>
+          </div>
+          <p class="fw-semibold mb-3" style="font-size:.85rem;color:var(--navy);border-bottom:1px solid var(--border);padding-bottom:8px;">
+            <i class="bi bi-person-badge me-1"></i>Profil enseignant
+          </p>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Matricule <span class="text-danger">*</span></label>
+              <div class="input-group">
+                {{ form.matricule }}
+                <button class="btn btn-outline-secondary btn-sm" type="button" id="btn-gen-matricule" title="Générer un matricule automatiquement">
+                  <i class="bi bi-shuffle"></i>
+                </button>
+              </div>
+              {% if form.matricule.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.matricule.errors.0 }}</div>{% endif %}
+              <div class="form-text" style="font-size:.72rem;">
+                <i class="bi bi-info-circle me-1"></i>Format : Ens_AA_NNNN/SIGLE — générable automatiquement ou saisissable directement.
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Grade <span class="text-danger">*</span></label>
+              {{ form.grade }}
+              {% if form.grade.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.grade.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Spécialité <span class="text-danger">*</span></label>
+              {{ form.specialty }}
+              {% if form.specialty.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.specialty.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Statut <span class="text-danger">*</span></label>
+              {{ form.statut }}
+              {% if form.statut.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.statut.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Volume horaire contractuel</label>
+              {{ form.contractual_hours }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Date d'embauche</label>
+              {{ form.hire_date }}
+            </div>
+            <div class="col-md-12">
+              <label class="form-label">Biographie</label>
+              {{ form.bio }}
+            </div>
+          </div>
+
+          {% else %}
+          <!-- Modification : formulaire simple profil seul -->
+          <div class="row g-3">
+            {% for field in form %}
+            <div class="col-md-{% if field.field.widget.input_type == 'textarea' %}12{% else %}6{% endif %}">
+              <label class="form-label">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>
+              {% if field.name == 'matricule' %}
+              <div class="input-group">
+                {{ field }}
+                <button class="btn btn-outline-secondary btn-sm" type="button" id="btn-gen-matricule" title="Générer un matricule automatiquement">
+                  <i class="bi bi-shuffle"></i>
+                </button>
+              </div>
+              {% else %}
+              {{ field }}
+              {% endif %}
+              {% if field.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ field.errors.0 }}</div>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="d-flex gap-2 justify-content-end border-top pt-3 mt-4">
+            <a href="{% url 'teachers:list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if is_create %}
+<script>
+document.getElementById('btn-gen-pwd')?.addEventListener('click', function() {
+  const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789@#!';
+  let pwd = '';
+  for (let i = 0; i < 10; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+  const pwdField = document.getElementById('id_password');
+  if (pwdField) { pwdField.value = pwd; pwdField.type = 'text'; }
+});
+</script>
+{% endif %}
+
+<script>
+document.getElementById('btn-gen-matricule')?.addEventListener('click', function() {
+  const btn = this;
+  const institutSelect = document.getElementById('id_target_institut');
+  const params = new URLSearchParams();
+  if (institutSelect && institutSelect.value) params.append('institut_id', institutSelect.value);
+
+  btn.disabled = true;
+  fetch(`{% url 'teachers:ajax_generate_matricule' %}?${params}`)
+    .then(r => r.json())
+    .then(data => {
+      const matField = document.getElementById('id_matricule');
+      if (matField && data.matricule) matField.value = data.matricule;
+    })
+    .finally(() => { btn.disabled = false; });
+});
+</script>
+{% endblock %}

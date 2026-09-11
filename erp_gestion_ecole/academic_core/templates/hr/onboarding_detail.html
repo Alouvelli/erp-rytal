@@ -1,0 +1,76 @@
+{% extends "base/base.html" %}
+{% block title %}Intégration — {{ onboarding.user.get_full_name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-statut { display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:999px;font-size:.8rem;font-weight:600; }
+.bo-EN_COURS { background:#fef3c7;color:#92400e; }
+.bo-TERMINE  { background:#dcfce7;color:#15803d; }
+.task-row { display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f1f5f9; }
+.task-row:last-child { border-bottom:none; }
+.task-badge { font-size:.68rem;padding:2px 8px;border-radius:999px;background:#f1f5f9;color:#475569;font-weight:600; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:700px;">
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{% url 'hr:onboarding_list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <div>
+      <h5 class="mb-0 fw-bold">{{ onboarding.user.get_full_name }}</h5>
+      <small class="text-muted">Intégration depuis le {{ onboarding.date_debut|date:"d/m/Y" }}</small>
+    </div>
+    <span class="badge-statut bo-{{ onboarding.statut }} ms-auto">{{ onboarding.get_statut_display }}</span>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3 fw-bold d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-list-check text-primary me-2"></i>Checklist d'intégration</span>
+      {% if is_manager %}
+      <button class="btn btn-xs btn-outline-primary" style="font-size:.72rem;padding:3px 9px;" type="button"
+              data-bs-toggle="collapse" data-bs-target="#form-tache">+ Tâche</button>
+      {% endif %}
+    </div>
+    {% if is_manager %}
+    <div class="collapse" id="form-tache">
+      <form method="post" action="{% url 'hr:onboarding_task_create' pk=onboarding.pk %}" class="p-3 border-bottom bg-light d-flex gap-2">
+        {% csrf_token %}
+        <input type="text" name="libelle" class="form-control form-control-sm" placeholder="Nouvelle tâche" required>
+        <select name="responsable" class="form-select form-select-sm" style="max-width:140px;">
+          <option value="RH">RH</option><option value="Manager">Manager</option><option value="DSI">DSI</option>
+        </select>
+        <button class="btn btn-sm btn-primary">Ajouter</button>
+      </form>
+    </div>
+    {% endif %}
+    <div class="card-body">
+      {% for t in taches %}
+      <div class="task-row">
+        {% if is_manager %}
+        <form method="post" action="{% url 'hr:onboarding_task_toggle' pk=t.pk %}">
+          {% csrf_token %}
+          <button class="btn btn-sm p-0 border-0 bg-transparent" style="font-size:1.1rem;">
+            {% if t.fait %}<i class="bi bi-check-square-fill text-success"></i>{% else %}<i class="bi bi-square text-muted"></i>{% endif %}
+          </button>
+        </form>
+        {% else %}
+        {% if t.fait %}<i class="bi bi-check-square-fill text-success"></i>{% else %}<i class="bi bi-square text-muted"></i>{% endif %}
+        {% endif %}
+        <span class="{% if t.fait %}text-decoration-line-through text-muted{% endif %}" style="font-size:.87rem;flex:1;">{{ t.libelle }}</span>
+        <span class="task-badge">{{ t.responsable }}</span>
+      </div>
+      {% empty %}
+      <div class="text-center py-4 text-muted" style="font-size:.85rem;">Aucune tâche.</div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if is_manager and onboarding.statut == 'EN_COURS' %}
+  <form method="post" action="{% url 'hr:onboarding_complete' pk=onboarding.pk %}" class="text-center"
+        onsubmit="return confirm('Clôturer cette intégration ?');">
+    {% csrf_token %}
+    <button class="btn btn-success fw-semibold px-4"><i class="bi bi-check2-circle me-2"></i>Clôturer l'intégration</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,377 @@
+{% extends 'base/base.html' %}
+{% block title %}Modules (EC){% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Modules (EC)</li>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-book"></i></span>
+    Modules (EC)
+  </h1>
+  {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+  <a href="{% url 'subjects:create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Nouveau module (EC)
+  </a>
+  {% endif %}
+</div>
+
+<!-- Année académique + recherche -->
+<div class="card-section mb-3">
+  <div style="padding:14px 20px;">
+    <div class="d-flex flex-wrap gap-3 align-items-end">
+      <form method="get" style="min-width:220px;">
+        <label style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">
+          <i class="bi bi-calendar-range me-1"></i>Année académique
+        </label>
+        <select name="annee" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for y in academic_years %}
+          <option value="{{ y.pk }}" {% if selected_year.pk == y.pk %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <div style="flex:1;min-width:260px;">
+        <label style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">
+          <i class="bi bi-search me-1"></i>Recherche rapide
+        </label>
+        <input type="text" id="live-search" placeholder="Code, intitulé, enseignant…"
+               autocomplete="off"
+               style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px 14px;font-size:.85rem;background:#f8fafc;color:#1e293b;outline:none;transition:border-color .2s;"
+               onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='#e2e8f0'">
+      </div>
+      <div style="margin-left:auto;font-size:.82rem;color:#64748b;font-weight:600;">
+        <span id="result-count">{{ total_subjects }}</span> module<span id="result-plural">{% if total_subjects != 1 %}s{% endif %}</span> (EC)
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Semestres vides pouvant être dupliqués depuis l'année précédente -->
+{% if empty_semesters %}
+<div class="card-section mb-3" style="border-left:4px solid #7c3aed;">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <i class="bi bi-copy me-2" style="color:#7c3aed;"></i>Semestres sans module dans {{ selected_year.label }}
+    </h6>
+  </div>
+  <div class="p-3">
+    {% for row in empty_semesters %}
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3"
+         style="padding:10px 12px;{% if not forloop.last %}border-bottom:1px solid #f1f5f9;{% endif %}">
+      <div>
+        <div style="font-weight:700;font-size:.86rem;color:#1e293b;">
+          {% if row.semester.level %}{{ row.semester.level.name }} — {% endif %}{{ row.semester.name }}
+        </div>
+        <div style="font-size:.78rem;color:#64748b;">
+          Aucun module. Le semestre correspondant de {{ row.source_semester.academic_year.label }} en contient.
+        </div>
+      </div>
+      <a href="{% url 'subjects:semester_duplicate' row.semester.pk %}"
+         class="btn btn-sm" style="background:#7c3aed;color:#fff;border:none;padding:7px 16px;white-space:nowrap;">
+        <i class="bi bi-copy me-1"></i>Dupliquer depuis {{ row.source_semester.academic_year.label }}
+      </a>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Groupes Niveau → Classe → Semestre -->
+<div id="level-groups">
+{% for lvl in levels %}
+<div class="level-group mb-3" style="border-radius:10px;overflow:hidden;border:1.5px solid #cbd5e1;">
+
+  <!-- Header niveau -->
+  <button class="level-header w-100 d-flex align-items-center justify-content-between"
+          data-target="level-body-{{ forloop.counter }}"
+          style="padding:13px 18px;background:var(--navy);border:none;cursor:pointer;text-align:left;transition:background .15s;"
+          onclick="toggleGroup(this)">
+    <div class="d-flex align-items-center gap-3">
+      <span style="width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.15);display:inline-flex;align-items:center;justify-content:center;font-size:.9rem;color:#fff;flex-shrink:0;">
+        <i class="bi bi-bar-chart-steps"></i>
+      </span>
+      <span style="font-weight:800;font-size:.95rem;color:#fff;">{{ lvl.level.name }}</span>
+      <span class="level-count" style="font-size:.73rem;font-weight:700;color:#fff;background:rgba(255,255,255,.18);padding:2px 10px;border-radius:20px;">
+        {{ lvl.total }} module{{ lvl.total|pluralize }}
+      </span>
+    </div>
+    <i class="bi bi-chevron-down group-arrow" style="color:#fff;font-size:.85rem;transition:transform .25s;"></i>
+  </button>
+
+  <!-- Corps niveau : classes -->
+  <div class="level-body" id="level-body-{{ forloop.counter }}" style="display:none;">
+    {% for cls in lvl.classes %}
+    {% with clsid=forloop.parentloop.counter|stringformat:"s"|add:"-"|add:forloop.counter|stringformat:"s" %}
+    <div class="class-group" style="border-top:1px solid #e2e8f0;">
+      <button class="class-header w-100 d-flex align-items-center justify-content-between"
+              data-target="class-body-{{ clsid }}"
+              style="padding:11px 18px 11px 30px;background:#eff6ff;border:none;border-left:4px solid var(--navy);cursor:pointer;text-align:left;"
+              onclick="toggleGroup(this)">
+        <div class="d-flex align-items-center gap-3">
+          <span style="width:30px;height:30px;border-radius:8px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.82rem;color:#fff;flex-shrink:0;">
+            <i class="bi bi-people-fill"></i>
+          </span>
+          <span style="font-weight:700;font-size:.88rem;color:var(--navy);">
+            {% if cls.class_group %}{{ cls.class_group.name }}{% else %}Sans classe assignée{% endif %}
+          </span>
+          <span class="class-count" style="font-size:.72rem;font-weight:700;color:var(--navy);background:#dbeafe;padding:1px 9px;border-radius:20px;border:1px solid #bfdbfe;">
+            {{ cls.total }} module{{ cls.total|pluralize }}
+          </span>
+        </div>
+        <i class="bi bi-chevron-down group-arrow" style="color:var(--navy);font-size:.8rem;transition:transform .25s;"></i>
+      </button>
+
+      <!-- Corps classe : semestres -->
+      <div class="class-body" id="class-body-{{ clsid }}" style="display:none;">
+        {% for sem in cls.semesters %}
+        {% with semid=clsid|stringformat:"s"|add:"-"|add:forloop.counter|stringformat:"s" %}
+        <div class="sem-group" style="border-top:1px solid #f1f5f9;">
+          <button class="sem-header w-100 d-flex align-items-center justify-content-between"
+                  data-target="sem-body-{{ semid }}"
+                  style="padding:8px 18px 8px 48px;background:#fafafa;border:none;cursor:pointer;text-align:left;"
+                  onclick="toggleGroup(this)">
+            <div class="d-flex align-items-center gap-2">
+              <i class="bi bi-calendar3" style="color:#7c3aed;font-size:.8rem;"></i>
+              <span style="font-weight:700;font-size:.8rem;color:#7c3aed;">{{ sem.semester.label }}</span>
+              <span style="font-size:.68rem;color:#94a3b8;">{{ sem.semester.academic_year }}</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="sem-count" style="font-size:.7rem;font-weight:700;color:#7c3aed;background:#ede9fe;padding:1px 8px;border-radius:20px;">
+                {{ sem.subjects|length }} module{{ sem.subjects|length|pluralize }}
+              </span>
+              <i class="bi bi-chevron-down group-arrow" style="color:#7c3aed;font-size:.75rem;transition:transform .25s;"></i>
+            </div>
+          </button>
+          <div class="sem-body" id="sem-body-{{ semid }}" style="display:none;">
+            <div class="table-responsive">
+              <table class="table" style="margin:0;">
+                <thead style="background:#f8fafc;">
+                  <tr>
+                    <th style="font-size:.73rem;color:#64748b;font-weight:700;padding:8px 16px 8px 48px;">Code</th>
+                    <th style="font-size:.73rem;color:#64748b;font-weight:700;">Intitulé</th>
+                    <th style="font-size:.73rem;color:#64748b;font-weight:700;">Crédits</th>
+                    <th style="font-size:.73rem;color:#64748b;font-weight:700;">Vol. horaire</th>
+                    <th style="font-size:.73rem;color:#64748b;font-weight:700;">Enseignant responsable</th>
+                    {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+                    <th style="font-size:.73rem;color:#64748b;font-weight:700;">Actions</th>
+                    {% endif %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for subj in sem.subjects %}
+                  <tr class="subj-row"
+                      data-code="{{ subj.code|lower }}"
+                      data-title="{{ subj.title|lower }}"
+                      data-teacher="{% if subj.responsible_teacher %}{{ subj.responsible_teacher.full_name|lower }}{% endif %}">
+                    <td style="padding:9px 16px 9px 48px;">
+                      <span style="font-weight:700;font-size:.8rem;background:#eff6ff;color:var(--navy);padding:3px 8px;border-radius:5px;">
+                        {{ subj.code }}
+                      </span>
+                    </td>
+                    <td>
+                      <div style="font-weight:600;font-size:.85rem;color:#1e293b;">{{ subj.title }}</div>
+                    </td>
+                    <td>
+                      <span style="font-weight:700;color:var(--navy);font-size:.9rem;">{{ subj.credits }}</span>
+                    </td>
+                    <td style="font-size:.83rem;color:#64748b;">
+                      {% if subj.volume_hours %}{{ subj.volume_hours }} h{% else %}—{% endif %}
+                    </td>
+                    <td style="font-size:.83rem;">
+                      {% if subj.responsible_teacher %}
+                        <div style="font-weight:600;color:#1e293b;">{{ subj.responsible_teacher.full_name }}</div>
+                        <div style="font-size:.75rem;color:#94a3b8;">{{ subj.responsible_teacher.matricule }}</div>
+                      {% else %}
+                        <span style="color:#cbd5e1;">—</span>
+                      {% endif %}
+                      {% if subj.syllabus %}
+                      <a href="{{ subj.syllabus.url }}" target="_blank" rel="noopener"
+                         style="display:inline-flex;align-items:center;gap:4px;font-size:.68rem;font-weight:700;color:#7c3aed;text-decoration:none;background:#ede9fe;padding:1px 7px;border-radius:10px;margin-top:3px;">
+                        <i class="bi bi-file-earmark-text-fill"></i>Syllabus
+                      </a>
+                      {% elif subj.responsible_teacher %}
+                      <span style="display:inline-flex;align-items:center;gap:4px;font-size:.68rem;font-weight:700;color:#b45309;background:#fef3c7;padding:1px 7px;border-radius:10px;margin-top:3px;"
+                            title="Aucun syllabus fourni pour cet enseignant">
+                        <i class="bi bi-exclamation-triangle-fill"></i>Sans syllabus
+                      </span>
+                      {% endif %}
+                    </td>
+                    {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+                    <td>
+                      <div class="d-flex gap-1">
+                        <a href="{% url 'subjects:edit' subj.pk %}" class="btn-action edit" title="Modifier">
+                          <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="{% url 'subjects:delete' subj.pk %}" class="btn-action delete" title="Supprimer">
+                          <i class="bi bi-trash"></i>
+                        </a>
+                      </div>
+                    </td>
+                    {% endif %}
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+      </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+  </div>
+</div>
+{% empty %}
+<div class="card-section">
+  <div class="text-center py-5" style="color:#94a3b8;">
+    <i class="bi bi-book d-block mb-2" style="font-size:2.5rem;color:#cbd5e1;"></i>
+    <div style="font-weight:600;">Aucun module (EC) enregistré</div>
+  </div>
+</div>
+{% endfor %}
+</div>
+
+<!-- Modules sans niveau déterminé -->
+{% if no_level_subjects %}
+<div class="card-section mb-3" style="border:1.5px solid #fca5a5;">
+  <div class="card-section-header">
+    <h6 class="card-section-title" style="color:#dc2626;">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>Modules sans niveau déterminé
+      <span style="font-size:.72rem;font-weight:700;color:#dc2626;background:#fee2e2;padding:1px 9px;border-radius:20px;margin-left:6px;">{{ no_level_subjects|length }}</span>
+    </h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0">
+      <thead style="background:#f8fafc;">
+        <tr>
+          <th style="font-size:.73rem;color:#64748b;font-weight:700;padding:8px 16px;">Code</th>
+          <th style="font-size:.73rem;color:#64748b;font-weight:700;">Intitulé</th>
+          <th style="font-size:.73rem;color:#64748b;font-weight:700;">Filière</th>
+          <th style="font-size:.73rem;color:#64748b;font-weight:700;">Semestre</th>
+          {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+          <th style="font-size:.73rem;color:#64748b;font-weight:700;">Actions</th>
+          {% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for subj in no_level_subjects %}
+        <tr class="subj-row" data-code="{{ subj.code|lower }}" data-title="{{ subj.title|lower }}" data-teacher="">
+          <td style="padding:9px 16px;">
+            <span style="font-weight:700;font-size:.8rem;background:#eff6ff;color:var(--navy);padding:3px 8px;border-radius:5px;">{{ subj.code }}</span>
+          </td>
+          <td><div style="font-weight:600;font-size:.85rem;color:#1e293b;">{{ subj.title }}</div></td>
+          <td style="font-size:.83rem;">{{ subj.program|default:"—" }}</td>
+          <td style="font-size:.83rem;">{{ subj.semester|default:"—" }}</td>
+          {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'subjects:edit' subj.pk %}" class="btn-action edit" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'subjects:delete' subj.pk %}" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleGroup(btn) {
+  const bodyId = btn.getAttribute('data-target');
+  const body   = document.getElementById(bodyId);
+  const arrow  = btn.querySelector('.group-arrow');
+  const open   = body.style.display !== 'none';
+  body.style.display    = open ? 'none' : 'block';
+  arrow.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+// Ouvrir le premier niveau par défaut
+document.addEventListener('DOMContentLoaded', function () {
+  const first = document.querySelector('.level-header');
+  if (first) toggleGroup(first);
+});
+
+// Recherche live (niveau → classe → semestre → lignes)
+const searchInput  = document.getElementById('live-search');
+const resultCount  = document.getElementById('result-count');
+const resultPlural = document.getElementById('result-plural');
+
+searchInput.addEventListener('input', function () {
+  const q = this.value.toLowerCase().trim();
+  let total = 0;
+
+  document.querySelectorAll('.level-group').forEach(function (levelGroup) {
+    const levelBody  = levelGroup.querySelector('.level-body');
+    const levelArrow = levelGroup.querySelector('.group-arrow');
+    let levelVisible = 0;
+
+    levelGroup.querySelectorAll('.class-group').forEach(function (classGroup) {
+      const classBody  = classGroup.querySelector('.class-body');
+      const classArrow = classGroup.querySelector('.group-arrow');
+      let classVisible = 0;
+
+      classGroup.querySelectorAll('.sem-group').forEach(function (semGroup) {
+        const semBody  = semGroup.querySelector('.sem-body');
+        const semArrow = semGroup.querySelector('.group-arrow');
+        let semVisible = 0;
+        semGroup.querySelectorAll('.subj-row').forEach(function (row) {
+          const code    = row.getAttribute('data-code') || '';
+          const title   = row.getAttribute('data-title') || '';
+          const teacher = row.getAttribute('data-teacher') || '';
+          const match   = !q || code.includes(q) || title.includes(q) || teacher.includes(q);
+          row.style.display = match ? '' : 'none';
+          if (match) semVisible++;
+        });
+        semGroup.style.display = semVisible > 0 ? '' : 'none';
+        const semCount = semGroup.querySelector('.sem-count');
+        if (semCount) semCount.textContent = semVisible + ' module' + (semVisible !== 1 ? 's' : '');
+        if (q) {
+          semBody.style.display    = semVisible > 0 ? 'block' : 'none';
+          semArrow.style.transform = semVisible > 0 ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+        classVisible += semVisible;
+      });
+
+      classGroup.style.display = classVisible > 0 ? '' : 'none';
+      const classCount = classGroup.querySelector('.class-count');
+      if (classCount) classCount.textContent = classVisible + ' module' + (classVisible !== 1 ? 's' : '');
+      if (q) {
+        classBody.style.display    = classVisible > 0 ? 'block' : 'none';
+        classArrow.style.transform = classVisible > 0 ? 'rotate(180deg)' : 'rotate(0deg)';
+      }
+      levelVisible += classVisible;
+    });
+
+    levelGroup.style.display = levelVisible > 0 ? '' : 'none';
+    const levelCount = levelGroup.querySelector('.level-count');
+    if (levelCount) levelCount.textContent = levelVisible + ' module' + (levelVisible !== 1 ? 's' : '');
+    if (q) {
+      levelBody.style.display    = levelVisible > 0 ? 'block' : 'none';
+      levelArrow.style.transform = levelVisible > 0 ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+    total += levelVisible;
+  });
+
+  // Modules sans niveau
+  document.querySelectorAll('#level-groups ~ .card-section .subj-row, .card-section.mb-3 .subj-row').forEach(function() {});
+  document.querySelectorAll('.subj-row').forEach(function (row) {
+    if (row.closest('.level-group')) return; // déjà traité ci-dessus
+    const code    = row.getAttribute('data-code') || '';
+    const title   = row.getAttribute('data-title') || '';
+    const match   = !q || code.includes(q) || title.includes(q);
+    row.style.display = match ? '' : 'none';
+    if (match) total++;
+  });
+
+  resultCount.textContent  = total;
+  resultPlural.textContent = total !== 1 ? 's' : '';
+});
+</script>
+{% endblock %}

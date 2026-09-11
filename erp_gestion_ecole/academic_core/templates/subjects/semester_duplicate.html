@@ -1,0 +1,99 @@
+{% extends 'base/base.html' %}
+{% block title %}Dupliquer un semestre{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'subjects:list' %}">Modules (EC)</a></li>
+<li class="breadcrumb-item active">Dupliquer</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-copy"></i></span>
+    Dupliquer les modules (EC) d'un semestre
+  </h1>
+</div>
+
+<div class="card-section mb-4">
+  <div class="p-4">
+    <div style="font-size:.9rem;">
+      Depuis <strong>{{ source_semester.name }} — {{ source_semester.academic_year.label }}</strong>
+      vers <strong>{{ target_semester.name }} — {{ target_semester.academic_year.label }}</strong>
+    </div>
+    <div style="font-size:.8rem;color:#64748b;margin-top:6px;">
+      Seuls les modules (EC) — code, intitulé, volumes horaires, coefficients, crédits —
+      et leur UE éventuelle seront copiés. L'enseignant responsable, le syllabus, les
+      notes, bulletins et le cahier de texte ne sont pas concernés : ils restent propres
+      à chaque année.
+    </div>
+  </div>
+</div>
+
+{% if not preview_rows %}
+<div class="card-section">
+  <div class="text-center py-5" style="color:#94a3b8;">
+    <i class="bi bi-inbox d-block mb-2" style="font-size:2.5rem;color:#cbd5e1;"></i>
+    <div style="font-weight:600;font-size:.9rem;color:#64748b;">Aucun module (EC) trouvé pour {{ source_semester.name }} — {{ source_semester.academic_year.label }}</div>
+    <a href="{% url 'subjects:list' %}?annee={{ target_semester.academic_year_id }}" class="btn btn-outline-secondary btn-sm mt-3">Retour</a>
+  </div>
+</div>
+{% else %}
+<div class="card-section mb-4">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-check"></i></span>
+      Aperçu — {{ preview_rows|length }} module{{ preview_rows|length|pluralize }} (EC) trouvé{{ preview_rows|length|pluralize }}
+    </h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table mb-0" style="font-size:.83rem;">
+      <thead style="background:#f8fafc;">
+        <tr>
+          <th class="px-3">Filière</th>
+          <th>Code</th>
+          <th>Intitulé</th>
+          <th>Type</th>
+          <th class="text-center">Crédits</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in preview_rows %}
+        <tr>
+          <td class="px-3">{{ row.subject.program.name }}</td>
+          <td style="font-weight:600;">{{ row.subject.code }}</td>
+          <td>{{ row.subject.title }}</td>
+          <td>{{ row.subject.get_subject_type_display }}</td>
+          <td class="text-center">{{ row.subject.credits }}</td>
+          <td>
+            {% if row.already_exists %}
+            <span class="badge-statut" style="background:#fef3c7;color:#92400e;">Déjà existant</span>
+            {% else %}
+            <span class="badge-statut" style="background:#dcfce7;color:#15803d;">Sera dupliqué</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="p-4 d-flex gap-3">
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm" style="background:#7c3aed;color:#fff;border:none;padding:8px 20px;">
+        <i class="bi bi-check-lg me-1"></i>Confirmer la duplication
+      </button>
+    </form>
+    <a href="{% url 'subjects:list' %}?annee={{ target_semester.academic_year_id }}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-statut { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:.72rem;font-weight:600; }
+</style>
+{% endblock %}

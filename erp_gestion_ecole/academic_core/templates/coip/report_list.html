@@ -1,0 +1,85 @@
+{% extends 'base/base.html' %}
+{% block title %}COIP — Rapports{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item active">Rapports</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-bar-chart-fill"></i></span>
+    Rapports COIP
+  </h1>
+  <a href="{% url 'coip:insertion_report' %}" class="btn btn-sm" style="background:#0d9488;color:#fff;">
+    <i class="bi bi-graph-up-arrow me-1"></i>Taux d'insertion par filière
+  </a>
+</div>
+
+<div class="alert alert-info py-2 px-3 mb-3" style="font-size:.83rem;">
+  <i class="bi bi-info-circle-fill me-1"></i>
+  Un rapport de type <strong>Annuel</strong> inclut automatiquement le détail complet de
+  toutes les activités de la COIP sur la période (activités, conventions, stages,
+  sorties pédagogiques, séances d'orientation, recommandations, opportunités) en plus
+  des indicateurs de synthèse.
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title">Générer un rapport</h6></div>
+      <div class="p-3">
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Titre <span class="text-danger">*</span></label>
+            {{ form.titre }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Type</label>
+            {{ form.type_rapport }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Format</label>
+            {{ form.format_fichier }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Début de période <span class="text-danger">*</span></label>
+            {{ form.periode_debut }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Fin de période <span class="text-danger">*</span></label>
+            {{ form.periode_fin }}
+            {% if form.periode_fin.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.periode_fin.errors.0 }}</div>{% endif %}
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-gear me-1"></i>Générer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title">Rapports générés</h6></div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Titre</th><th>Période</th><th>Format</th><th>Statut</th><th>Généré par</th><th></th></tr></thead>
+          <tbody>
+            {% for r in reports %}
+            <tr>
+              <td style="font-size:.85rem;font-weight:600;">{{ r.titre }}</td>
+              <td style="font-size:.82rem;">{{ r.periode_debut|date:"d/m/Y" }} — {{ r.periode_fin|date:"d/m/Y" }}</td>
+              <td style="font-size:.82rem;">{{ r.get_format_fichier_display }}</td>
+              <td><span class="badge bg-{{ r.statut_color }}">{{ r.get_status_display }}</span></td>
+              <td style="font-size:.82rem;color:#64748b;">{{ r.genere_par.get_full_name|default:"—" }}</td>
+              <td>{% if r.fichier %}<a href="{{ r.fichier.url }}" target="_blank"><i class="bi bi-download"></i></a>{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted py-4">Aucun rapport généré.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

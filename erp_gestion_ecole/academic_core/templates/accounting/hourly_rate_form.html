@@ -1,0 +1,145 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ action }} un taux horaire{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Direction Administrative Financière</a></li>
+<li class="breadcrumb-item"><a href="{% url 'accounting:rate_list' %}">Taux horaires</a></li>
+<li class="breadcrumb-item active">{{ action }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#166534;"><i class="bi bi-gear-fill"></i></span>
+    {{ action }} un taux horaire — {{ dept.name }}
+  </h1>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-cash-coin"></i></span>
+          Paramètres du taux
+        </h6>
+      </div>
+      <div class="p-4">
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:24px;font-size:.82rem;color:#1e40af;">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          Le montant d'une séance = <strong>Taux horaire × Durée de la séance</strong> (définie dans l'emploi du temps).
+        </div>
+
+        <form method="post">
+          {% csrf_token %}
+
+          <!-- Niveau -->
+          <div class="mb-4">
+            <label class="form-label" style="font-weight:600;font-size:.85rem;">
+              Niveau <span style="color:#ef4444;">*</span>
+            </label>
+            {{ form.level }}
+            {% for e in form.level.errors %}
+            <div style="font-size:.78rem;color:#ef4444;margin-top:4px;"><i class="bi bi-exclamation-circle me-1"></i>{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <!-- Année académique -->
+          <div class="mb-4">
+            <label class="form-label" style="font-weight:600;font-size:.85rem;">
+              Année académique <span style="color:#ef4444;">*</span>
+            </label>
+            {{ form.academic_year }}
+            {% for e in form.academic_year.errors %}
+            <div style="font-size:.78rem;color:#ef4444;margin-top:4px;"><i class="bi bi-exclamation-circle me-1"></i>{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <!-- Taux horaire — cartes prédéfinies -->
+          <div class="mb-4">
+            <label class="form-label" style="font-weight:600;font-size:.85rem;">
+              Taux horaire (FCFA/heure) <span style="color:#ef4444;">*</span>
+            </label>
+            <div class="row g-2 mb-3" id="rate-grid">
+              {% for val, label in form.rate_choice.field.choices %}
+              {% if val and val != 'custom' %}
+              <div class="col-4">
+                <label class="rate-card {% if form.rate_choice.value == val %}selected{% endif %}"
+                       data-value="{{ val }}"
+                       style="display:block;cursor:pointer;border:2px solid {% if form.rate_choice.value == val %}var(--navy){% else %}var(--border){% endif %};border-radius:10px;padding:14px 8px;text-align:center;transition:all .15s;">
+                  <div style="font-size:1.05rem;font-weight:800;color:{% if form.rate_choice.value == val %}var(--navy){% else %}#1e293b{% endif %};">{{ val|floatformat:0 }}</div>
+                  <div style="font-size:.7rem;color:#64748b;">FCFA/h</div>
+                </label>
+              </div>
+              {% endif %}
+              {% endfor %}
+              <!-- Personnalisé -->
+              <div class="col-4">
+                <label class="rate-card {% if form.rate_choice.value == 'custom' %}selected{% endif %}"
+                       data-value="custom"
+                       style="display:block;cursor:pointer;border:2px dashed {% if form.rate_choice.value == 'custom' %}var(--navy){% else %}#cbd5e1{% endif %};border-radius:10px;padding:14px 8px;text-align:center;transition:all .15s;">
+                  <div style="font-size:.9rem;font-weight:700;color:#64748b;"><i class="bi bi-pencil-square"></i></div>
+                  <div style="font-size:.7rem;color:#94a3b8;">Personnalisé</div>
+                </label>
+              </div>
+            </div>
+            <input type="hidden" name="rate_choice" id="rate_choice_input" value="{{ form.rate_choice.value|default:'' }}">
+            {% for e in form.rate_choice.errors %}
+            <div style="font-size:.78rem;color:#ef4444;margin-top:4px;"><i class="bi bi-exclamation-circle me-1"></i>{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <!-- Montant personnalisé (masqué par défaut) -->
+          <div class="mb-4" id="custom-rate-box" style="display:{% if form.rate_choice.value == 'custom' %}block{% else %}none{% endif %};">
+            <label class="form-label" style="font-weight:600;font-size:.85rem;">
+              Montant personnalisé (FCFA/heure) <span style="color:#ef4444;">*</span>
+            </label>
+            {{ form.custom_rate }}
+            {% for e in form.custom_rate.errors %}
+            <div style="font-size:.78rem;color:#ef4444;margin-top:4px;"><i class="bi bi-exclamation-circle me-1"></i>{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'accounting:rate_list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-check-lg me-1"></i>{{ action }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const rateInput   = document.getElementById('rate_choice_input');
+const customBox   = document.getElementById('custom-rate-box');
+const customField = document.getElementById('custom_rate');
+
+function selectCard(card) {
+  document.querySelectorAll('.rate-card').forEach(c => {
+    const isCustom = c.dataset.value === 'custom';
+    c.style.borderColor  = isCustom ? '#cbd5e1' : 'var(--border)';
+    c.style.borderStyle  = isCustom ? 'dashed' : 'solid';
+    c.querySelector('div').style.color = isCustom ? '#64748b' : '#1e293b';
+  });
+
+  card.style.borderColor = 'var(--navy)';
+  card.style.borderStyle = 'solid';
+  card.querySelector('div').style.color = 'var(--navy)';
+
+  const val = card.dataset.value;
+  rateInput.value = val;
+  customBox.style.display = val === 'custom' ? 'block' : 'none';
+  if (val === 'custom') customField?.focus();
+}
+
+document.querySelectorAll('.rate-card').forEach(c => c.addEventListener('click', () => selectCard(c)));
+
+// Init : pré-sélectionner la carte courante
+const initialCard = document.querySelector(`.rate-card[data-value="${rateInput.value}"]`);
+if (initialCard) selectCard(initialCard);
+</script>
+{% endblock %}

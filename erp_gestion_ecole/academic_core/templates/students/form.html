@@ -1,0 +1,772 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if is_create %}Nouvel étudiant{% else %}Modifier l'étudiant{% endif %}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:list' %}">Étudiants</a></li>
+<li class="breadcrumb-item active">{% if is_create %}Nouvel étudiant{% else %}Modifier{% endif %}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-person-plus-fill"></i></span>
+    {% if is_create %}Nouvel étudiant{% else %}Modifier l'étudiant{% endif %}
+  </h1>
+  {% if is_create %}
+  <a href="{% url 'students:import' %}" class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;">
+    <i class="bi bi-file-earmark-arrow-up me-1"></i>Importer CSV
+  </a>
+  {% endif %}
+</div>
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form.photo_webcam }}
+  <div class="row g-3">
+
+    <!-- Bloc 0 : Institut d'appartenance + Affectation à une classe -->
+    <div class="col-12">
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:26px;height:26px;border-radius:6px;background:#00173B;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-buildings-fill"></i></span>
+            Institut &amp; Affectation
+          </h6>
+        </div>
+        <div style="padding:18px;">
+
+          {% if is_create %}
+          <!-- Institut d'appartenance -->
+          <div class="row g-3 mb-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">
+                Institut d'appartenance <span class="text-danger">*</span>
+              </label>
+              {% if form.institut_locked %}
+                <input type="text" class="form-control" value="{{ form.institut_display }}" readonly disabled>
+                <input type="hidden" name="target_institut" id="id_target_institut" value="{{ form.target_institut.value|default:'' }}">
+              {% else %}
+                {{ form.target_institut }}
+              {% endif %}
+              {% if form.target_institut.errors %}
+                <div class="text-danger mt-1" style="font-size:.75rem;">{{ form.target_institut.errors.0 }}</div>
+              {% endif %}
+              <div class="form-text" style="font-size:.76rem;">
+                <i class="bi bi-info-circle me-1"></i>
+                Les données de l'étudiant seront enregistrées dans la base de cet institut. La liste des classes se met à jour automatiquement.
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Classe <span class="text-danger">*</span></label>
+              {% if is_create %}
+                <select name="class_group" id="id_class_group" class="form-select" required>
+                  <option value="">— Sélectionner une classe —</option>
+                  {% for val, label in form.class_group.field.choices %}
+                    {% if val %}<option value="{{ val }}">{{ label }}</option>{% endif %}
+                  {% endfor %}
+                </select>
+                {% if form.class_group.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.class_group.errors.0 }}</div>{% endif %}
+              {% else %}
+                <select name="class_group" class="form-select" required>
+                  <option value="">— Sélectionner une classe —</option>
+                  {% for cls in classes %}
+                    <option value="{{ cls.pk }}" {% if current_enrollment and current_enrollment.class_group_id == cls.pk %}selected{% elif not current_enrollment and student.current_class_id == cls.pk %}selected{% endif %}>
+                      {{ cls.name }}{% if cls.program %} — {{ cls.program.name }}{% endif %}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Année académique <span class="text-danger">*</span></label>
+              {% if is_create %}
+                <select name="academic_year" id="id_academic_year" class="form-select" required>
+                  <option value="">— Sélectionner une année —</option>
+                  {% for val, label in form.academic_year.field.choices %}
+                    {% if val %}<option value="{{ val }}">{{ label }}</option>{% endif %}
+                  {% endfor %}
+                </select>
+                {% if form.academic_year.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.academic_year.errors.0 }}</div>{% endif %}
+              {% else %}
+                <select name="academic_year" class="form-select" required>
+                  <option value="">— Sélectionner une année —</option>
+                  {% for yr in academic_years %}
+                    <option value="{{ yr.pk }}" {% if current_enrollment and current_enrollment.academic_year_id == yr.pk %}selected{% elif yr.is_current %}selected{% endif %}>
+                      {{ yr.name }}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% endif %}
+            </div>
+          </div>
+          {% if not is_create and current_enrollment %}
+          <div class="mt-2" style="font-size:.77rem;color:#64748b;">
+            <i class="bi bi-info-circle me-1"></i>
+            Inscription actuelle : <strong>{{ current_enrollment.class_group.name }}</strong> — {{ current_enrollment.academic_year.name }}
+            <span style="margin-left:8px;padding:2px 8px;border-radius:10px;font-size:.72rem;background:{% if current_enrollment.status == 'VALIDATED' %}#dcfce7;color:#166534{% elif current_enrollment.status == 'PENDING' %}#fef3c7;color:#92400e{% else %}#fee2e2;color:#991b1b{% endif %};">
+              {{ current_enrollment.get_status_display }}
+            </span>
+          </div>
+          {% elif is_create %}
+          <div class="mt-2" style="font-size:.77rem;color:#64748b;">
+            <i class="bi bi-info-circle me-1"></i>
+            L'inscription sera créée en statut <strong>En attente</strong> et apparaîtra immédiatement à la Direction Administrative Financière pour validation après paiement.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Bloc Photo -->
+    <div class="col-12">
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:26px;height:26px;border-radius:6px;background:#0891b2;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-camera-fill"></i></span>
+            Photo de l'étudiant
+          </h6>
+        </div>
+        <div class="p-4">
+          <div class="row g-3 align-items-start">
+            <!-- Aperçu -->
+            <div class="col-md-3 text-center">
+              <div id="photo-preview-wrapper" style="width:120px;height:140px;border-radius:10px;border:2px dashed #cbd5e1;background:#f8fafc;display:flex;align-items:center;justify-content:center;margin:0 auto;overflow:hidden;">
+                {% if not is_create and student.photo %}
+                  <img id="photo-preview" src="{{ student.photo.url }}" style="width:100%;height:100%;object-fit:cover;">
+                {% else %}
+                  <img id="photo-preview" src="" style="width:100%;height:100%;object-fit:cover;display:none;">
+                  <span id="photo-placeholder" class="text-muted" style="font-size:.75rem;">Aperçu photo</span>
+                {% endif %}
+              </div>
+            </div>
+            <!-- Contrôles -->
+            <div class="col-md-9">
+              <!-- Onglets Importer / Webcam -->
+              <ul class="nav nav-pills mb-3" id="photo-tabs">
+                <li class="nav-item">
+                  <button class="nav-link active" type="button" onclick="switchPhotoTab('upload')">
+                    <i class="bi bi-upload me-1"></i> Importer une photo
+                  </button>
+                </li>
+                <li class="nav-item">
+                  <button class="nav-link" type="button" onclick="switchPhotoTab('webcam')">
+                    <i class="bi bi-webcam me-1"></i> Utiliser la webcam
+                  </button>
+                </li>
+              </ul>
+
+              <!-- Onglet Upload -->
+              <div id="tab-upload">
+                <label class="form-label fw-semibold" style="font-size:.82rem;">Fichier image</label>
+                {{ form.photo }}
+                {% if form.photo.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.photo.errors.0 }}</div>{% endif %}
+                <div class="form-text">Formats acceptés : JPG, PNG, WebP. Taille recommandée : 3×4 cm.</div>
+              </div>
+
+              <!-- Onglet Webcam -->
+              <div id="tab-webcam" style="display:none;">
+                <div class="mb-2">
+                  <video id="webcam-video" autoplay playsinline style="width:240px;height:180px;border-radius:8px;background:#000;display:none;"></video>
+                  <canvas id="webcam-canvas" style="display:none;"></canvas>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                  <button type="button" class="btn btn-sm btn-outline-primary" id="btn-start-cam">
+                    <i class="bi bi-camera-video me-1"></i> Démarrer la caméra
+                  </button>
+                  <button type="button" class="btn btn-sm btn-success" id="btn-capture" style="display:none;">
+                    <i class="bi bi-camera me-1"></i> Prendre la photo
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-retake" style="display:none;">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Recommencer
+                  </button>
+                </div>
+                <div id="webcam-status" class="form-text mt-1"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bloc 1 : Informations de l'étudiant -->
+    <div class="col-12">
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-person"></i></span>
+            Informations de l'étudiant
+          </h6>
+        </div>
+        <div class="p-4">
+          <div class="row g-3">
+            {% if is_create %}
+            <div class="col-12">
+              <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:.8rem;color:#713f12;">
+                <i class="bi bi-info-circle-fill me-1"></i>
+                L'identifiant et le mot de passe seront communiqués à l'étudiant.
+                Il devra <strong>changer son mot de passe</strong> dès sa première connexion.
+              </div>
+            </div>
+            {% endif %}
+            <div class="col-md-4">
+              <label class="form-label">Prénom <span class="text-danger">*</span></label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.first_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Nom <span class="text-danger">*</span></label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.last_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">
+                Email <span class="text-danger">*</span>
+                <span class="badge ms-1" style="background:#dbeafe;color:#1e40af;font-size:.65rem;font-weight:600;border-radius:6px;padding:2px 6px;">
+                  <i class="bi bi-key-fill me-1"></i>Identifiant de connexion
+                </span>
+              </label>
+              {{ form.email }}
+              {% if form.email.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.email.errors.0 }}</div>{% endif %}
+              <div class="form-text" style="font-size:.72rem;">L'étudiant se connecte avec cette adresse email.</div>
+            </div>
+            {% if is_create %}
+            <div class="col-md-6">
+              <label class="form-label">
+                Identifiant interne <span class="text-danger">*</span>
+                <span class="badge ms-1" style="background:#ede9fe;color:#6d28d9;font-size:.65rem;font-weight:600;border-radius:6px;padding:2px 6px;">
+                  <i class="bi bi-link-45deg me-1"></i>= Matricule
+                </span>
+              </label>
+              <input type="text" name="username" id="id_username"
+                     class="form-control" maxlength="150"
+                     placeholder="Auto-rempli depuis le matricule"
+                     autocomplete="off"
+                     value="{{ form.username.value|default:'' }}"
+                     style="background:#f5f3ff;">
+              {% if form.username.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.username.errors.0 }}</div>{% endif %}
+              <div class="form-text" style="font-size:.72rem;">Synchronisé automatiquement avec le matricule (non utilisé pour la connexion).</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Mot de passe temporaire <span class="text-danger">*</span></label>
+              <div class="input-group">
+                {{ form.password }}
+                <button class="btn btn-outline-secondary btn-sm" type="button" id="btn-gen-pwd" title="Générer un mot de passe aléatoire">
+                  <i class="bi bi-shuffle"></i>
+                </button>
+              </div>
+              {% if form.password.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.password.errors.0 }}</div>{% endif %}
+              {% if form.password.help_text %}<div class="form-text" style="font-size:.72rem;">{{ form.password.help_text }}</div>{% endif %}
+            </div>
+            {% else %}
+            <div class="col-md-4">
+              <label class="form-label">Identifiant interne</label>
+              {{ form.username }}
+              {% if form.username.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.username.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-12">
+              <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;font-size:.8rem;color:#1e40af;">
+                <i class="bi bi-shield-lock-fill me-1"></i>Réinitialiser le mot de passe (laisser vide pour ne pas changer)
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ form.new_password.label }}</label>
+              {{ form.new_password }}
+              {% if form.new_password.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.new_password.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ form.new_password_confirm.label }}</label>
+              {{ form.new_password_confirm }}
+              {% if form.new_password_confirm.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.new_password_confirm.errors.0 }}</div>{% endif %}
+            </div>
+            {% endif %}
+            <div class="col-md-3">
+              <label class="form-label">
+                Matricule <span class="text-danger">*</span>
+                {% if is_create %}
+                <span class="badge ms-1" style="background:#dcfce7;color:#166534;font-size:.65rem;font-weight:600;border-radius:6px;padding:2px 6px;">
+                  <i class="bi bi-magic me-1"></i>Auto ou manuel
+                </span>
+                {% endif %}
+              </label>
+              {% if is_create %}
+              <div class="input-group">
+                <input type="text" name="matricule" id="id_matricule"
+                       class="form-control" maxlength="30"
+                       placeholder="Saisissez un matricule ou générez-le ci-dessous"
+                       value="{{ form.matricule.value|default:'' }}"
+                       style="background:#f0fdf4;font-weight:600;letter-spacing:.03em;">
+                <button type="button" id="btn-gen-matricule"
+                        class="btn btn-outline-success btn-sm"
+                        title="Générer automatiquement (sélectionnez d'abord une classe et une année)" disabled>
+                  <i class="bi bi-arrow-clockwise"></i>
+                </button>
+              </div>
+              <div id="matricule-status" class="form-text" style="font-size:.72rem;color:#6b7280;">
+                <i class="bi bi-info-circle me-1"></i>Vous pouvez saisir directement un matricule existant, ou sélectionner une classe et une année académique pour le générer automatiquement.
+                Format généré : <code>411-26-XXXX/ISI</code>
+              </div>
+              {% else %}
+              {{ form.matricule }}
+              {% endif %}
+              {% if form.matricule.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.matricule.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Date de naissance <span class="text-danger">*</span></label>
+              {{ form.date_of_birth }}
+              {% if form.date_of_birth.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.date_of_birth.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Lieu de naissance <span class="text-danger">*</span></label>
+              {{ form.place_of_birth }}
+              {% if form.place_of_birth.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.place_of_birth.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Genre <span class="text-danger">*</span></label>
+              {{ form.gender }}
+              {% if form.gender.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.gender.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Pays de naissance{% if is_create %} <span class="text-danger">*</span>{% endif %}</label>
+              {{ form.country_of_birth }}
+              {% if form.country_of_birth.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.country_of_birth.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Nationalité</label>
+              {{ form.nationality }}
+              {% if form.nationality.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.nationality.errors.0 }}</div>{% endif %}
+              {% if form.nationality.help_text %}<div class="form-text" style="font-size:.72rem;">{{ form.nationality.help_text }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Téléphone <span class="text-danger">*</span></label>
+              {{ form.phone }}
+              {% if form.phone.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.phone.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Adresse <span class="text-danger">*</span></label>
+              {{ form.address }}
+              {% if form.address.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.address.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bloc : Informations sur la Bourse -->
+    <div class="col-12">
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:26px;height:26px;border-radius:6px;background:#15803d;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-award"></i></span>
+            Informations sur la Bourse
+          </h6>
+        </div>
+        <div class="p-4">
+          <div class="row g-3">
+            <div class="col-12 form-check">
+              {{ form.is_boursier }}
+              <label class="form-check-label" for="{{ form.is_boursier.id_for_label }}">
+                Étudiant boursier
+              </label>
+              {% if form.is_boursier.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.is_boursier.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6" id="partenaireBourseWrap" style="display:none;">
+              <label class="form-label">Partenaire de bourse</label>
+              {{ form.partenaire_bourse }}
+              {% if form.partenaire_bourse.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.partenaire_bourse.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bloc 2 : Personne à contacter -->
+    <div class="col-12">
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:26px;height:26px;border-radius:6px;background:#d97706;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-people"></i></span>
+            Personne à contacter (tuteur)
+          </h6>
+        </div>
+        <div class="p-4">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Prénom tuteur <span class="text-danger">*</span></label>
+              {{ form.guardian_first_name }}
+              {% if form.guardian_first_name.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.guardian_first_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Nom tuteur <span class="text-danger">*</span></label>
+              {{ form.guardian_last_name }}
+              {% if form.guardian_last_name.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.guardian_last_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Téléphone tuteur <span class="text-danger">*</span></label>
+              {{ form.guardian_phone }}
+              {% if form.guardian_phone.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.guardian_phone.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email tuteur <span class="text-danger">*</span></label>
+              {{ form.guardian_email }}
+              {% if form.guardian_email.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.guardian_email.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Adresse tuteur <span class="text-danger">*</span></label>
+              {{ form.guardian_address }}
+              {% if form.guardian_address.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.guardian_address.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="d-flex gap-2 justify-content-end mt-3">
+    <a href="{% url 'students:list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+    <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+  </div>
+</form>
+
+{% if is_create %}
+<style>
+@keyframes _spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: _spin .6s linear infinite; }
+</style>
+<script>
+document.getElementById('btn-gen-pwd')?.addEventListener('click', function() {
+  const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789@#!';
+  let pwd = '';
+  for (let i = 0; i < 10; i++) pwd += chars[Math.floor(Math.random() * chars.length)];
+  const pwdField = document.getElementById('id_password');
+  if (pwdField) { pwdField.value = pwd; pwdField.type = 'text'; }
+});
+</script>
+{% endif %}
+
+<script>
+// ── Photo preview on file select ──────────────────────────────────────────
+document.getElementById('id_photo')?.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => showPreview(ev.target.result);
+  reader.readAsDataURL(file);
+  // Clear webcam data when a file is selected
+  const wc = document.getElementById('id_photo_webcam');
+  if (wc) wc.value = '';
+});
+
+function showPreview(src) {
+  const img = document.getElementById('photo-preview');
+  const placeholder = document.getElementById('photo-placeholder');
+  if (img) { img.src = src; img.style.display = 'block'; }
+  if (placeholder) placeholder.style.display = 'none';
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────
+function switchPhotoTab(tab) {
+  document.getElementById('tab-upload').style.display  = tab === 'upload'  ? '' : 'none';
+  document.getElementById('tab-webcam').style.display  = tab === 'webcam'  ? '' : 'none';
+  document.querySelectorAll('#photo-tabs .nav-link').forEach((btn, i) => {
+    btn.classList.toggle('active', (tab === 'upload' && i === 0) || (tab === 'webcam' && i === 1));
+  });
+  if (tab !== 'webcam') stopCam();
+}
+
+// ── Webcam logic ──────────────────────────────────────────────────────────
+let camStream = null;
+
+document.getElementById('btn-start-cam')?.addEventListener('click', async () => {
+  const video   = document.getElementById('webcam-video');
+  const status  = document.getElementById('webcam-status');
+  const btnCap  = document.getElementById('btn-capture');
+  const btnStart= document.getElementById('btn-start-cam');
+
+  // Check API availability
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    status.innerHTML = '<span class="text-danger"><b>Webcam non disponible.</b> Votre navigateur ou le contexte (HTTP) ne supporte pas l\'accès à la caméra. Utilisez l\'onglet <b>Importer une photo</b> à la place.</span>';
+    return;
+  }
+
+  status.textContent = 'Demande d\'accès à la caméra…';
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+    video.srcObject = camStream;
+    video.style.display = 'block';
+    btnCap.style.display  = '';
+    btnStart.style.display = 'none';
+    status.textContent = 'Caméra active. Positionnez-vous et cliquez sur "Prendre la photo".';
+  } catch(err) {
+    const msgs = {
+      NotFoundError:    'Aucune caméra détectée. Branchez une webcam ou importez une photo.',
+      NotAllowedError:  'Permission refusée. Autorisez l\'accès à la caméra dans les paramètres du navigateur.',
+      NotReadableError: 'La caméra est déjà utilisée par une autre application. Fermez-la et réessayez.',
+      OverconstrainedError: 'La caméra ne supporte pas les paramètres demandés.',
+      SecurityError:    'Accès à la caméra bloqué (contexte non sécurisé). Utilisez l\'importation de photo.',
+    };
+    const friendly = msgs[err.name] || ('Erreur caméra : ' + (err.message || err.name));
+    status.innerHTML = `<span class="text-danger"><b>⚠ ${friendly}</b><br><small>Utilisez l'onglet <b>Importer une photo</b> à la place.</small></span>`;
+    btnStart.style.display = '';
+  }
+});
+
+document.getElementById('btn-capture')?.addEventListener('click', () => {
+  const video   = document.getElementById('webcam-video');
+  const canvas  = document.getElementById('webcam-canvas');
+  const btnCap  = document.getElementById('btn-capture');
+  const btnRetake = document.getElementById('btn-retake');
+  const status  = document.getElementById('webcam-status');
+
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+  // Store in hidden field
+  document.getElementById('id_photo_webcam').value = dataUrl;
+  // Show preview
+  showPreview(dataUrl);
+  // Clear file input
+  const fileInput = document.getElementById('id_photo');
+  if (fileInput) fileInput.value = '';
+
+  stopCam();
+  video.style.display = 'none';
+  btnCap.style.display = 'none';
+  btnRetake.style.display = '';
+  status.textContent = 'Photo capturée. Cliquez sur "Recommencer" pour en prendre une autre.';
+});
+
+document.getElementById('btn-retake')?.addEventListener('click', () => {
+  document.getElementById('id_photo_webcam').value = '';
+  document.getElementById('btn-retake').style.display = 'none';
+  document.getElementById('btn-start-cam').style.display = '';
+  document.getElementById('webcam-status').textContent = '';
+  const img = document.getElementById('photo-preview');
+  if (img) { img.src = ''; img.style.display = 'none'; }
+  const ph = document.getElementById('photo-placeholder');
+  if (ph) ph.style.display = '';
+});
+
+function stopCam() {
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+}
+
+// Stop camera if user navigates away
+window.addEventListener('beforeunload', stopCam);
+
+// ── Auto-génération du matricule ─────────────────────────────────────────────
+{% if is_create %}
+(function () {
+  const AJAX_URL    = "{% url 'students:ajax_generate_matricule' %}";
+  const classEl     = document.getElementById('id_class_group');
+  const yearEl      = document.getElementById('id_academic_year');
+  const matriculeEl = document.getElementById('id_matricule');
+  const usernameEl  = document.getElementById('id_username');
+  const btnRegen    = document.getElementById('btn-gen-matricule');
+  const statusEl    = document.getElementById('matricule-status');
+
+  if (!classEl || !yearEl || !matriculeEl) return;
+
+  let lastGenerated = '';   // dernier matricule généré par AJAX (vs. tapé manuellement)
+
+  // force=true (bouton « Regénérer ») écrase toujours la valeur actuelle.
+  // force=false (changement classe/année) respecte une saisie manuelle existante,
+  // pour que taper directement un matricule reste toujours possible et ne soit
+  // pas silencieusement écrasé si la classe/année est choisie ensuite.
+  async function generateMatricule(force) {
+    const classId = classEl.value;
+    const yearId  = yearEl.value;
+    if (!classId || !yearId) {
+      if (btnRegen) btnRegen.disabled = true;
+      return;
+    }
+    if (!force && matriculeEl.dataset.userEdited === 'true') {
+      if (btnRegen) btnRegen.disabled = false;
+      return;
+    }
+    if (statusEl) statusEl.innerHTML = '<span class="text-primary"><i class="bi bi-arrow-clockwise spin me-1"></i>Génération…</span>';
+    try {
+      const resp = await fetch(`${AJAX_URL}?class_id=${classId}&year_id=${yearId}`);
+      if (!resp.ok) throw new Error('Erreur réseau');
+      const data = await resp.json();
+      if (data.matricule) {
+        matriculeEl.value = data.matricule;
+        matriculeEl.dataset.userEdited = 'false';
+        lastGenerated = data.matricule;
+        // Synchroniser l'identifiant avec le matricule
+        if (usernameEl && (!usernameEl.value || usernameEl.value === lastGenerated || usernameEl.dataset.syncedWithMatricule === 'true')) {
+          usernameEl.value = data.matricule;
+          usernameEl.dataset.syncedWithMatricule = 'true';
+        }
+        if (btnRegen) btnRegen.disabled = false;
+        if (statusEl) {
+          statusEl.innerHTML = '<span class="text-success"><i class="bi bi-check-circle me-1"></i>Matricule généré automatiquement. Modifiable directement, ou regénérable si besoin.</span>';
+        }
+      }
+    } catch (e) {
+      if (statusEl) statusEl.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Erreur lors de la génération. Saisissez le matricule manuellement.</span>';
+      if (btnRegen) btnRegen.disabled = false;
+    }
+  }
+
+  // Déclencher la génération quand classe ou année change (sans écraser une saisie manuelle)
+  classEl.addEventListener('change', () => generateMatricule(false));
+  yearEl.addEventListener('change', () => generateMatricule(false));
+
+  // Bouton regénérer : écrase toujours, y compris une saisie manuelle
+  if (btnRegen) {
+    btnRegen.addEventListener('click', () => generateMatricule(true));
+  }
+
+  // Si l'utilisateur modifie manuellement le matricule → désactiver la sync avec
+  // username et marquer le champ comme édité manuellement (ne plus l'auto-remplir).
+  matriculeEl.addEventListener('input', function () {
+    usernameEl.dataset.syncedWithMatricule = 'false';
+    matriculeEl.dataset.userEdited = 'true';
+  });
+
+  // Si l'utilisateur modifie manuellement l'identifiant → désactiver la sync
+  if (usernameEl) {
+    usernameEl.addEventListener('input', function () {
+      usernameEl.dataset.syncedWithMatricule = 'false';
+    });
+  }
+
+  // Lancer au chargement si la classe et l'année sont déjà sélectionnées (erreur form)
+  if (classEl.value && yearEl.value && !matriculeEl.value) {
+    generateMatricule(false);
+  }
+})();
+{% endif %}
+
+// ── Cascade Institut → Classes + Années ─────────────────────────────────────
+{% if is_create %}
+(function () {
+  const AJAX_URL   = "{% url 'students:ajax_classes_by_institut' %}";
+  const institutEl = document.getElementById('id_target_institut');
+  const classEl    = document.getElementById('id_class_group');
+  const yearEl     = document.getElementById('id_academic_year');
+
+  if (!institutEl || !classEl) return;
+
+  function rebuildSelect(el, items, emptyLabel) {
+    const prev = el.value;
+    el.innerHTML = '';
+    const opt0 = document.createElement('option');
+    opt0.value = '';
+    opt0.textContent = emptyLabel;
+    el.appendChild(opt0);
+    items.forEach(function (item) {
+      const opt = document.createElement('option');
+      opt.value = item.id;
+      opt.textContent = item.label;
+      if (String(item.id) === String(prev)) opt.selected = true;
+      el.appendChild(opt);
+    });
+  }
+
+  async function loadByInstitut() {
+    const instId = institutEl.value;
+    if (!instId) return;
+    try {
+      const resp = await fetch(AJAX_URL + '?institut_id=' + instId);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      rebuildSelect(classEl, data.classes, '— Sélectionner une classe —');
+      if (yearEl) rebuildSelect(yearEl, data.years, '— Sélectionner une année —');
+      // Réinitialiser matricule si les classes ont changé
+      const matriculeEl = document.getElementById('id_matricule');
+      if (matriculeEl) { matriculeEl.value = ''; matriculeEl.dataset.userEdited = 'false'; }
+      const usernameEl = document.getElementById('id_username');
+      if (usernameEl) usernameEl.dataset.syncedWithMatricule = 'false';
+    } catch (e) {
+      console.warn('Erreur chargement classes par institut :', e);
+    }
+  }
+
+  institutEl.addEventListener('change', loadByInstitut);
+
+  // Au chargement : si un institut est déjà sélectionné (re-submit après erreur)
+  if (institutEl.value) loadByInstitut();
+})();
+{% endif %}
+
+// ── Affichage conditionnel du partenaire de bourse ────────────────────────
+(function () {
+  const checkbox = document.getElementById('id_is_boursier');
+  const wrap     = document.getElementById('partenaireBourseWrap');
+  if (!checkbox || !wrap) return;
+
+  function toggle() {
+    wrap.style.display = checkbox.checked ? '' : 'none';
+  }
+  checkbox.addEventListener('change', toggle);
+  toggle();
+})();
+
+// ── Nationalité auto-déduite du pays de naissance ─────────────────────────
+(function () {
+  const countryEl = document.getElementById('id_country_of_birth');
+  const natEl     = document.getElementById('id_nationality');
+  if (!countryEl || !natEl) return;
+
+  const COUNTRY_NATIONALITY = {
+    'Afghanistan': 'Afghane', 'Afrique du Sud': 'Sud-Africaine', 'Algérie': 'Algérienne',
+    'Allemagne': 'Allemande', 'Angola': 'Angolaise', 'Arabie saoudite': 'Saoudienne',
+    'Australie': 'Australienne', 'Belgique': 'Belge', 'Bénin': 'Béninoise',
+    'Botswana': 'Botswanaise', 'Brésil': 'Brésilienne', 'Burkina Faso': 'Burkinabè',
+    'Burundi': 'Burundaise', 'Cameroun': 'Camerounaise', 'Canada': 'Canadienne',
+    'Cap-Vert': 'Cap-Verdienne', 'Chine': 'Chinoise', 'Comores': 'Comorienne',
+    'Congo': 'Congolaise', "Côte d'Ivoire": 'Ivoirienne', 'Djibouti': 'Djiboutienne',
+    'Égypte': 'Égyptienne', 'Émirats arabes unis': 'Émirienne', 'Érythrée': 'Érythréenne',
+    'Espagne': 'Espagnole', 'Eswatini': 'Swazie', 'États-Unis': 'Américaine',
+    'Éthiopie': 'Éthiopienne', 'France': 'Française', 'Gabon': 'Gabonaise',
+    'Gambie': 'Gambienne', 'Ghana': 'Ghanéenne', 'Guinée': 'Guinéenne',
+    'Guinée équatoriale': 'Équato-guinéenne', 'Guinée-Bissau': 'Bissau-Guinéenne',
+    'Haïti': 'Haïtienne', 'Inde': 'Indienne', 'Indonésie': 'Indonésienne',
+    'Irak': 'Irakienne', 'Iran': 'Iranienne', 'Italie': 'Italienne', 'Japon': 'Japonaise',
+    'Jordanie': 'Jordanienne', 'Kenya': 'Kényane', 'Lesotho': 'Basotho',
+    'Liban': 'Libanaise', 'Liberia': 'Libérienne', 'Libye': 'Libyenne',
+    'Madagascar': 'Malgache', 'Malaisie': 'Malaisienne', 'Malawi': 'Malawite',
+    'Mali': 'Malienne', 'Maroc': 'Marocaine', 'Mauritanie': 'Mauritanienne',
+    'Mozambique': 'Mozambicaine', 'Namibie': 'Namibienne', 'Niger': 'Nigérienne',
+    'Nigéria': 'Nigériane', 'Ouganda': 'Ougandaise', 'Pakistan': 'Pakistanaise',
+    'Pays-Bas': 'Néerlandaise', 'Philippines': 'Philippine', 'Portugal': 'Portugaise',
+    'Qatar': 'Qatarienne', 'République centrafricaine': 'Centrafricaine',
+    'République démocratique du Congo': 'Congolaise (RDC)', 'Royaume-Uni': 'Britannique',
+    'Russie': 'Russe', 'Rwanda': 'Rwandaise', 'Sao Tomé-et-Principe': 'Santoméenne',
+    'Sénégal': 'Sénégalaise', 'Sierra Leone': 'Sierra-Léonaise', 'Somalie': 'Somalienne',
+    'Soudan': 'Soudanaise', 'Soudan du Sud': 'Sud-Soudanaise', 'Suisse': 'Suisse',
+    'Syrie': 'Syrienne', 'Tanzanie': 'Tanzanienne', 'Tchad': 'Tchadienne',
+    'Thaïlande': 'Thaïlandaise', 'Togo': 'Togolaise', 'Tunisie': 'Tunisienne',
+    'Turquie': 'Turque', 'Vietnam': 'Vietnamienne', 'Yémen': 'Yéménite',
+    'Zambie': 'Zambienne', 'Zimbabwe': 'Zimbabwéenne',
+  };
+
+  function applyNationality() {
+    const country = countryEl.value;
+    if (country === 'AUTRE') {
+      natEl.readOnly = false;
+      natEl.placeholder = 'Précisez la nationalité';
+      if (COUNTRY_NATIONALITY.hasOwnProperty(natEl.dataset.lastAuto)) natEl.value = '';
+    } else if (COUNTRY_NATIONALITY[country]) {
+      natEl.value = COUNTRY_NATIONALITY[country];
+      natEl.dataset.lastAuto = country;
+      natEl.readOnly = true;
+    } else {
+      natEl.readOnly = true;
+      natEl.value = '';
+    }
+  }
+
+  countryEl.addEventListener('change', applyNationality);
+  // Formulaire de modification (valeur déjà en base) : ne pas verrouiller
+  // le champ si le pays sélectionné est "Autre pays".
+  if (countryEl.value === 'AUTRE') { natEl.readOnly = false; }
+})();
+</script>
+{% endblock %}

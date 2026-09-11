@@ -1,0 +1,119 @@
+{% extends 'base/base.html' %}
+{% block title %}Répartition Année Académique{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Direction Administrative Financière</a></li>
+<li class="breadcrumb-item active">Répartition Année Académique</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="mb-0 fw-bold" style="color:var(--navy);">
+      <i class="bi bi-calendar-range-fill me-2" style="color:var(--accent);"></i>Répartition Année Académique
+    </h4>
+    <p class="text-muted mb-0" style="font-size:.82rem;">Définir le nombre de mois de l'année académique par classe</p>
+  </div>
+  <a href="{% url 'accounting:repartition_annee_create' %}" class="btn btn-sm" style="background:var(--navy);color:#fff;border-radius:8px;font-size:.82rem;">
+    <i class="bi bi-plus-lg me-1"></i>Nouvelle répartition
+  </a>
+</div>
+
+<!-- Filtre -->
+<div class="card border-0 shadow-sm mb-3" style="border-radius:12px;">
+  <div class="card-body py-2">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+      <div>
+        <label class="form-label mb-1" style="font-size:.75rem;font-weight:600;">Année académique</label>
+        <select name="academic_year" class="form-select form-select-sm" style="border-radius:8px;min-width:180px;">
+          {% for yr in academic_years %}
+          <option value="{{ yr.pk }}" {% if year_filter == yr.pk|stringformat:"s" or not year_filter and yr.is_current %}selected{% endif %}>{{ yr.label }}{% if yr.is_current %} (en cours){% endif %}</option>
+          {% endfor %}
+          <option value="all" {% if year_filter == 'all' %}selected{% endif %}>Toutes les années</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-sm" style="background:var(--navy);color:#fff;border-radius:8px;">
+        <i class="bi bi-funnel-fill me-1"></i>Filtrer
+      </button>
+      <a href="{% url 'accounting:repartition_annee_list' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+        <i class="bi bi-x me-1"></i>Réinitialiser
+      </a>
+    </form>
+  </div>
+</div>
+
+<!-- Tableau -->
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle" id="tbl-repartition">
+        <thead>
+          <tr style="background:#f8fafc;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:#64748b;">
+            <th class="px-3 py-3">Classe</th>
+            <th>Département</th>
+            <th>Niveau</th>
+            <th>Année académique</th>
+            <th class="text-center">Mois de début</th>
+            <th class="text-center">Mois de fin</th>
+            <th class="text-center">Nb mois</th>
+            <th>Observations</th>
+            <th>Créé par</th>
+            <th class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody style="font-size:.83rem;">
+          {% for d in distributions %}
+          <tr>
+            <td class="px-3 fw-semibold" style="color:var(--navy);">{{ d.class_group.name }}</td>
+            <td>{{ d.class_group.program.department.code }}</td>
+            <td>{{ d.class_group.level|default:"—" }}</td>
+            <td>{{ d.academic_year.label }}</td>
+            <td class="text-center">
+              <span class="badge" style="background:#166534;color:#fff;font-size:.78rem;border-radius:20px;padding:4px 12px;">
+                {{ d.start_month_display }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span class="badge" style="background:#7c3aed;color:#fff;font-size:.78rem;border-radius:20px;padding:4px 12px;">
+                {{ d.end_month_display }}
+              </span>
+            </td>
+            <td class="text-center">
+              <span class="badge" style="background:var(--navy);color:#fff;font-size:.85rem;border-radius:20px;padding:5px 14px;">
+                {{ d.nb_months }} mois
+              </span>
+            </td>
+            <td style="color:#64748b;font-size:.78rem;max-width:180px;white-space:normal;">{{ d.notes|default:"—"|truncatechars:60 }}</td>
+            <td style="font-size:.78rem;color:#64748b;">{{ d.created_by.get_full_name|default:d.created_by.username|default:"—" }}</td>
+            <td class="text-end pe-3">
+              <a href="{% url 'accounting:repartition_annee_edit' d.pk %}" class="btn btn-sm me-1" title="Modifier" style="background:#1e3a5f;color:#fff;border-radius:7px;padding:3px 10px;font-size:.75rem;">
+                <i class="bi bi-pencil-fill"></i>
+              </a>
+              <form method="post" action="{% url 'accounting:repartition_annee_delete' d.pk %}" style="display:inline;" onsubmit="return confirm('Supprimer cette répartition ?')">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" title="Supprimer" style="background:#dc2626;color:#fff;border-radius:7px;padding:3px 10px;font-size:.75rem;">
+                  <i class="bi bi-trash-fill"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="10" class="text-center py-5" style="color:#94a3b8;">
+              <i class="bi bi-calendar-x" style="font-size:2rem;display:block;margin-bottom:8px;"></i>
+              Aucune répartition définie
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(function(){ $('#tbl-repartition').DataTable({ order:[], pageLength:25 }); });
+</script>
+{% endblock %}

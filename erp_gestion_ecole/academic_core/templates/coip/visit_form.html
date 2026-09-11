@@ -1,0 +1,76 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if form.instance.pk %}Modifier{% else %}Nouvelle{% endif %} sortie pédagogique{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:visit_list' %}">Sorties pédagogiques</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Modifier{% else %}Nouvelle{% endif %}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-bus-front-fill"></i></span>
+    {% if form.instance.pk %}Modifier la sortie{% else %}Nouvelle sortie pédagogique{% endif %}
+  </h1>
+</div>
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card-section">
+      <div class="p-4">
+        <form method="post">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Intitulé <span class="text-danger">*</span></label>
+              {{ form.intitule }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Statut</label>
+              {{ form.status }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Lieu <span class="text-danger">*</span></label>
+              {{ form.lieu }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Transport</label>
+              {{ form.transport }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Date/heure de départ <span class="text-danger">*</span></label>
+              {{ form.date_depart }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Date/heure de retour</label>
+              {{ form.date_retour }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Nombre de places</label>
+              {{ form.nombre_places }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Responsable</label>
+              {{ form.responsable }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Budget</label>
+              {{ form.budget }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Objectifs pédagogiques</label>
+              {{ form.objectifs }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Rapport / compte-rendu</label>
+              {{ form.rapport }}
+            </div>
+          </div>
+          <div class="d-flex gap-2 justify-content-end border-top pt-3 mt-3">
+            <a href="{% url 'coip:visit_list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

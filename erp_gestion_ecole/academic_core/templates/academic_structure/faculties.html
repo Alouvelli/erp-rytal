@@ -1,0 +1,113 @@
+{% extends 'base/base.html' %}
+{% block title %}Instituts{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academic_structure:index' %}">Structure</a></li>
+<li class="breadcrumb-item active">Instituts</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:#7c3aed;"><i class="bi bi-building"></i></span>{% if is_super_admin %}Instituts{% else %}Mon Institut{% endif %}</h1>
+  {% if is_super_admin %}
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalFaculty"><i class="bi bi-plus-lg"></i> Nouvel institut</button>
+  {% endif %}
+</div>
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:#7c3aed;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ul"></i></span>Liste des instituts</h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table" id="tbl-faculties">
+      <thead><tr><th>Code</th><th>Nom</th><th>Départements</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for fac in faculties %}
+        <tr>
+          <td><span style="font-weight:700;font-size:.8rem;background:#f5f3ff;color:#7c3aed;padding:3px 8px;border-radius:5px;">{{ fac.code }}</span></td>
+          <td style="font-weight:600;font-size:.85rem;">{{ fac.name }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ fac.department_count|default:"0" }}</td>
+          <td>
+            {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+            <div class="d-flex gap-1">
+              <button class="btn-action edit" title="Modifier"
+                onclick="openEditFaculty({{ fac.pk }},'{{ fac.code|escapejs }}','{{ fac.name|escapejs }}','{{ fac.description|default:''|escapejs }}')">
+                <i class="bi bi-pencil"></i>
+              </button>
+              {% if is_super_admin %}
+              <form method="post" style="display:inline;" onsubmit="return confirm('Supprimer cet institut ?');">
+                {% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="pk" value="{{ fac.pk }}">
+                <button type="submit" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></button>
+              </form>
+              {% endif %}
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if is_super_admin %}
+<!-- Modal création (réservée au Super Admin — crée un nouveau tenant) -->
+<div class="modal fade" id="modalFaculty" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:#7c3aed;color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nouvelle institut</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'academic_structure:faculty_create' %}">
+        {% csrf_token %}<input type="hidden" name="action" value="create">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label">Code <span class="text-danger">*</span></label><input type="text" name="code" class="form-control" placeholder="ex: FST" required></div>
+          <div class="mb-3"><label class="form-label">Nom <span class="text-danger">*</span></label><input type="text" name="name" class="form-control" placeholder="Institut des Sciences et Technologies" required></div>
+          <div class="mb-3"><label class="form-label">Description</label><textarea name="description" class="form-control" rows="2"></textarea></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+<!-- Modal édition (institut propre pour un rôle non-Super Admin) -->
+<div class="modal fade" id="modalEditFaculty" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:#7c3aed;color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-pencil me-2"></i>Modifier l'institut</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post">
+        {% csrf_token %}<input type="hidden" name="action" value="edit"><input type="hidden" name="pk" id="efPk">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label">Code <span class="text-danger">*</span></label><input type="text" name="code" id="efCode" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label">Nom <span class="text-danger">*</span></label><input type="text" name="name" id="efName" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label">Description</label><textarea name="description" id="efDesc" class="form-control" rows="2"></textarea></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+$(document).ready(function(){ $('#tbl-faculties').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}}); });
+function openEditFaculty(pk, code, name, desc) {
+  document.getElementById('efPk').value = pk;
+  document.getElementById('efCode').value = code;
+  document.getElementById('efName').value = name;
+  document.getElementById('efDesc').value = desc;
+  new bootstrap.Modal(document.getElementById('modalEditFaculty')).show();
+}
+</script>
+{% endblock %}

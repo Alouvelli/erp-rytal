@@ -1,0 +1,68 @@
+{% extends 'base/base.html' %}
+{% block title %}COIP — Opportunités{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item active">Opportunités</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-megaphone-fill"></i></span>
+    Opportunités
+  </h1>
+  <a href="{% url 'coip:opportunity_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Nouvelle opportunité</a>
+</div>
+
+<div class="card-section mb-3">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <input type="text" name="q" class="form-control form-control-sm" value="{{ request.GET.q }}" placeholder="Titre…">
+      </div>
+      <div class="col-md-4">
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Tous statuts</option>
+          {% for code, label in status_choices %}
+          <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{% url 'coip:opportunity_list' %}" class="btn btn-outline-secondary btn-sm">Réinit.</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="table-responsive">
+    <table class="table" id="tbl-opportunities">
+      <thead><tr><th>Titre</th><th>Type</th><th>Filière</th><th>Date limite</th><th>Statut</th><th>Candidatures</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for o in opportunities %}
+        <tr>
+          <td style="font-size:.85rem;font-weight:600;"><a href="{% url 'coip:opportunity_detail' o.pk %}">{{ o.titre }}</a></td>
+          <td style="font-size:.82rem;">{{ o.get_type_opportunite_display }}</td>
+          <td style="font-size:.82rem;color:#64748b;">{{ o.filiere_cible.name|default:"Toutes" }}</td>
+          <td style="font-size:.82rem;">{{ o.date_limite|date:"d/m/Y"|default:"—" }}</td>
+          <td><span class="badge bg-{{ o.statut_color }}">{{ o.get_status_display }}</span></td>
+          <td style="font-size:.82rem;text-align:center;">{{ o.applications.count }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'coip:opportunity_edit' o.pk %}" class="btn-action edit" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'coip:opportunity_delete' o.pk %}" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-4">Aucune opportunité publiée.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>$(document).ready(function(){ $('#tbl-opportunities').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}}); });</script>
+{% endblock %}

@@ -1,0 +1,330 @@
+{% extends 'base/base.html' %}
+{% block title %}Feuille d'émargement{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_list' %}">Émargements</a></li>
+<li class="breadcrumb-item active">Détail</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-pencil-square"></i></span>
+    Feuille d'émargement
+  </h1>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if sheet.status == 'PENDING' and teacher_profile and sheet.timetable_entry.teacher == teacher_profile %}
+    <a href="{% url 'attendance:sign_sheet' sheet.pk %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-pen me-1"></i>Signer
+    </a>
+    {% endif %}
+    {% if sheet.status == 'PENDING' and user.can_manage_dept %}
+    <a href="{% url 'attendance:sign_sheet' sheet.pk %}" class="btn btn-warning btn-sm">
+      <i class="bi bi-shield-check me-1"></i>Signer & Valider (admin)
+    </a>
+    {% endif %}
+    {% if sheet.status == 'SIGNED' %}
+      {% if user.can_manage_dept or teacher_profile and sheet.timetable_entry.teacher == teacher_profile %}
+      <a href="{% url 'attendance:validate_sheet' sheet.pk %}" class="btn btn-success btn-sm">
+        <i class="bi bi-check-lg me-1"></i>Valider la séance
+      </a>
+      {% endif %}
+    {% endif %}
+    {% if sheet.status == 'PENDING' or sheet.status == 'SIGNED' %}
+      {% if teacher_profile and sheet.timetable_entry.teacher == teacher_profile or user.can_manage_dept %}
+    <a href="{% url 'attendance:session_qr_display' sheet.pk %}" class="btn btn-sm" style="background:#0891b2;color:#fff;border-radius:8px;font-size:.82rem;">
+      <i class="bi bi-qr-code me-1"></i>QR Pointage
+    </a>
+      {% endif %}
+    {% endif %}
+    {% if teacher_profile and sheet.timetable_entry.teacher == teacher_profile or user.can_manage_dept %}
+    <a href="{% url 'attendance:session_absence_list' sheet.pk %}" class="btn btn-sm btn-outline-danger">
+      <i class="bi bi-person-x me-1"></i>Absences
+    </a>
+    {% endif %}
+    {% if user.can_manage_dept %}
+    <a href="{% url 'attendance:sheet_edit' sheet.pk %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-pencil me-1"></i>Modifier
+    </a>
+    <a href="{% url 'attendance:sheet_delete' sheet.pk %}" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-trash me-1"></i>Supprimer
+    </a>
+    {% endif %}
+    <!-- Export -->
+    <div class="btn-group btn-group-sm" role="group">
+      <button type="button" onclick="window.print()" class="btn btn-outline-secondary btn-sm" title="Imprimer">
+        <i class="bi bi-printer me-1"></i>Imprimer
+      </button>
+      <a href="{{ export_pdf_url }}" class="btn btn-sm" style="background:#dc2626;color:#fff;border:none;" title="Télécharger PDF">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+      </a>
+      <a href="{{ export_word_url }}" class="btn btn-sm" style="background:#2563eb;color:#fff;border:none;" title="Télécharger Word">
+        <i class="bi bi-file-earmark-word me-1"></i>Word
+      </a>
+    </div>
+    <a href="{% url 'attendance:sheet_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+  </div>
+</div>
+
+{% if needs_cahier_texte %}
+<!-- Alerte cahier de texte obligatoire -->
+<div style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:12px;padding:14px 18px;margin-bottom:18px;
+            display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+  <i class="bi bi-exclamation-triangle-fill" style="font-size:1.6rem;color:#f59e0b;flex-shrink:0;"></i>
+  <div style="flex:1;min-width:200px;">
+    <div style="font-weight:700;color:#92400e;font-size:.9rem;margin-bottom:3px;">
+      Cahier de texte non renseigné
+    </div>
+    <div style="font-size:.82rem;color:#b45309;">
+      La fenêtre d'émargement est expirée. Vous devez obligatoirement saisir les objectifs
+      et le contenu de la séance pour que l'administrateur puisse valider cette fiche.
+    </div>
+  </div>
+  <a href="{% url 'attendance:fill_cahier_texte' sheet.pk %}"
+     style="background:#f59e0b;color:#fff;border-radius:8px;padding:9px 18px;font-weight:700;
+            font-size:.85rem;text-decoration:none;white-space:nowrap;display:flex;align-items:center;gap:7px;flex-shrink:0;">
+    <i class="bi bi-journal-text"></i>Saisir maintenant
+  </a>
+</div>
+{% elif is_expired_pending %}
+<!-- Cahier de texte déjà renseigné mais fenêtre expirée -->
+<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:12px 18px;margin-bottom:18px;
+            display:flex;align-items:center;gap:12px;">
+  <i class="bi bi-check-circle-fill" style="font-size:1.4rem;color:#16a34a;flex-shrink:0;"></i>
+  <div style="font-size:.85rem;color:#166534;">
+    <strong>Cahier de texte enregistré.</strong>
+    La fiche est en attente de validation par l'administrateur du département.
+  </div>
+  <a href="{% url 'attendance:fill_cahier_texte' sheet.pk %}"
+     style="margin-left:auto;font-size:.78rem;color:#15803d;text-decoration:underline;white-space:nowrap;">
+    <i class="bi bi-pencil me-1"></i>Modifier
+  </a>
+</div>
+{% endif %}
+
+<div class="row g-3">
+
+  <!-- Informations de la séance -->
+  <div class="col-lg-4">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-info-circle"></i></span>
+          Informations
+        </h6>
+      </div>
+      <div class="p-3">
+
+        {% with entry=sheet.timetable_entry %}
+
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;">
+          <span style="color:#64748b;font-weight:600;">Module (EC)</span>
+          <span style="font-weight:700;text-align:right;max-width:60%;">{{ entry.subject.title }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;">
+          <span style="color:#64748b;font-weight:600;">Enseignant</span>
+          <span style="text-align:right;max-width:60%;">{{ entry.teacher.user.get_full_name }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;">
+          <span style="color:#64748b;font-weight:600;">Classe</span>
+          <span>{{ entry.class_group.name }}</span>
+        </div>
+        {% if entry.class_group.level %}
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;">
+          <span style="color:#64748b;font-weight:600;">Niveau</span>
+          <span style="background:#eff6ff;color:var(--navy);border-radius:20px;padding:2px 10px;font-size:.78rem;font-weight:600;">{{ entry.class_group.level }}</span>
+        </div>
+        {% endif %}
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;">
+          <span style="color:#64748b;font-weight:600;">Date</span>
+          <span>{{ sheet.session_date|date:"d/m/Y" }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;">
+          <span style="color:#64748b;font-weight:600;">Créneau</span>
+          <span>{{ entry.start_time|time:"H:i" }} – {{ entry.end_time|time:"H:i" }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;">
+          <span style="color:#64748b;font-weight:600;">Durée</span>
+          <span>{{ entry.duration_hours|floatformat:1 }} h</span>
+        </div>
+        {% if entry.room %}
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;">
+          <span style="color:#64748b;font-weight:600;">Salle</span>
+          <span>{{ entry.room.name }}</span>
+        </div>
+        {% endif %}
+
+        <!-- Statut -->
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;">
+          <span style="color:#64748b;font-weight:600;">Statut</span>
+          <span>
+            {% if sheet.status == 'VALIDATED' %}
+            <span style="background:#f0fdf4;color:#16a34a;border-radius:20px;padding:2px 10px;font-size:.78rem;font-weight:700;"><i class="bi bi-check-circle-fill me-1"></i>Validé</span>
+            {% elif sheet.status == 'SIGNED' %}
+            <span style="background:#eff6ff;color:#1d4ed8;border-radius:20px;padding:2px 10px;font-size:.78rem;font-weight:700;"><i class="bi bi-pen-fill me-1"></i>Signé</span>
+            {% elif sheet.status == 'REJECTED' %}
+            <span style="background:#fff1f2;color:#dc2626;border-radius:20px;padding:2px 10px;font-size:.78rem;font-weight:700;"><i class="bi bi-x-circle-fill me-1"></i>Rejeté</span>
+            {% else %}
+            <span style="background:#f8fafc;color:#64748b;border-radius:20px;padding:2px 10px;font-size:.78rem;font-weight:700;"><i class="bi bi-hourglass me-1"></i>En attente</span>
+            {% endif %}
+          </span>
+        </div>
+
+        {% if sheet.signed_by_admin %}
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;">
+          <span style="color:#64748b;font-weight:600;">Signé par</span>
+          <span style="color:#b45309;font-size:.78rem;"><i class="bi bi-shield-fill me-1"></i>Administrateur</span>
+        </div>
+        {% endif %}
+
+        {% if sheet.teacher_signature_at %}
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;">
+          <span style="color:#64748b;font-weight:600;">Signé le</span>
+          <span>{{ sheet.teacher_signature_at|date:"d/m/Y H:i" }}</span>
+        </div>
+        {% endif %}
+
+        {% if sheet.validated_by %}
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;">
+          <span style="color:#64748b;font-weight:600;">Validé par</span>
+          <span>{{ sheet.validated_by.get_full_name }}</span>
+        </div>
+        <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;">
+          <span style="color:#64748b;font-weight:600;">Validé le</span>
+          <span>{{ sheet.validated_at|date:"d/m/Y H:i" }}</span>
+        </div>
+        {% endif %}
+
+        {% if sheet.teacher_comment %}
+        <div class="py-2 border-bottom" style="font-size:.83rem;">
+          <div style="color:#64748b;font-weight:600;margin-bottom:4px;">Commentaire</div>
+          <div style="color:#475569;">{{ sheet.teacher_comment }}</div>
+        </div>
+        {% endif %}
+
+        {% if sheet.rejection_reason %}
+        <div class="py-2" style="font-size:.83rem;">
+          <div style="color:#dc2626;font-weight:600;margin-bottom:4px;"><i class="bi bi-exclamation-circle me-1"></i>Motif de rejet</div>
+          <div style="color:#7f1d1d;">{{ sheet.rejection_reason }}</div>
+        </div>
+        {% endif %}
+
+        {% endwith %}
+      </div>
+    </div>
+
+    <!-- Cahier de texte -->
+    {% if sheet.lesson_content %}
+    <div class="card-section mt-3">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#f59e0b;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-journal-text"></i></span>
+          Cahier de texte
+        </h6>
+      </div>
+      <div class="p-3">
+        <div style="font-size:.83rem;color:#1e293b;line-height:1.6;white-space:pre-wrap;">{{ sheet.lesson_content }}</div>
+        {% if sheet.lesson_objectives %}
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;">
+          <div style="font-size:.75rem;font-weight:700;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;">Objectifs pédagogiques</div>
+          <div style="font-size:.83rem;color:#475569;line-height:1.6;white-space:pre-wrap;">{{ sheet.lesson_objectives }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Présences étudiants -->
+  <div class="col-lg-8">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-people"></i></span>
+          Présences étudiants
+        </h6>
+        {% if user.can_manage_dept or teacher_profile and sheet.timetable_entry.teacher == teacher_profile %}
+        <a href="{% url 'attendance:record_attendance' sheet.pk %}" class="btn btn-primary btn-sm">
+          <i class="bi bi-pencil-square me-1"></i>Saisir présences
+        </a>
+        {% endif %}
+      </div>
+      <div class="table-responsive">
+        <table class="table" style="margin:0;font-size:.85rem;">
+          <thead>
+            <tr>
+              <th>Étudiant</th>
+              <th>N° Matricule</th>
+              <th>Présence</th>
+              <th>Commentaire</th>
+              {% if user.can_manage_dept or teacher_profile and sheet.timetable_entry.teacher == teacher_profile %}
+              <th style="width:90px;">Actions</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for student, att in students_attendance %}
+            <tr>
+              <td style="font-weight:600;">{{ student.user.get_full_name }}</td>
+              <td style="color:#64748b;">{{ student.matricule }}</td>
+
+              {% if att %}
+              <!-- Mode affichage / édition inline -->
+              <form method="post" action="{% url 'attendance:update_attendance' att.pk %}" id="form-att-{{ att.pk }}" style="display:contents;">
+                {% csrf_token %}
+                <td>
+                  <select name="status" form="form-att-{{ att.pk }}" class="form-select form-select-sm" style="width:140px;font-size:.78rem;">
+                    <option value="PRESENT"   {% if att.status == 'PRESENT'   %}selected{% endif %}>{% if student.gender == 'F' %}Présente{% else %}Présent{% endif %}</option>
+                    <option value="ABSENT"    {% if att.status == 'ABSENT'    %}selected{% endif %}>{% if student.gender == 'F' %}Absente{% else %}Absent{% endif %}</option>
+                    <option value="LATE"      {% if att.status == 'LATE'      %}selected{% endif %}>Retard</option>
+                    <option value="JUSTIFIED" {% if att.status == 'JUSTIFIED' %}selected{% endif %}>{% if student.gender == 'F' %}Justifiée{% else %}Justifié{% endif %}</option>
+                  </select>
+                </td>
+                <td>
+                  <input type="text" name="comment" form="form-att-{{ att.pk }}" class="form-control form-control-sm" value="{{ att.comment|default:'' }}" placeholder="Commentaire…" style="font-size:.78rem;min-width:150px;">
+                </td>
+                {% if user.can_manage_dept or teacher_profile and sheet.timetable_entry.teacher == teacher_profile %}
+                <td>
+                  <div class="d-flex gap-1 align-items-center">
+                    <button type="submit" form="form-att-{{ att.pk }}" class="btn-action edit" title="Enregistrer" style="background:#16a34a;color:#fff;">
+                      <i class="bi bi-check-lg"></i>
+                    </button>
+                    <form method="post" action="{% url 'attendance:delete_attendance' att.pk %}">
+                      {% csrf_token %}
+                      <button type="submit" class="btn-action delete" title="Supprimer"
+                              onclick="return confirm('Supprimer la présence de {{ student.user.get_full_name }} ?')">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+                {% endif %}
+              </form>
+
+              {% else %}
+              <!-- Pas encore saisi -->
+              <td><span style="font-size:.78rem;color:#94a3b8;">Non saisi</span></td>
+              <td></td>
+              {% if user.can_manage_dept or teacher_profile and sheet.timetable_entry.teacher == teacher_profile %}
+              <td></td>
+              {% endif %}
+              {% endif %}
+
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4" style="font-size:.83rem;">
+                <i class="bi bi-people d-block mb-2" style="font-size:1.5rem;"></i>
+                Aucun étudiant inscrit dans cette classe
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

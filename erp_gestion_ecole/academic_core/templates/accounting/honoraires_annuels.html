@@ -1,0 +1,612 @@
+{% extends 'base/base.html' %}
+{% load accounting_tags %}
+{% block title %}Honoraires annuels{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Honoraires</a></li>
+<li class="breadcrumb-item active">Vue annuelle</li>
+{% endblock %}
+
+{% block content %}
+<style>
+  .stat-card { background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 22px;text-align:center; }
+  .stat-label { font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:6px; }
+  .stat-value { font-size:1.6rem;font-weight:800;color:#1e3a5f;line-height:1; }
+  .stat-sub   { font-size:.76rem;color:#64748b;margin-top:4px; }
+
+  .matrix-table { width:100%;border-collapse:collapse;font-size:.8rem; }
+  .matrix-table th { background:#003D82;color:#fff;padding:9px 12px;white-space:nowrap;font-size:.71rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em; }
+  .matrix-table th.dept-th { background:#1d4ed8;text-align:center;min-width:130px; }
+  .matrix-table td { padding:8px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle; }
+  .matrix-table tr:hover td { background:#f8fafc; }
+  .matrix-table tr.year-row td { background:#eff6ff; }
+  .matrix-table tr.year-row:hover td { background:#dbeafe; }
+  .matrix-table tr.total-row td { background:#003D82;color:#fff;font-weight:800;border-top:2px solid #1d4ed8; }
+
+  .dept-card { background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:16px; }
+  .dept-card-header { padding:14px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none; }
+  .dept-card-header:hover { background:#f8fafc; }
+  .dept-card-body { border-top:1px solid #e2e8f0;padding:0; }
+  .dept-inner-table { width:100%;border-collapse:collapse;font-size:.79rem; }
+  .dept-inner-table th { background:#f8fafc;color:#64748b;font-size:.7rem;font-weight:700;text-transform:uppercase;padding:7px 12px;border-bottom:1px solid #e2e8f0; }
+  .dept-inner-table td { padding:7px 12px;border-bottom:1px solid #f1f5f9; }
+  .dept-inner-table tr:last-child td { border-bottom:none; }
+  .dept-inner-table .subtotal td { background:#eff6ff;font-weight:700;border-top:1px solid #bfdbfe; }
+
+  .chevron { transition:transform .2s;display:inline-block; }
+  .collapsed .chevron { transform:rotate(-90deg); }
+
+  .fcfa { font-family:monospace;font-weight:700; }
+  .zero { color:#94a3b8; }
+
+  .filter-card { background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-bottom:20px; }
+  .fg label { font-size:.7rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px; }
+  .fg select { border:1.5px solid #e2e8f0;border-radius:7px;padding:6px 10px;font-size:.83rem;background:#f8fafc;color:#1e293b;min-width:180px; }
+
+  .tab-btn { padding:8px 20px;font-size:.83rem;font-weight:600;border:none;border-radius:8px;cursor:pointer;transition:all .15s; }
+  .tab-btn.active { background:#003D82;color:#fff; }
+  .tab-btn:not(.active) { background:#f1f5f9;color:#475569; }
+  .tab-btn:not(.active):hover { background:#e2e8f0; }
+
+  .export-btn { display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:.8rem;font-weight:700;text-decoration:none;border:none;cursor:pointer;white-space:nowrap; }
+  .export-btn-excel { background:#166534;color:#fff; }
+  .export-btn-excel:hover { background:#14532d;color:#fff; }
+  .export-btn-pdf   { background:#991b1b;color:#fff; }
+  .export-btn-pdf:hover { background:#7f1d1d;color:#fff; }
+  .export-btn-word  { background:#1d4ed8;color:#fff; }
+  .export-btn-word:hover { background:#1e40af;color:#fff; }
+
+  /* Vue département mensuelle */
+  .year-block { background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:20px; }
+  .year-block-header { background:#003D82;color:#fff;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;cursor:pointer; }
+  .year-block-header:hover { background:#0f2d5e; }
+  .year-block-body { padding:0; }
+  .month-table { width:100%;border-collapse:collapse;font-size:.8rem; }
+  .month-table th { background:#f8fafc;color:#64748b;font-size:.7rem;font-weight:700;text-transform:uppercase;padding:8px 14px;border-bottom:1px solid #e2e8f0; }
+  .month-table td { padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:top; }
+  .month-table tr:hover td { background:#fafafa; }
+  .month-table tr.month-total-row td { background:#eff6ff;font-weight:700;border-top:2px solid #bfdbfe; }
+  .month-badge { display:inline-block;background:#003D82;color:#fff;border-radius:6px;padding:3px 10px;font-size:.73rem;font-weight:700;min-width:110px;text-align:center; }
+  .teacher-chip { display:inline-flex;align-items:center;gap:4px;background:#eff6ff;color:#1d4ed8;border-radius:10px;padding:3px 10px;font-size:.72rem;font-weight:600;margin:2px; }
+  .teacher-amount { color:#003D82;font-weight:800; }
+</style>
+
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003D82;"><i class="bi bi-bar-chart-line"></i></span>
+    Honoraires annuels{% if dept_filter %} — {{ dept_filter.name }}{% endif %}
+  </h1>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+    <a href="{% url 'accounting:export_annuel_excel' %}?{% if acad_year_filter %}academic_year={{ acad_year_filter.pk }}&{% endif %}{% if dept_filter %}department={{ dept_filter.pk }}{% endif %}"
+       class="export-btn export-btn-excel">
+      <i class="bi bi-file-earmark-spreadsheet"></i> Excel
+    </a>
+    <a href="{% url 'accounting:export_annuel_pdf' %}?{% if acad_year_filter %}academic_year={{ acad_year_filter.pk }}&{% endif %}{% if dept_filter %}department={{ dept_filter.pk }}{% endif %}"
+       class="export-btn export-btn-pdf">
+      <i class="bi bi-file-earmark-pdf"></i> PDF
+    </a>
+    <a href="{% url 'accounting:export_annuel_word' %}?{% if acad_year_filter %}academic_year={{ acad_year_filter.pk }}&{% endif %}{% if dept_filter %}department={{ dept_filter.pk }}{% endif %}"
+       class="export-btn export-btn-word">
+      <i class="bi bi-file-earmark-word"></i> Word
+    </a>
+    <a href="{% url 'accounting:dashboard' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Vue mensuelle
+    </a>
+  </div>
+</div>
+
+<!-- Filtres -->
+<div class="filter-card">
+  <form method="get" class="d-flex flex-wrap gap-3 align-items-end">
+    <div class="fg">
+      <label>Année académique</label>
+      <select name="academic_year" onchange="this.form.submit()">
+        {% for ay in academic_years %}
+        <option value="{{ ay.pk }}" {% if acad_year_filter and acad_year_filter.pk == ay.pk %}selected{% endif %}>
+          {{ ay.label }}{% if ay.is_current %} (en cours){% endif %}
+        </option>
+        {% endfor %}
+        <option value="all" {% if not acad_year_filter %}selected{% endif %}>Toutes les années</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label>Département</label>
+      <select name="department" onchange="this.form.submit()">
+        <option value="">— Tous les départements —</option>
+        {% for d in departments %}
+        <option value="{{ d.pk }}" {% if dept_filter and dept_filter.pk == d.pk %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if acad_year_filter or dept_filter %}
+    <div class="fg">
+      <label>&nbsp;</label>
+      <a href="{% url 'accounting:honoraires_annuels' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-x-lg me-1"></i>Réinitialiser
+      </a>
+    </div>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Stats globales -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px;">
+  {% if dept_filter %}
+  {% with tot=stats.total_amount|default:0 sc=stats.total_seances|default:0 hr=stats.total_heures|default:0 %}
+  <div class="stat-card" style="border-left:4px solid #003D82;">
+    <div class="stat-label">Total honoraires</div>
+    <div class="stat-value" style="color:#003D82;">{{ tot|floatformat:0 }}</div>
+    <div class="stat-sub">FCFA{% if acad_year_filter %} — {{ acad_year_filter.label }}{% endif %}</div>
+  </div>
+  <div class="stat-card" style="border-left:4px solid #16a34a;">
+    <div class="stat-label">Séances validées</div>
+    <div class="stat-value" style="color:#15803d;">{{ sc }}</div>
+    <div class="stat-sub">feuilles d'émargement</div>
+  </div>
+  <div class="stat-card" style="border-left:4px solid #7c3aed;">
+    <div class="stat-label">Volume horaire</div>
+    <div class="stat-value" style="color:#6d28d9;">{{ hr|floatformat:1 }}</div>
+    <div class="stat-sub">heures enseignées</div>
+  </div>
+  <div class="stat-card" style="border-left:4px solid #f59e0b;">
+    <div class="stat-label">Années concernées</div>
+    <div class="stat-value" style="color:#b45309;">{{ dept_monthly_data.0.years|length }}</div>
+    <div class="stat-sub">années académiques</div>
+  </div>
+  {% endwith %}
+  {% else %}
+  <div class="stat-card" style="border-left:4px solid #003D82;">
+    <div class="stat-label">Total honoraires</div>
+    <div class="stat-value" style="color:#003D82;">{{ grand_total|floatformat:0 }}</div>
+    <div class="stat-sub">FCFA {% if acad_year_filter %}— {{ acad_year_filter.label }}{% endif %}</div>
+  </div>
+  <div class="stat-card" style="border-left:4px solid #16a34a;">
+    <div class="stat-label">Séances validées</div>
+    <div class="stat-value" style="color:#15803d;">{{ grand_seances }}</div>
+    <div class="stat-sub">feuilles d'émargement</div>
+  </div>
+  <div class="stat-card" style="border-left:4px solid #7c3aed;">
+    <div class="stat-label">Volume horaire</div>
+    <div class="stat-value" style="color:#6d28d9;">{{ grand_heures|floatformat:1 }}</div>
+    <div class="stat-sub">heures enseignées</div>
+  </div>
+  <div class="stat-card" style="border-left:4px solid #f59e0b;">
+    <div class="stat-label">Départements actifs</div>
+    <div class="stat-value" style="color:#b45309;">{{ departments|length }}</div>
+    <div class="stat-sub">départements</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+{% if dept_filter %}
+<!-- VUE DÉPARTEMENT : global + breakdown mensuel                              -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+{% if dept_monthly_data and dept_monthly_data.0.dept_total %}
+
+{# Résumé annuel du département #}
+<div class="card-section" style="padding:0;overflow-x:auto;margin-bottom:24px;">
+  <div style="padding:12px 16px;background:#003D82;color:#fff;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">
+    <i class="bi bi-table me-2"></i>Récapitulatif annuel — {{ dept_filter.name }}
+  </div>
+  <table class="matrix-table">
+    <thead>
+      <tr>
+        <th style="text-align:left;">Année académique</th>
+        <th class="dept-th">Total (FCFA)</th>
+        <th class="dept-th">SYNTHESE</th>
+        <th class="dept-th">Nb mois actifs</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for yr in dept_monthly_data.0.years %}
+      <tr class="year-row">
+        <td style="font-weight:700;color:#1e3a5f;">{{ yr.year_label }}</td>
+        <td style="text-align:right;font-weight:800;color:#003D82;">{{ yr.total|floatformat:0 }} <span style="font-size:.68rem;font-weight:400;color:#64748b;">FCFA</span></td>
+        <td style="text-align:center;color:#64748b;">{{ yr.heures|floatformat:1 }}h</td>
+        <td style="text-align:center;color:#64748b;">{{ yr.months|length }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% if dept_monthly_data.0.years|length > 1 %}
+    <tfoot>
+      <tr class="total-row">
+        <td>TOTAL</td>
+        <td style="text-align:right;">{{ dept_monthly_data.0.dept_total|floatformat:0 }} FCFA</td>
+        <td style="text-align:center;">{{ dept_monthly_data.0.dept_heures|floatformat:1 }}h</td>
+        <td></td>
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+</div>
+
+{# Détail mensuel par année académique #}
+<div style="font-size:.8rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">
+  <i class="bi bi-calendar3 me-2"></i>Détail mensuel
+</div>
+
+{% for yr in dept_monthly_data.0.years %}
+<div class="year-block">
+  <div class="year-block-header" onclick="toggleYear('yr-{{ yr.year_id }}')">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <i class="bi bi-calendar-range" style="font-size:1rem;opacity:.8;"></i>
+      <span style="font-weight:700;font-size:.92rem;">{{ yr.year_label }}</span>
+      <span style="background:rgba(255,255,255,.15);border-radius:20px;padding:2px 12px;font-size:.75rem;">{{ yr.months|length }} mois</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:20px;">
+      <div style="text-align:right;">
+        <div style="font-size:1rem;font-weight:800;">{{ yr.total|floatformat:0 }} FCFA</div>
+        <div style="font-size:.72rem;opacity:.7;">{{ yr.seances }} séances · {{ yr.heures|floatformat:1 }}h</div>
+      </div>
+      <i class="bi bi-chevron-down chevron" id="chev-yr-{{ yr.year_id }}"></i>
+    </div>
+  </div>
+
+  <div class="year-block-body" id="yr-{{ yr.year_id }}">
+    {% if yr.months %}
+    <table class="month-table">
+      <thead>
+        <tr>
+          <th style="width:150px;">Mois</th>
+          <th style="text-align:right;">Montant (FCFA)</th>
+          <th style="text-align:right;color:#dc2626;">Impôts 5%</th>
+          <th style="text-align:right;color:#0284c7;">Net à payer</th>
+          <th style="text-align:center;">SYNTHESE</th>
+          <th>Enseignants</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in yr.months %}
+        <tr>
+          <td>
+            <span class="month-badge">{{ m.month_label }}</span>
+          </td>
+          <td style="text-align:right;">
+            <span class="fcfa" style="color:{% if m.total > 500000 %}#dc2626{% elif m.total > 200000 %}#b45309{% else %}#15803d{% endif %};">
+              {{ m.total|floatformat:0 }}
+            </span>
+          </td>
+          <td style="text-align:right;color:#dc2626;">{{ m.impots|floatformat:0 }}</td>
+          <td style="text-align:right;color:#0284c7;font-weight:700;">{{ m.net|floatformat:0 }}</td>
+          <td style="text-align:center;color:#64748b;">{{ m.heures|floatformat:1 }}h</td>
+          <td>
+            {% for t in m.teachers %}
+            <span class="teacher-chip">
+              {{ t.teacher__user__first_name|first }}.{{ t.teacher__user__last_name }}
+              <span class="teacher-amount">{{ t.total|floatformat:0 }} F</span>
+              <span style="color:#94a3b8;font-weight:400;">{{ t.heures|floatformat:1 }}h</span>
+            </span>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="month-total-row">
+          <td style="color:#003D82;">Total {{ yr.year_label }}</td>
+          <td style="text-align:right;color:#003D82;">{{ yr.total|floatformat:0 }} FCFA</td>
+          <td style="text-align:right;color:#dc2626;">{{ yr.impots|floatformat:0 }}</td>
+          <td style="text-align:right;color:#0284c7;">{{ yr.net|floatformat:0 }}</td>
+          <td style="text-align:center;color:#003D82;">{{ yr.heures|floatformat:1 }}h</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+    {% else %}
+    <div style="padding:24px;text-align:center;color:#94a3b8;font-size:.82rem;">Aucune séance pour cette année.</div>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div style="text-align:center;padding:60px;color:#94a3b8;">
+  <i class="bi bi-inbox" style="font-size:2.5rem;display:block;margin-bottom:12px;"></i>
+  <div>Aucun honoraire enregistré pour {{ dept_filter.name }}{% if acad_year_filter %} en {{ acad_year_filter.label }}{% endif %}.</div>
+</div>
+{% endif %}
+
+{% else %}
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- VUE GLOBALE : tableau croisé + accordéon par département                  -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+
+<!-- Onglets vue -->
+<div class="d-flex gap-2 mb-4">
+  <button class="tab-btn active" id="tab-matrix-btn" onclick="showTab('matrix')">
+    <i class="bi bi-table me-1"></i>Tableau croisé
+  </button>
+  <button class="tab-btn" id="tab-dept-btn" onclick="showTab('dept')">
+    <i class="bi bi-building me-1"></i>Par département
+  </button>
+</div>
+
+<!-- VUE 1 : Tableau croisé + détail mensuel par département -->
+<div id="view-matrix">
+{% if matrix_rows %}
+
+{# ── Tableau croisé : Années × Départements ── #}
+<div style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
+  <i class="bi bi-table me-2"></i>Synthèse annuelle{% if acad_year_filter %} — {{ acad_year_filter.label }}{% endif %}
+</div>
+<div class="card-section" style="padding:0;margin-bottom:28px;overflow-x:auto;">
+  <table class="matrix-table" style="min-width:600px;">
+    <thead>
+      <tr>
+        <th style="text-align:left;min-width:150px;">Année académique</th>
+        {% for dept in departments %}
+        <th class="dept-th" style="min-width:130px;">
+          <div style="font-size:.68rem;opacity:.8;">{{ dept.code }}</div>
+          <div style="font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px;">{{ dept.name }}</div>
+        </th>
+        {% endfor %}
+        <th class="dept-th" style="background:#0a1f3d;min-width:120px;">TOTAL</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in matrix_rows %}
+      <tr class="year-row">
+        <td style="font-weight:700;color:#1e3a5f;white-space:nowrap;">
+          <i class="bi bi-calendar2 me-1" style="color:#64748b;font-size:.8rem;"></i>
+          {{ row.year_label }}
+        </td>
+        {% for cell in row.cells %}
+        <td style="text-align:center;">
+          {% if cell.data %}
+          <a href="?{% if acad_year_filter %}academic_year={{ acad_year_filter.pk }}&{% endif %}department={{ cell.dept.pk }}"
+             style="text-decoration:none;" title="Voir détail {{ cell.dept.name }} — {{ row.year_label }}">
+            <div style="font-weight:700;color:#003D82;font-size:.85rem;">{{ cell.data.total|floatformat:0 }}</div>
+            <div style="font-size:.68rem;color:#94a3b8;">{{ cell.data.seances }} séance{{ cell.data.seances|pluralize }} · {{ cell.data.heures|floatformat:1 }}h</div>
+          </a>
+          {% else %}
+          <span class="zero">—</span>
+          {% endif %}
+        </td>
+        {% endfor %}
+        <td style="text-align:center;background:#e0e7ff;">
+          <div style="font-weight:800;color:#003D82;font-size:.88rem;">{{ row.row_total|floatformat:0 }}</div>
+          <div style="font-size:.68rem;color:#6b7280;">{{ row.row_seances }} séance{{ row.row_seances|pluralize }} · {{ row.row_heures|floatformat:1 }}h</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td style="text-align:left;">TOTAL GLOBAL</td>
+        {% for dept in departments %}
+        {% with dt=dept_totals|get_item:dept.pk %}
+        <td style="text-align:center;">
+          {% if dt %}
+          <div>{{ dt|floatformat:0 }}</div>
+          <div style="font-size:.68rem;opacity:.7;">FCFA</div>
+          {% else %}
+          <span style="opacity:.4;">—</span>
+          {% endif %}
+        </td>
+        {% endwith %}
+        {% endfor %}
+        <td style="text-align:center;background:#0a1f3d;">
+          <div style="font-size:.95rem;">{{ grand_total|floatformat:0 }}</div>
+          <div style="font-size:.68rem;opacity:.7;">FCFA</div>
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+<div style="font-size:.75rem;color:#94a3b8;margin-bottom:20px;">
+  <i class="bi bi-hand-index me-1"></i>Cliquer sur un montant pour voir le détail mensuel du département
+</div>
+
+{# ── Détail mensuel par département ── #}
+<div style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px;">
+  <i class="bi bi-calendar3 me-2"></i>Détail mensuel par département
+</div>
+
+{% for dept_block in all_dept_monthly %}
+{% if dept_block.dept_total %}
+<div class="year-block" style="margin-bottom:16px;">
+  <div class="year-block-header" onclick="toggleYear('dept-blk-{{ dept_block.dept.id }}')">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <span style="background:rgba(255,255,255,.2);border-radius:6px;padding:3px 10px;font-size:.75rem;font-weight:800;">{{ dept_block.dept.code }}</span>
+      <span style="font-weight:700;font-size:.92rem;">{{ dept_block.dept.name }}</span>
+      <span style="background:rgba(255,255,255,.15);border-radius:20px;padding:2px 10px;font-size:.73rem;">{{ dept_block.years|length }} année(s)</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div style="text-align:right;">
+        <div style="font-size:.98rem;font-weight:800;">{{ dept_block.dept_total|floatformat:0 }} FCFA</div>
+        <div style="font-size:.7rem;opacity:.75;">{{ dept_block.dept_seances }} séances · {{ dept_block.dept_heures|floatformat:1 }}h</div>
+      </div>
+      <a href="?department={{ dept_block.dept.id }}{% if acad_year_filter %}&academic_year={{ acad_year_filter.pk }}{% endif %}"
+         class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;border:none;font-size:.73rem;padding:4px 10px;"
+         onclick="event.stopPropagation();" title="Vue mensuelle complète">
+        <i class="bi bi-zoom-in"></i>
+      </a>
+      <i class="bi bi-chevron-down chevron" id="chev-dept-blk-{{ dept_block.dept.id }}"></i>
+    </div>
+  </div>
+
+  <div class="year-block-body" id="dept-blk-{{ dept_block.dept.id }}">
+    {% for yr in dept_block.years %}
+    {# Sous-titre année si plusieurs années #}
+    {% if dept_block.years|length > 1 %}
+    <div style="padding:8px 16px;background:#f1f5f9;border-bottom:1px solid #e2e8f0;font-size:.77rem;font-weight:700;color:#1e3a5f;">
+      <i class="bi bi-calendar2 me-1"></i>{{ yr.year_label }}
+      <span style="font-weight:400;color:#64748b;">— {{ yr.total|floatformat:0 }} FCFA · {{ yr.seances }} séances · {{ yr.heures|floatformat:1 }}h</span>
+    </div>
+    {% endif %}
+    <table class="month-table">
+      <thead>
+        <tr>
+          <th style="width:150px;">Mois</th>
+          <th style="text-align:right;">Montant (FCFA)</th>
+          <th style="text-align:right;color:#dc2626;">Impôts 5%</th>
+          <th style="text-align:right;color:#0284c7;">Net à payer</th>
+          <th style="text-align:center;">SYNTHESE</th>
+          <th>Enseignants</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in yr.months %}
+        <tr>
+          <td><span class="month-badge">{{ m.month_label }}</span></td>
+          <td style="text-align:right;">
+            <span class="fcfa" style="color:{% if m.total > 500000 %}#dc2626{% elif m.total > 200000 %}#b45309{% else %}#15803d{% endif %};">
+              {{ m.total|floatformat:0 }}
+            </span>
+          </td>
+          <td style="text-align:right;color:#dc2626;">{{ m.impots|floatformat:0 }}</td>
+          <td style="text-align:right;color:#0284c7;font-weight:700;">{{ m.net|floatformat:0 }}</td>
+          <td style="text-align:center;color:#64748b;">{{ m.heures|floatformat:1 }}h</td>
+          <td>
+            {% for t in m.teachers %}
+            <span class="teacher-chip">
+              {{ t.teacher__user__first_name|first }}.{{ t.teacher__user__last_name }}
+              <span class="teacher-amount">{{ t.total|floatformat:0 }} F</span>
+            </span>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr class="month-total-row">
+          <td style="color:#003D82;">{% if dept_block.years|length > 1 %}Total {{ yr.year_label }}{% else %}Total {{ dept_block.dept.name }}{% endif %}</td>
+          <td style="text-align:right;color:#003D82;">{{ yr.total|floatformat:0 }} FCFA</td>
+          <td style="text-align:right;color:#dc2626;">{{ yr.impots|floatformat:0 }}</td>
+          <td style="text-align:right;color:#0284c7;">{{ yr.net|floatformat:0 }}</td>
+          <td style="text-align:center;color:#003D82;">{{ yr.heures|floatformat:1 }}h</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% else %}
+<div style="text-align:center;padding:60px;color:#94a3b8;">
+  <i class="bi bi-inbox" style="font-size:2.5rem;display:block;margin-bottom:12px;"></i>
+  <div style="font-size:.9rem;">Aucun honoraire enregistré pour les critères sélectionnés.</div>
+</div>
+{% endif %}
+</div>
+
+<!-- VUE 2 : Accordéon par département -->
+<div id="view-dept" style="display:none;">
+{% for dept in departments %}
+{% with dept_total=dept_totals|get_item:dept.pk %}
+{% if dept_total %}
+<div class="dept-card">
+  <div class="dept-card-header" onclick="toggleDept({{ dept.pk }})">
+    <div class="d-flex align-items-center gap-3">
+      <span style="background:#003D82;color:#fff;border-radius:8px;padding:4px 12px;font-size:.78rem;font-weight:700;">{{ dept.code }}</span>
+      <span style="font-weight:700;color:#1e3a5f;font-size:.9rem;">{{ dept.name }}</span>
+    </div>
+    <div class="d-flex align-items-center gap-4">
+      <div style="text-align:right;">
+        <div style="font-size:1.1rem;font-weight:800;color:#003D82;">{{ dept_total|floatformat:0 }} <span style="font-size:.72rem;font-weight:400;color:#64748b;">FCFA</span></div>
+        <div style="font-size:.72rem;color:#94a3b8;">total cumulé</div>
+      </div>
+      <a href="?department={{ dept.pk }}" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border:none;font-size:.75rem;padding:4px 10px;" onclick="event.stopPropagation();">
+        <i class="bi bi-calendar3 me-1"></i>Voir par mois
+      </a>
+      <i class="bi bi-chevron-down chevron" id="chev-{{ dept.pk }}"></i>
+    </div>
+  </div>
+  <div class="dept-card-body" id="body-{{ dept.pk }}" style="display:none;">
+    <table class="dept-inner-table">
+      <thead>
+        <tr>
+          <th>Année académique</th>
+          <th style="text-align:right;">Montant (FCFA)</th>
+          <th style="text-align:center;">SYNTHESE</th>
+          <th>Enseignants</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in matrix_rows %}
+        {% for cell in row.cells %}
+        {% if cell.dept.pk == dept.pk and cell.data %}
+        <tr>
+          <td style="font-weight:600;color:#1e3a5f;">{{ row.year_label }}</td>
+          <td style="text-align:right;"><span class="fcfa" style="color:#003D82;">{{ cell.data.total|floatformat:0 }}</span></td>
+          <td style="text-align:center;color:#64748b;">{{ cell.data.heures|floatformat:1 }}h</td>
+          <td>
+            <div class="d-flex flex-wrap gap-1">
+              {% for t in cell.teachers %}
+              <span style="background:#eff6ff;color:#1d4ed8;border-radius:10px;padding:2px 8px;font-size:.72rem;font-weight:600;">
+                {{ t.teacher__user__first_name|first }}.{{ t.teacher__user__last_name }}
+                <span style="color:#64748b;font-weight:400;">{{ t.total|floatformat:0 }} F</span>
+              </span>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+        {% endfor %}
+        <tr class="subtotal">
+          <td>Total {{ dept.name }}</td>
+          <td style="text-align:right;color:#003D82;">{{ dept_total|floatformat:0 }} FCFA</td>
+          <td colspan="2"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endwith %}
+{% endfor %}
+{% if not matrix_rows %}
+<div style="text-align:center;padding:60px;color:#94a3b8;">
+  <i class="bi bi-inbox" style="font-size:2.5rem;display:block;margin-bottom:12px;"></i>
+  <div>Aucun honoraire enregistré pour les critères sélectionnés.</div>
+</div>
+{% endif %}
+</div>
+
+{% endif %}{# fin bloc dept_filter #}
+
+<script>
+function showTab(tab) {
+  document.getElementById('view-matrix').style.display = tab === 'matrix' ? '' : 'none';
+  document.getElementById('view-dept').style.display   = tab === 'dept'   ? '' : 'none';
+  document.getElementById('tab-matrix-btn').className  = 'tab-btn' + (tab === 'matrix' ? ' active' : '');
+  document.getElementById('tab-dept-btn').className    = 'tab-btn' + (tab === 'dept'   ? ' active' : '');
+}
+
+function toggleDept(pk) {
+  const body = document.getElementById('body-' + pk);
+  const chev = document.getElementById('chev-' + pk);
+  const card = chev ? chev.closest('.dept-card-header') : null;
+  const open = body && body.style.display !== 'none';
+  if (body) body.style.display = open ? 'none' : '';
+  if (card) { if (open) card.classList.add('collapsed'); else card.classList.remove('collapsed'); }
+}
+
+function toggleYear(id) {
+  const body = document.getElementById(id);
+  const chev = document.getElementById('chev-' + id);
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  if (chev) { if (open) chev.closest('.year-block-header').classList.add('collapsed'); else chev.closest('.year-block-header').classList.remove('collapsed'); }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  {% if dept_filter %}
+  // Ouvrir toutes les années par défaut en vue département
+  document.querySelectorAll('[id^="yr-"]').forEach(function(el) { el.style.display = ''; });
+  {% else %}
+  // Ouvrir le premier département par défaut
+  const firstBody = document.querySelector('[id^="body-"]');
+  if (firstBody) {
+    const pk = firstBody.id.replace('body-', '');
+    toggleDept(parseInt(pk));
+  }
+  {% endif %}
+});
+</script>
+{% endblock %}

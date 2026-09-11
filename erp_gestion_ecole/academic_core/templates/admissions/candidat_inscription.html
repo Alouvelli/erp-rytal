@@ -1,0 +1,103 @@
+{% extends 'base/base.html' %}
+{% block title %}Compléter mon inscription{% endblock %}
+{% block content %}
+{% include 'admissions/_stepper.html' with current_step=current_step|default:4 %}
+
+<div class="page-header justify-content-center">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003d82;"><i class="bi bi-person-vcard-fill"></i></span>
+    Compléter mon inscription — {{ candidature.program }}
+  </h1>
+</div>
+
+<div class="card-section p-4 mx-auto" style="max-width: 900px;">
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label small fw-semibold">Filière</label>
+        <input type="text" class="form-control" value="{{ candidature.program.name }}" readonly disabled>
+        <div class="text-muted small mt-1">Filière choisie lors de votre candidature — non modifiable.</div>
+      </div>
+      {% for field in form %}
+      <div class="col-md-6 mb-3">
+        <label class="form-label small fw-semibold">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+        {% if field.name == 'photo' and identity_doc %}
+        <div class="d-flex align-items-center gap-3 mb-2 p-2" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;">
+          <img src="{{ identity_doc.fichier.url }}" alt="Photo d'identité" style="width:56px;height:56px;object-fit:cover;border-radius:6px;">
+          <div class="small">
+            <div class="fw-semibold text-success"><i class="bi bi-check-circle-fill me-1"></i>Photo d'identité déjà déposée</div>
+            <div class="text-muted">Utilisée automatiquement, sauf si vous en importez une nouvelle ci-dessous.</div>
+          </div>
+        </div>
+        {% endif %}
+        {{ field }}
+        {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
+        {% if field.help_text %}<div class="text-muted small mt-1">{{ field.help_text }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-primary w-100 fw-bold">Soumettre mon dossier d'inscription</button>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Nationalité auto-déduite du pays de naissance ─────────────────────────
+(function () {
+  const countryEl = document.getElementById('id_country_of_birth');
+  const natEl     = document.getElementById('id_nationality');
+  if (!countryEl || !natEl) return;
+
+  const COUNTRY_NATIONALITY = {
+    'Afghanistan': 'Afghane', 'Afrique du Sud': 'Sud-Africaine', 'Algérie': 'Algérienne',
+    'Allemagne': 'Allemande', 'Angola': 'Angolaise', 'Arabie saoudite': 'Saoudienne',
+    'Australie': 'Australienne', 'Belgique': 'Belge', 'Bénin': 'Béninoise',
+    'Botswana': 'Botswanaise', 'Brésil': 'Brésilienne', 'Burkina Faso': 'Burkinabè',
+    'Burundi': 'Burundaise', 'Cameroun': 'Camerounaise', 'Canada': 'Canadienne',
+    'Cap-Vert': 'Cap-Verdienne', 'Chine': 'Chinoise', 'Comores': 'Comorienne',
+    'Congo': 'Congolaise', "Côte d'Ivoire": 'Ivoirienne', 'Djibouti': 'Djiboutienne',
+    'Égypte': 'Égyptienne', 'Émirats arabes unis': 'Émirienne', 'Érythrée': 'Érythréenne',
+    'Espagne': 'Espagnole', 'Eswatini': 'Swazie', 'États-Unis': 'Américaine',
+    'Éthiopie': 'Éthiopienne', 'France': 'Française', 'Gabon': 'Gabonaise',
+    'Gambie': 'Gambienne', 'Ghana': 'Ghanéenne', 'Guinée': 'Guinéenne',
+    'Guinée équatoriale': 'Équato-guinéenne', 'Guinée-Bissau': 'Bissau-Guinéenne',
+    'Haïti': 'Haïtienne', 'Inde': 'Indienne', 'Indonésie': 'Indonésienne',
+    'Irak': 'Irakienne', 'Iran': 'Iranienne', 'Italie': 'Italienne', 'Japon': 'Japonaise',
+    'Jordanie': 'Jordanienne', 'Kenya': 'Kényane', 'Lesotho': 'Basotho',
+    'Liban': 'Libanaise', 'Liberia': 'Libérienne', 'Libye': 'Libyenne',
+    'Madagascar': 'Malgache', 'Malaisie': 'Malaisienne', 'Malawi': 'Malawite',
+    'Mali': 'Malienne', 'Maroc': 'Marocaine', 'Mauritanie': 'Mauritanienne',
+    'Mozambique': 'Mozambicaine', 'Namibie': 'Namibienne', 'Niger': 'Nigérienne',
+    'Nigéria': 'Nigériane', 'Ouganda': 'Ougandaise', 'Pakistan': 'Pakistanaise',
+    'Pays-Bas': 'Néerlandaise', 'Philippines': 'Philippine', 'Portugal': 'Portugaise',
+    'Qatar': 'Qatarienne', 'République centrafricaine': 'Centrafricaine',
+    'République démocratique du Congo': 'Congolaise (RDC)', 'Royaume-Uni': 'Britannique',
+    'Russie': 'Russe', 'Rwanda': 'Rwandaise', 'Sao Tomé-et-Principe': 'Santoméenne',
+    'Sénégal': 'Sénégalaise', 'Sierra Leone': 'Sierra-Léonaise', 'Somalie': 'Somalienne',
+    'Soudan': 'Soudanaise', 'Soudan du Sud': 'Sud-Soudanaise', 'Suisse': 'Suisse',
+    'Syrie': 'Syrienne', 'Tanzanie': 'Tanzanienne', 'Tchad': 'Tchadienne',
+    'Thaïlande': 'Thaïlandaise', 'Togo': 'Togolaise', 'Tunisie': 'Tunisienne',
+    'Turquie': 'Turque', 'Vietnam': 'Vietnamienne', 'Yémen': 'Yéménite',
+    'Zambie': 'Zambienne', 'Zimbabwe': 'Zimbabwéenne',
+  };
+
+  function applyNationality() {
+    const country = countryEl.value;
+    if (country === 'AUTRE') {
+      natEl.readOnly = false;
+      natEl.placeholder = 'Précisez la nationalité';
+    } else if (COUNTRY_NATIONALITY[country]) {
+      natEl.value = COUNTRY_NATIONALITY[country];
+      natEl.readOnly = true;
+    } else {
+      natEl.readOnly = true;
+      natEl.value = '';
+    }
+  }
+
+  countryEl.addEventListener('change', applyNationality);
+})();
+</script>
+{% endblock %}

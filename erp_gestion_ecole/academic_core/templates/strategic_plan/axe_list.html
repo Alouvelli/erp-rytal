@@ -1,0 +1,134 @@
+{% extends "base/base.html" %}
+
+{% block title %}Axes stratégiques{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-signpost-split-fill me-2"></i>Axes stratégiques
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Plan Stratégique de Développement</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap no-print">
+    <a href="{% url 'strategic_plan:cadrage_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    <a href="{% url 'strategic_plan:axe_import' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-file-earmark-arrow-up-fill me-1"></i>Importer
+    </a>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+      <i class="bi bi-printer-fill me-1"></i>Imprimer
+    </button>
+    <a href="{% url 'strategic_plan:axe_pdf' %}" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>Télécharger PDF
+    </a>
+    <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('axeModal')).show()">
+      <i class="bi bi-plus-lg me-1"></i>Nouvel axe
+    </button>
+  </div>
+</div>
+
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Code</th>
+          <th>Libellé</th>
+          <th>Cadrage</th>
+          <th class="text-center">Objectifs</th>
+          <th class="text-center no-print" style="width:120px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in axes %}
+        <tr>
+          <td style="padding:8px 16px;font-weight:700;color:var(--navy);">{{ a.code }}</td>
+          <td>{{ a.libelle }}</td>
+          <td style="font-size:.78rem;">{{ a.cadrage.libelle|default:"—" }}</td>
+          <td class="text-center">{{ a.objectifs.count }}</td>
+          <td class="text-center no-print">
+            <div class="d-flex gap-1 justify-content-center">
+              <button type="button" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 10px;font-size:.72rem;"
+                onclick="editAxe({{ a.pk }}, '{{ a.code }}', '{{ a.libelle|escapejs }}', '{{ a.description|escapejs }}', {{ a.cadrage_id|default:'null' }}, {{ a.annee_debut|default:'null' }}, {{ a.annee_fin|default:'null' }})">Modifier</button>
+              <form method="post" action="{% url 'strategic_plan:axe_delete' a.pk %}" onsubmit="return confirm('Supprimer cet axe ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:3px 10px;font-size:.72rem;">Supprimer</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:40px;">Aucun axe stratégique défini.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="axeModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0" id="axeModalTitle"><i class="bi bi-plus-circle me-2"></i>Nouvel axe stratégique</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="axeForm" action="{% url 'strategic_plan:axe_create' %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Cadrage stratégique</label>
+            <select name="cadrage" id="axe_cadrage" class="form-select">
+              <option value="">— Aucun —</option>
+              {% for c in cadrages %}
+              <option value="{{ c.pk }}">{{ c.libelle }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Code <span class="text-danger">*</span></label>
+            <input type="text" name="code" id="axe_code" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Libellé <span class="text-danger">*</span></label>
+            <input type="text" name="libelle" id="axe_libelle" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Description</label>
+            <textarea name="description" id="axe_description" class="form-control" rows="2"></textarea>
+          </div>
+          <div class="row mb-3">
+            <div class="col-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Année de début</label>
+              <input type="number" name="annee_debut" id="axe_annee_debut" class="form-control">
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Année de fin</label>
+              <input type="number" name="annee_fin" id="axe_annee_fin" class="form-control">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function editAxe(pk, code, libelle, description, cadrageId, debut, fin) {
+  document.getElementById('axeModalTitle').innerHTML = '<i class="bi bi-pencil me-2"></i>Modifier l\'axe';
+  document.getElementById('axeForm').action = '/plan-strategique/axes/' + pk + '/modifier/';
+  document.getElementById('axe_code').value = code;
+  document.getElementById('axe_libelle').value = libelle;
+  document.getElementById('axe_description').value = description;
+  document.getElementById('axe_cadrage').value = cadrageId || '';
+  document.getElementById('axe_annee_debut').value = debut || '';
+  document.getElementById('axe_annee_fin').value = fin || '';
+  new bootstrap.Modal(document.getElementById('axeModal')).show();
+}
+</script>
+{% endblock %}

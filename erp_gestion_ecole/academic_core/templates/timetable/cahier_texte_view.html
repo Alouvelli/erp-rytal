@@ -1,0 +1,709 @@
+{% extends 'base/base.html' %}
+{% block title %}Cahier de Texte — {{ class_group }} — {{ semester }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'timetable:cahier_texte_list' %}">Cahier de Texte</a></li>
+<li class="breadcrumb-item active">{{ class_group.name }} — {{ semester }}</li>
+{% endblock %}
+
+{% block content %}
+<!-- En-tête -->
+<div class="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-1" style="color:var(--navy);">
+      <i class="bi bi-journal-richtext me-2" style="color:#7c3aed;"></i>Cahier de Texte Numérique
+    </h5>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <span style="background:#ede9fe;color:#7c3aed;border-radius:20px;padding:3px 12px;font-size:.78rem;font-weight:700;">
+        <i class="bi bi-people-fill me-1"></i>{{ class_group.name }}
+      </span>
+      <span style="background:#e0f2fe;color:#0369a1;border-radius:20px;padding:3px 12px;font-size:.78rem;font-weight:700;">
+        <i class="bi bi-calendar3 me-1"></i>{{ semester.label }} — {{ semester.academic_year }}
+        {% if semester.is_locked %}<i class="bi bi-lock-fill ms-1" style="color:#dc2626;" title="Semestre verrouillé"></i>{% endif %}
+      </span>
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <button onclick="window.print()" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-printer me-1"></i>Imprimer
+    </button>
+    <a href="{% url 'timetable:cahier_texte_pdf' class_id semester_id %}" class="btn btn-success btn-sm" download>
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>Télécharger PDF
+    </a>
+    <a href="{% url 'timetable:cahier_texte_word' class_id semester_id %}" class="btn btn-sm" style="background:#1d6f42;color:#fff;" download>
+      <i class="bi bi-file-earmark-word-fill me-1"></i>Télécharger Word
+    </a>
+    <a href="{% url 'timetable:cahier_texte_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+  </div>
+</div>
+
+<!-- Stats globales -->
+<div class="row g-3 mb-3">
+  <div class="col-sm-4">
+    <div class="card-section" style="padding:14px 18px;display:flex;align-items:center;gap:12px;">
+      <div style="width:40px;height:40px;border-radius:10px;background:#7c3aed;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;flex-shrink:0;">
+        <i class="bi bi-calendar3"></i>
+      </div>
+      <div>
+        <div style="font-size:1.5rem;font-weight:900;color:#1e3a5f;line-height:1;">{{ grand_total }}</div>
+        <div style="font-size:.7rem;color:#64748b;">séances passées</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card-section" style="padding:14px 18px;display:flex;align-items:center;gap:12px;">
+      <div style="width:40px;height:40px;border-radius:10px;background:#16a34a;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;flex-shrink:0;">
+        <i class="bi bi-check-circle-fill"></i>
+      </div>
+      <div>
+        <div style="font-size:1.5rem;font-weight:900;color:#166534;line-height:1;">{{ grand_filled }}</div>
+        <div style="font-size:.7rem;color:#64748b;">séances renseignées</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card-section" style="padding:14px 18px;">
+      <div class="d-flex justify-content-between mb-1">
+        <span style="font-size:.78rem;font-weight:700;color:#1e3a5f;">Taux global</span>
+        <span style="font-size:.85rem;font-weight:800;color:{% if grand_pct >= 75 %}#16a34a{% elif grand_pct >= 40 %}#d97706{% else %}#dc2626{% endif %};">{{ grand_pct }} %</span>
+      </div>
+      <div style="height:10px;background:#e2e8f0;border-radius:5px;overflow:hidden;">
+        <div style="height:100%;border-radius:5px;width:{{ grand_pct }}%;
+                    background:{% if grand_pct >= 75 %}#16a34a{% elif grand_pct >= 40 %}#d97706{% else %}#dc2626{% endif %};
+                    transition:width .6s ease;"></div>
+      </div>
+      <div style="font-size:.68rem;color:#94a3b8;margin-top:4px;">{{ grand_filled }} / {{ grand_total }} séances</div>
+    </div>
+  </div>
+</div>
+
+<!-- Accordéons UE → EC → Séances -->
+{% for ue_group in grouped %}
+{% with ue=ue_group.ue uid=forloop.counter %}
+<div class="card-section mb-3" style="overflow:hidden;">
+
+  <!-- En-tête UE (cliquable) -->
+  <div onclick="toggleUE({{ uid }})"
+       style="display:flex;align-items:center;gap:12px;padding:14px 20px;
+              background:#f5f3ff;border-left:4px solid #7c3aed;cursor:pointer;
+              border-bottom:1px solid #e2e8f0;user-select:none;">
+    <div style="width:36px;height:36px;border-radius:8px;background:#7c3aed;
+                display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;flex-shrink:0;">
+      <i class="bi bi-diagram-3-fill"></i>
+    </div>
+    <div style="flex:1;min-width:0;">
+      {% if ue %}
+      <div style="font-weight:800;color:#1e3a5f;font-size:.9rem;">
+        {{ ue.code }} — {{ ue.title }}
+      </div>
+      <div style="font-size:.72rem;color:#7c3aed;">{{ ue.credits }} crédits</div>
+      {% else %}
+      <div style="font-weight:800;color:#1e3a5f;font-size:.9rem;">Sans UE</div>
+      {% endif %}
+    </div>
+    <!-- Barre de progression UE -->
+    <div style="min-width:140px;text-align:right;">
+      <div style="font-size:.75rem;font-weight:700;color:{% if ue_group.pct >= 75 %}#16a34a{% elif ue_group.pct >= 40 %}#d97706{% else %}#dc2626{% endif %};margin-bottom:4px;">
+        {{ ue_group.filled }}/{{ ue_group.total }} séances — {{ ue_group.pct }}%
+      </div>
+      <div style="height:6px;background:#ddd6fe;border-radius:3px;overflow:hidden;width:140px;">
+        <div style="height:100%;background:{% if ue_group.pct >= 75 %}#16a34a{% elif ue_group.pct >= 40 %}#d97706{% else %}#dc2626{% endif %};width:{{ ue_group.pct }}%;border-radius:3px;"></div>
+      </div>
+    </div>
+    <i id="ue-arrow-{{ uid }}" class="bi bi-chevron-right" style="color:#7c3aed;transition:transform .25s;flex-shrink:0;"></i>
+  </div>
+
+  <!-- Corps UE -->
+  <div id="ue-body-{{ uid }}" style="display:none;">
+    {% for ec in ue_group.subjects %}
+    {% with eid=uid|stringformat:"s"|add:"-"|add:forloop.counter|stringformat:"s" %}
+    <!-- EC -->
+    <div style="border-bottom:1px solid #f1f5f9;">
+      <div onclick="toggleEC('{{ uid }}-{{ forloop.counter }}')"
+           style="display:flex;align-items:center;gap:12px;padding:11px 20px 11px 40px;
+                  background:#fafafa;border-left:3px solid #06b6d4;cursor:pointer;user-select:none;">
+        <div style="flex:1;min-width:0;">
+          <span style="font-weight:700;color:#0e7490;font-size:.85rem;">{{ ec.subject.code }}</span>
+          <span style="font-size:.82rem;color:#1e3a5f;margin-left:8px;">{{ ec.subject.title }}</span>
+        </div>
+        <div style="font-size:.73rem;font-weight:700;
+                    color:{% if ec.pct >= 75 %}#16a34a{% elif ec.pct >= 40 %}#d97706{% else %}#dc2626{% endif %};
+                    white-space:nowrap;">
+          {{ ec.filled }}/{{ ec.total }} — {{ ec.pct }}%
+        </div>
+        <i id="ec-arrow-{{ uid }}-{{ forloop.counter }}" class="bi bi-chevron-right" style="color:#06b6d4;transition:transform .25s;flex-shrink:0;font-size:.8rem;"></i>
+      </div>
+
+      <!-- Séances de l'EC -->
+      <div id="ec-body-{{ uid }}-{{ forloop.counter }}" style="display:none;">
+        {% if ec.sessions %}
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
+            <thead>
+              <tr style="background:#f0f9ff;">
+                <th style="padding:8px 12px 8px 48px;font-size:.7rem;color:#64748b;font-weight:700;text-align:left;white-space:nowrap;border-bottom:2px solid #e2e8f0;">Enseignant</th>
+                <th style="padding:8px 12px;font-size:.7rem;color:#64748b;font-weight:700;text-align:left;white-space:nowrap;border-bottom:2px solid #e2e8f0;">Date de séance</th>
+                <th style="padding:8px 12px;font-size:.7rem;color:#64748b;font-weight:700;text-align:center;white-space:nowrap;border-bottom:2px solid #e2e8f0;">Statut</th>
+                <th style="padding:8px 12px;font-size:.7rem;color:#64748b;font-weight:700;text-align:left;border-bottom:2px solid #e2e8f0;">Objectifs</th>
+                <th style="padding:8px 12px;font-size:.7rem;color:#64748b;font-weight:700;text-align:left;border-bottom:2px solid #e2e8f0;">Contenu réalisé</th>
+                <th style="padding:8px 12px;font-size:.7rem;color:#64748b;font-weight:700;text-align:center;border-bottom:2px solid #e2e8f0;width:80px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in ec.sessions %}
+              <tr id="log-row-{% if s.log %}{{ s.log.pk }}{% else %}e{{ s.entry.pk }}-{{ s.date|date:'Ymd' }}{% endif %}"
+                  style="border-bottom:1px solid #f1f5f9;{% if not s.is_filled %}background:#fff7f7;{% endif %}vertical-align:middle;">
+
+                {# Cellule Enseignant — rowspan sur la première ligne uniquement #}
+                {% if forloop.first %}
+                <td rowspan="{{ ec.sessions|length }}"
+                    style="padding:10px 12px 10px 48px;vertical-align:middle;border-right:2px solid #e0f2fe;background:#f8fdff;white-space:nowrap;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="width:28px;height:28px;border-radius:50%;background:#0e7490;color:#fff;
+                                display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;">
+                      {{ s.entry.teacher.user.first_name|first|upper }}{{ s.entry.teacher.user.last_name|first|upper }}
+                    </div>
+                    <div>
+                      <div style="font-weight:700;color:#1e3a5f;font-size:.8rem;">{{ s.entry.teacher.user.get_full_name }}</div>
+                      <div style="font-size:.65rem;color:#7c3aed;">{{ ec.sessions|length }} séance{{ ec.sessions|length|pluralize }}</div>
+                    </div>
+                  </div>
+                </td>
+                {% endif %}
+
+                {# Date de séance #}
+                <td style="padding:10px 12px;white-space:nowrap;border-right:1px solid #f1f5f9;">
+                  <span style="font-weight:700;color:#1e3a5f;font-size:.82rem;">{{ s.date|date:"d/m/Y" }}</span>
+                  <div style="font-size:.65rem;color:#94a3b8;">{{ s.date|date:"l" }}</div>
+                  <div style="font-size:.62rem;color:#64748b;">{{ s.entry.start_time|time:"H\hi" }}–{{ s.entry.end_time|time:"H\hi" }}</div>
+                  {% if s.attendance_sheet %}
+                  <div style="font-size:.6rem;color:#7c3aed;margin-top:2px;"><i class="bi bi-link-45deg"></i>émargement</div>
+                  {% endif %}
+                </td>
+
+                {# Statut #}
+                <td style="padding:10px 12px;text-align:center;border-right:1px solid #f1f5f9;">
+                  {% if s.is_filled %}
+                  <span style="background:#dcfce7;color:#166534;border-radius:20px;padding:2px 8px;font-size:.65rem;font-weight:700;white-space:nowrap;display:inline-block;">
+                    <i class="bi bi-check-circle-fill me-1"></i>Renseigné
+                  </span>
+                  {% else %}
+                  <span style="background:#fee2e2;color:#dc2626;border-radius:20px;padding:2px 8px;font-size:.65rem;font-weight:700;white-space:nowrap;display:inline-block;">
+                    <i class="bi bi-exclamation-circle-fill me-1"></i>Non renseigné
+                  </span>
+                  {% endif %}
+                  {% if s.log.is_validated %}
+                  <span style="background:#ede9fe;color:#5b21b6;border-radius:20px;padding:2px 8px;font-size:.65rem;font-weight:700;white-space:nowrap;display:inline-block;margin-top:3px;"
+                        title="Validé par {{ s.log.validated_by.get_full_name }} le {{ s.log.validated_at|date:'d/m/Y H:i' }}">
+                    <i class="bi bi-patch-check-fill me-1"></i>Validé
+                  </span>
+                  {% endif %}
+                </td>
+
+                {# Objectifs #}
+                <td style="padding:10px 12px;max-width:220px;border-right:1px solid #f1f5f9;">
+                  {% if s.log and s.log.objectives %}
+                  <span class="log-obj-{% if s.log %}{{ s.log.pk }}{% endif %}"
+                        style="font-size:.77rem;color:#1e3a5f;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">
+                    {{ s.log.objectives }}
+                  </span>
+                  {% else %}
+                  <span style="font-size:.72rem;color:#cbd5e1;font-style:italic;">—</span>
+                  {% endif %}
+                </td>
+
+                {# Contenu réalisé #}
+                <td style="padding:10px 12px;max-width:220px;border-right:1px solid #f1f5f9;">
+                  {% if s.log and s.log.content %}
+                  <span class="log-cont-{% if s.log %}{{ s.log.pk }}{% endif %}"
+                        style="font-size:.77rem;color:#374151;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">
+                    {{ s.log.content }}
+                  </span>
+                  {% else %}
+                  <span style="font-size:.72rem;color:#cbd5e1;font-style:italic;">—</span>
+                  {% endif %}
+                </td>
+
+                {# Actions #}
+                <td style="padding:8px 12px;text-align:center;white-space:nowrap;">
+                  {% if s.log %}
+                  {% if not s.log.is_validated %}
+                  <button class="btn-log-action btn-log-edit"
+                          data-pk="{{ s.log.pk }}"
+                          data-objectives="{{ s.log.objectives|escapejs }}"
+                          data-content="{{ s.log.content|escapejs }}"
+                          data-remarks="{{ s.log.remarks|escapejs }}"
+                          style="padding:3px 7px;font-size:.68rem;background:#e0f2fe;color:#0369a1;border:none;border-radius:5px;margin:1px;cursor:pointer;"
+                          title="Modifier">
+                    <i class="bi bi-pencil-fill"></i>
+                  </button>
+                  {% if user.can_manage_dept %}
+                  <button class="btn-log-action btn-log-delete"
+                          data-pk="{{ s.log.pk }}"
+                          data-date="{{ s.date|date:'d/m/Y' }}"
+                          data-subject="{{ s.entry.subject.title }}"
+                          style="padding:3px 7px;font-size:.68rem;background:#fee2e2;color:#dc2626;border:none;border-radius:5px;margin:1px;cursor:pointer;"
+                          title="Supprimer">
+                    <i class="bi bi-trash-fill"></i>
+                  </button>
+                  {% endif %}
+                  {% endif %}
+                  {% if can_validate %}
+                    {% if s.log.is_validated %}
+                    <button class="btn-log-action btn-log-unvalidate"
+                            data-pk="{{ s.log.pk }}"
+                            style="padding:3px 7px;font-size:.68rem;background:#fef3c7;color:#b45309;border:none;border-radius:5px;margin:1px;cursor:pointer;"
+                            title="Annuler la validation">
+                      <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                    {% elif s.log.objectives %}
+                    <button class="btn-log-action btn-log-validate"
+                            data-pk="{{ s.log.pk }}"
+                            style="padding:3px 7px;font-size:.68rem;background:#ede9fe;color:#5b21b6;border:none;border-radius:5px;margin:1px;cursor:pointer;"
+                            title="Valider ce cahier de texte">
+                      <i class="bi bi-patch-check-fill"></i>
+                    </button>
+                    {% endif %}
+                  {% endif %}
+                  {% else %}
+                  <button class="btn-log-action btn-log-create"
+                          data-entry="{{ s.entry.pk }}"
+                          data-date="{{ s.date|date:'Y-m-d' }}"
+                          data-date-fr="{{ s.date|date:'d/m/Y' }}"
+                          data-subject="{{ s.entry.subject.title }}"
+                          data-teacher="{{ s.entry.teacher.user.get_full_name }}"
+                          style="padding:3px 9px;font-size:.68rem;background:#dcfce7;color:#15803d;border:none;border-radius:5px;cursor:pointer;font-weight:700;"
+                          title="Renseigner cette séance">
+                    <i class="bi bi-plus-circle-fill me-1"></i>Renseigner
+                  </button>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div style="padding:16px 52px;font-size:.8rem;color:#94a3b8;font-style:italic;">
+          Aucune séance passée pour ce module.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+  </div>
+
+</div>
+{% endwith %}
+{% endfor %}
+
+{% if not grouped %}
+<div class="card-section" style="padding:40px;text-align:center;color:#94a3b8;">
+  <i class="bi bi-journal-x" style="font-size:2.5rem;color:#e2e8f0;"></i>
+  <p style="margin-top:12px;font-size:.85rem;">Aucun créneau trouvé pour cette classe et ce semestre.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+<!-- ══ Modal : Renseigner (créer) ══ -->
+<div id="log-create-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1063;align-items:center;justify-content:center;" onclick="if(event.target===this)closeLogCreate()">
+  <div style="background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:96%;max-width:580px;max-height:90vh;overflow-y:auto;animation:slideUp .2s ease;" onclick="event.stopPropagation()">
+    <div style="padding:16px 20px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;position:sticky;top:0;background:#fff;z-index:1;">
+      <div style="width:34px;height:34px;border-radius:8px;background:#16a34a;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;flex-shrink:0;"><i class="bi bi-plus-circle-fill"></i></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:800;color:#1e3a5f;font-size:.92rem;">Renseigner la séance</div>
+        <div id="create-subtitle" style="font-size:.73rem;color:#64748b;"></div>
+      </div>
+      <button onclick="closeLogCreate()" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1.2rem;"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div style="padding:20px;">
+      <div class="mb-3">
+        <label style="font-size:.8rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;"><i class="bi bi-bullseye me-1" style="color:#7c3aed;"></i>Objectifs pédagogiques <span class="text-danger">*</span></label>
+        <textarea id="create-objectives" rows="3" class="form-control" style="font-size:.84rem;resize:vertical;" placeholder="Quels objectifs les étudiants auront-ils atteint à l'issue de cette séance ?"></textarea>
+      </div>
+      <div class="mb-3">
+        <label style="font-size:.8rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;"><i class="bi bi-card-text me-1" style="color:#0369a1;"></i>Contenu réalisé</label>
+        <textarea id="create-content" rows="5" class="form-control" style="font-size:.84rem;resize:vertical;" placeholder="Thèmes abordés, notions enseignées, exercices réalisés…"></textarea>
+      </div>
+      <div class="mb-1">
+        <label style="font-size:.8rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;"><i class="bi bi-chat-left-text me-1" style="color:#64748b;"></i>Observations</label>
+        <textarea id="create-remarks" rows="2" class="form-control" style="font-size:.84rem;resize:vertical;"></textarea>
+      </div>
+    </div>
+    <div style="padding:10px 20px 16px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #f1f5f9;">
+      <button onclick="closeLogCreate()" class="btn btn-sm btn-outline-secondary">Annuler</button>
+      <button onclick="submitLogCreate()" id="create-save-btn" class="btn btn-sm btn-success" style="padding:6px 20px;"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal : Voir détail ══ -->
+<div id="log-view-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1060;align-items:center;justify-content:center;" onclick="if(event.target===this)closeLogView()">
+  <div style="background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:96%;max-width:620px;max-height:88vh;overflow-y:auto;animation:slideUp .2s ease;" onclick="event.stopPropagation()">
+    <div style="padding:16px 20px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:#fff;z-index:1;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:34px;height:34px;border-radius:8px;background:#7c3aed;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;flex-shrink:0;"><i class="bi bi-journal-richtext"></i></div>
+        <div>
+          <div id="view-title" style="font-weight:800;color:#1e3a5f;font-size:.92rem;"></div>
+          <div id="view-subtitle" style="font-size:.73rem;color:#64748b;"></div>
+        </div>
+      </div>
+      <button onclick="closeLogView()" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1.2rem;"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div style="padding:20px;">
+      <div style="margin-bottom:18px;">
+        <div style="font-size:.72rem;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-bullseye"></i> Objectifs pédagogiques
+        </div>
+        <div id="view-objectives" style="background:#f5f3ff;border-left:3px solid #7c3aed;border-radius:0 8px 8px 0;padding:12px 14px;font-size:.84rem;color:#1e3a5f;line-height:1.6;white-space:pre-wrap;"></div>
+      </div>
+      <div style="margin-bottom:18px;">
+        <div style="font-size:.72rem;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-card-text"></i> Contenu réalisé
+        </div>
+        <div id="view-content" style="background:#f0f9ff;border-left:3px solid #0369a1;border-radius:0 8px 8px 0;padding:12px 14px;font-size:.84rem;color:#374151;line-height:1.6;white-space:pre-wrap;"></div>
+      </div>
+      <div id="view-remarks-block" style="display:none;">
+        <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-chat-left-text"></i> Observations
+        </div>
+        <div id="view-remarks" style="background:#f8fafc;border-left:3px solid #cbd5e1;border-radius:0 8px 8px 0;padding:12px 14px;font-size:.82rem;color:#475569;line-height:1.5;font-style:italic;white-space:pre-wrap;"></div>
+      </div>
+    </div>
+    <div style="padding:10px 20px 16px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #f1f5f9;">
+      <button id="view-edit-btn" onclick="" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-fill me-1"></i>Modifier</button>
+      <button onclick="closeLogView()" class="btn btn-sm btn-outline-secondary">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal : Modifier ══ -->
+<div id="log-edit-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1061;align-items:center;justify-content:center;" onclick="if(event.target===this)closeLogEdit()">
+  <div style="background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:96%;max-width:580px;max-height:90vh;overflow-y:auto;animation:slideUp .2s ease;" onclick="event.stopPropagation()">
+    <div style="padding:16px 20px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;position:sticky;top:0;background:#fff;z-index:1;">
+      <div style="width:34px;height:34px;border-radius:8px;background:#0369a1;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;flex-shrink:0;"><i class="bi bi-pencil-fill"></i></div>
+      <div style="font-weight:800;color:#1e3a5f;font-size:.92rem;">Modifier le contenu de séance</div>
+      <button onclick="closeLogEdit()" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1.2rem;margin-left:auto;"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div style="padding:20px;">
+      <div class="mb-3">
+        <label style="font-size:.8rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;"><i class="bi bi-bullseye me-1" style="color:#7c3aed;"></i>Objectifs pédagogiques <span class="text-danger">*</span></label>
+        <textarea id="edit-objectives" rows="3" class="form-control" style="font-size:.84rem;resize:vertical;"></textarea>
+      </div>
+      <div class="mb-3">
+        <label style="font-size:.8rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;"><i class="bi bi-card-text me-1" style="color:#0369a1;"></i>Contenu réalisé</label>
+        <textarea id="edit-content" rows="5" class="form-control" style="font-size:.84rem;resize:vertical;"></textarea>
+      </div>
+      <div class="mb-1">
+        <label style="font-size:.8rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;"><i class="bi bi-chat-left-text me-1" style="color:#64748b;"></i>Observations</label>
+        <textarea id="edit-remarks" rows="2" class="form-control" style="font-size:.84rem;resize:vertical;"></textarea>
+      </div>
+    </div>
+    <div style="padding:10px 20px 16px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #f1f5f9;">
+      <button onclick="closeLogEdit()" class="btn btn-sm btn-outline-secondary">Annuler</button>
+      <button onclick="submitLogEdit()" id="edit-save-btn" class="btn btn-sm btn-primary" style="padding:6px 20px;"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal : Supprimer ══ -->
+<div id="log-delete-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1062;align-items:center;justify-content:center;" onclick="if(event.target===this)closeLogDelete()">
+  <div style="background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);width:94%;max-width:420px;animation:slideUp .2s ease;" onclick="event.stopPropagation()">
+    <div style="padding:16px 20px 12px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;">
+      <div style="width:34px;height:34px;border-radius:8px;background:#dc2626;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;flex-shrink:0;"><i class="bi bi-trash-fill"></i></div>
+      <div style="font-weight:800;color:#1e3a5f;font-size:.92rem;">Supprimer le contenu</div>
+    </div>
+    <div style="padding:18px 20px;">
+      <p style="font-size:.85rem;color:#374151;margin:0;">
+        Supprimer le contenu de la séance du <strong id="del-date" style="color:#dc2626;"></strong>
+        pour <strong id="del-subject"></strong> ?<br>
+        <span style="font-size:.77rem;color:#94a3b8;">Cette action est irréversible. La séance repassera en "Non renseigné".</span>
+      </p>
+    </div>
+    <div style="padding:10px 20px 16px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #f1f5f9;">
+      <button onclick="closeLogDelete()" class="btn btn-sm btn-outline-secondary">Annuler</button>
+      <button onclick="submitLogDelete()" id="del-confirm-btn" class="btn btn-sm btn-danger" style="padding:6px 20px;"><i class="bi bi-trash-fill me-1"></i>Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes slideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+@media print {
+  nav, .breadcrumb, .sidebar, .topbar, .page-header,
+  [id$="-overlay"], button, .btn, .no-print { display:none !important; }
+  body, .main-content, .content-wrapper { margin:0 !important; padding:0 !important; }
+  .card-section { box-shadow:none !important; border:1px solid #ccc !important; break-inside:avoid; }
+  table { font-size:.75rem !important; }
+  tr { break-inside:avoid; }
+  [id^="ue-body-"], [id^="ec-body-"] { display:block !important; }
+  .btn-log-action { display:none !important; }
+  a[download] { display:none !important; }
+}
+</style>
+
+{% block extra_js %}
+<script>
+const CSRF_CT = '{{ csrf_token }}';
+let _logPk, _logDelRowId;
+
+/* ── Voir ── */
+function openLogView(pk, date, subject, teacher) {
+  _logPk = pk;
+  document.getElementById('view-title').textContent     = subject + ' — ' + date;
+  document.getElementById('view-subtitle').textContent  = 'Enseignant : ' + teacher;
+  // Récupérer depuis le DOM (les éléments span déjà rendus)
+  const obj  = document.querySelector('.log-obj-'  + pk);
+  const cont = document.querySelector('.log-cont-' + pk);
+  const rem  = document.querySelector('.log-rem-'  + pk);
+  document.getElementById('view-objectives').textContent = obj  ? obj.textContent.trim()  : '—';
+  document.getElementById('view-content').textContent    = cont ? cont.textContent.trim() : '—';
+  const remTxt = rem ? rem.textContent.trim() : '';
+  const remBlock = document.getElementById('view-remarks-block');
+  if (remTxt) {
+    document.getElementById('view-remarks').textContent = remTxt;
+    remBlock.style.display = 'block';
+  } else {
+    remBlock.style.display = 'none';
+  }
+  // Bouton Modifier dans la modale Vue
+  document.getElementById('view-edit-btn').onclick = function() {
+    closeLogView();
+    const objFull  = obj  ? obj.closest('td').querySelector('span')?.textContent.trim()  || '' : '';
+    const contFull = cont ? cont.closest('td').querySelector('span')?.textContent.trim() || '' : '';
+    const remFull  = rem  ? rem.closest('td').querySelector('span')?.textContent.trim()  || '' : '';
+    openLogEdit(pk, objFull, contFull, remFull);
+  };
+  document.getElementById('log-view-overlay').style.display = 'flex';
+}
+function closeLogView() { document.getElementById('log-view-overlay').style.display = 'none'; }
+
+/* ── Modifier ── */
+function openLogEdit(pk, objectives, content, remarks) {
+  _logPk = pk;
+  document.getElementById('edit-objectives').value = objectives || '';
+  document.getElementById('edit-content').value    = content   || '';
+  document.getElementById('edit-remarks').value    = remarks   || '';
+  document.getElementById('log-edit-overlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('edit-objectives').focus(), 100);
+}
+function closeLogEdit() { document.getElementById('log-edit-overlay').style.display = 'none'; }
+
+function submitLogEdit() {
+  const objectives = document.getElementById('edit-objectives').value.trim();
+  const content    = document.getElementById('edit-content').value.trim();
+  const remarks    = document.getElementById('edit-remarks').value.trim();
+  if (!objectives) {
+    document.getElementById('edit-objectives').classList.add('is-invalid');
+    document.getElementById('edit-objectives').focus();
+    return;
+  }
+  document.getElementById('edit-objectives').classList.remove('is-invalid');
+  const btn = document.getElementById('edit-save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>…';
+
+  fetch(`/timetable/cahier-texte/log/${_logPk}/modifier/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF_CT, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ csrfmiddlewaretoken: CSRF_CT, objectives, content, remarks }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { alert(data.error); return; }
+    closeLogEdit();
+    // Mettre à jour les spans dans le tableau
+    const objSpan  = document.querySelector('.log-obj-'  + _logPk);
+    const contSpan = document.querySelector('.log-cont-' + _logPk);
+    const remSpan  = document.querySelector('.log-rem-'  + _logPk);
+    if (objSpan)  objSpan.textContent  = data.objectives.substring(0, 80) + (data.objectives.length > 80 ? '…' : '');
+    if (contSpan) contSpan.textContent = data.content.substring(0, 80)    + (data.content.length    > 80 ? '…' : '');
+    if (remSpan)  remSpan.textContent  = data.remarks.substring(0, 60)    + (data.remarks.length     > 60 ? '…' : '');
+    showCahierToast('Contenu mis à jour.', 'success');
+  })
+  .catch(() => alert('Erreur réseau'))
+  .finally(() => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Enregistrer'; });
+}
+
+/* ── Supprimer ── */
+function openLogDelete(pk, date, subject) {
+  _logPk = pk;
+  document.getElementById('del-date').textContent    = date;
+  document.getElementById('del-subject').textContent = subject;
+  document.getElementById('log-delete-overlay').style.display = 'flex';
+}
+function closeLogDelete() { document.getElementById('log-delete-overlay').style.display = 'none'; }
+
+function submitLogDelete() {
+  const btn = document.getElementById('del-confirm-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>…';
+
+  fetch(`/timetable/cahier-texte/log/${_logPk}/supprimer/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF_CT, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ csrfmiddlewaretoken: CSRF_CT }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { alert(data.error); return; }
+    closeLogDelete();
+    showCahierToast('Contenu supprimé.', 'warning');
+    setTimeout(() => location.reload(), 900);
+  })
+  .catch(() => alert('Erreur réseau'))
+  .finally(() => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-trash-fill me-1"></i>Supprimer'; });
+}
+
+function showCahierToast(msg, type) {
+  const colors = { success:'#16a34a', warning:'#b45309' };
+  const icons  = { success:'check-circle-fill', warning:'exclamation-triangle-fill' };
+  const d = document.createElement('div');
+  d.innerHTML = `<div style="position:fixed;top:20px;right:20px;z-index:99999;min-width:260px;border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.2);">
+    <div style="background:${colors[type]};padding:10px 16px;display:flex;align-items:center;gap:10px;color:#fff;">
+      <i class="bi bi-${icons[type]}"></i><span style="font-size:.84rem;">${msg}</span>
+    </div></div>`;
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 3000);
+}
+
+function toggleUE(uid) {
+  const body  = document.getElementById('ue-body-' + uid);
+  const arrow = document.getElementById('ue-arrow-' + uid);
+  const open  = body.style.display === 'block';
+  body.style.display    = open ? 'none' : 'block';
+  arrow.style.transform = open ? '' : 'rotate(90deg)';
+}
+function toggleEC(id) {
+  const body  = document.getElementById('ec-body-' + id);
+  const arrow = document.getElementById('ec-arrow-' + id);
+  const open  = body.style.display === 'block';
+  body.style.display    = open ? 'none' : 'block';
+  arrow.style.transform = open ? '' : 'rotate(90deg)';
+}
+/* ── Renseigner (créer) ── */
+let _createEntryPk, _createDate, _createRowBtn;
+
+function openLogCreate(entryPk, date, dateFr, subject, teacher, triggerBtn) {
+  _createEntryPk = entryPk;
+  _createDate    = date;
+  _createRowBtn  = triggerBtn;
+  document.getElementById('create-subtitle').textContent = subject + ' — ' + dateFr + ' | ' + teacher;
+  document.getElementById('create-objectives').value = '';
+  document.getElementById('create-content').value    = '';
+  document.getElementById('create-remarks').value    = '';
+  document.getElementById('log-create-overlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('create-objectives').focus(), 100);
+}
+function closeLogCreate() { document.getElementById('log-create-overlay').style.display = 'none'; }
+
+function submitLogCreate() {
+  const objectives = document.getElementById('create-objectives').value.trim();
+  const content    = document.getElementById('create-content').value.trim();
+  const remarks    = document.getElementById('create-remarks').value.trim();
+  if (!objectives) {
+    document.getElementById('create-objectives').classList.add('is-invalid');
+    document.getElementById('create-objectives').focus();
+    return;
+  }
+  document.getElementById('create-objectives').classList.remove('is-invalid');
+  const btn = document.getElementById('create-save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>…';
+
+  fetch(`/timetable/cahier-texte/log/create/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF_CT, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      csrfmiddlewaretoken: CSRF_CT,
+      entry_pk:   _createEntryPk,
+      session_date: _createDate,
+      objectives: objectives,
+      content:    content,
+      remarks:    remarks,
+    }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { alert(data.error); return; }
+    closeLogCreate();
+    showCahierToast('Séance renseignée avec succès.', 'success');
+    setTimeout(() => location.reload(), 700);
+  })
+  .catch(() => alert('Erreur réseau'))
+  .finally(() => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Enregistrer'; });
+}
+
+/* ── Valider / Dévalider ── */
+function submitLogValidate(pk, btn) {
+  btn.disabled = true;
+  fetch(`/timetable/cahier-texte/log/${pk}/valider/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF_CT, 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+    body: new URLSearchParams({ csrfmiddlewaretoken: CSRF_CT }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { alert(data.error); btn.disabled = false; return; }
+    showCahierToast('Cahier de texte validé.', 'success');
+    setTimeout(() => location.reload(), 700);
+  })
+  .catch(() => { alert('Erreur réseau'); btn.disabled = false; });
+}
+
+function submitLogUnvalidate(pk, btn) {
+  btn.disabled = true;
+  fetch(`/timetable/cahier-texte/log/${pk}/devalider/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF_CT, 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+    body: new URLSearchParams({ csrfmiddlewaretoken: CSRF_CT }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { alert(data.error); btn.disabled = false; return; }
+    showCahierToast('Validation annulée.', 'warning');
+    setTimeout(() => location.reload(), 700);
+  })
+  .catch(() => { alert('Erreur réseau'); btn.disabled = false; });
+}
+
+// Délégation d'événements pour les boutons action (data-* au lieu de onclick)
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.btn-log-action');
+  if (!btn) return;
+  const pk       = btn.dataset.pk      || '';
+  const date     = btn.dataset.date    || '';
+  const subject  = btn.dataset.subject || '';
+  const teacher  = btn.dataset.teacher || '';
+
+  if (btn.classList.contains('btn-log-view')) {
+    openLogView(pk, date, subject, teacher);
+  } else if (btn.classList.contains('btn-log-edit')) {
+    openLogEdit(pk, btn.dataset.objectives || '', btn.dataset.content || '', btn.dataset.remarks || '');
+  } else if (btn.classList.contains('btn-log-delete')) {
+    openLogDelete(pk, date, subject);
+  } else if (btn.classList.contains('btn-log-create')) {
+    openLogCreate(btn.dataset.entry, btn.dataset.date, btn.dataset.dateFr, subject, teacher, btn);
+  } else if (btn.classList.contains('btn-log-validate')) {
+    submitLogValidate(pk, btn);
+  } else if (btn.classList.contains('btn-log-unvalidate')) {
+    submitLogUnvalidate(pk, btn);
+  }
+});
+
+// Ouvrir automatiquement les UEs qui ont des séances non renseignées
+document.querySelectorAll('[id^="ue-body-"]').forEach(function(body) {
+  const hasUnfilled = body.querySelector('tr[style*="fff7f7"]');
+  if (hasUnfilled) {
+    const uid   = body.id.replace('ue-body-', '');
+    body.style.display = 'block';
+    const arrow = document.getElementById('ue-arrow-' + uid);
+    if (arrow) arrow.style.transform = 'rotate(90deg)';
+  }
+});
+</script>
+{% endblock %}

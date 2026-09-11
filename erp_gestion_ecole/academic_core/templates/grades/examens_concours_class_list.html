@@ -1,0 +1,158 @@
+{% extends 'base/base.html' %}
+{% block title %}Examens & Concours — Sélection classe{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Examens &amp; Concours</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#1e3a5f;"><i class="bi bi-patch-check-fill"></i></span>
+    Examens &amp; Concours — Validation des notes
+  </h1>
+</div>
+
+<!-- Filtre année -->
+<div class="card-section mb-4">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#7c3aed;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-calendar3"></i></span>
+      Sélectionner l'année académique
+    </h6>
+  </div>
+  <div class="p-4">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:.84rem;">Année académique</label>
+        <select name="year" class="form-select form-select-sm">
+          <option value="">— Choisir —</option>
+          {% for y in years %}
+          <option value="{{ y.pk }}" {% if selected_year.pk == y.pk %}selected{% endif %}>{{ y.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-sm w-100" style="background:var(--navy);color:#fff;border:none;padding:8px 0;">
+          <i class="bi bi-search me-1"></i>Afficher
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if selected_year %}
+  {% if levels_data %}
+  <div class="accordion" id="accordionNiveaux">
+    {% for ldata in levels_data %}
+    {% with loop_id=forloop.counter %}
+    <div class="card-section mb-3" style="border-radius:10px;overflow:hidden;">
+
+      <!-- En-tête niveau (bouton accordéon) -->
+      <button
+        class="accordion-toggle-btn d-flex align-items-center justify-content-between w-100"
+        type="button"
+        onclick="toggleLevel('niveau{{ loop_id }}')"
+        id="btn-niveau{{ loop_id }}"
+        style="background:var(--navy);color:#fff;border:none;padding:14px 20px;cursor:pointer;gap:12px;text-align:left;">
+        <div class="d-flex align-items-center gap-3">
+          <span style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.15);display:inline-flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0;">
+            <i class="bi bi-mortarboard-fill"></i>
+          </span>
+          <div>
+            <div style="font-weight:700;font-size:.95rem;letter-spacing:.3px;">{{ ldata.level_name }}</div>
+            <div style="font-size:.75rem;opacity:.75;margin-top:1px;">
+              {{ ldata.classes|length }} classe{{ ldata.classes|length|pluralize }} —
+              {% if ldata.classes %}
+                {% with item0=ldata.classes.0 %}
+                  {% if item0.semesters %}
+                    {% for s in item0.semesters %}{{ s.label }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                  {% else %}
+                    Aucun semestre
+                  {% endif %}
+                {% endwith %}
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <i class="bi bi-chevron-down" id="icon-niveau{{ loop_id }}" style="font-size:1rem;transition:transform .25s;"></i>
+      </button>
+
+      <!-- Contenu accordéon -->
+      <div id="niveau{{ loop_id }}" style="display:none;">
+        <div class="table-responsive">
+          <table class="table mb-0" style="font-size:.84rem;">
+            <thead style="background:#f8fafc;">
+              <tr>
+                <th style="padding:10px 16px;font-size:.76rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Classe</th>
+                <th style="padding:10px 16px;font-size:.76rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Filière</th>
+                <th style="padding:10px 16px;font-size:.76rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Département</th>
+                <th class="text-center" style="padding:10px 16px;font-size:.76rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Effectif</th>
+                <th style="padding:10px 16px;font-size:.76rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Semestres</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in ldata.classes %}
+              <tr style="border-bottom:1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+                <td style="padding:12px 16px;font-weight:700;color:#1e293b;">{{ item.cls.name }}</td>
+                <td style="padding:12px 16px;">{{ item.cls.program.name }}</td>
+                <td style="padding:12px 16px;font-size:.78rem;color:#64748b;">{{ item.cls.program.department.name }}</td>
+                <td class="text-center" style="padding:12px 16px;">
+                  <span style="font-weight:600;">{{ item.cls.student_count }}</span>
+                </td>
+                <td style="padding:12px 16px;">
+                  {% for sem in item.semesters %}
+                  <a href="{% url 'grades:examens_concours_detail' item.cls.pk sem.pk %}"
+                     class="btn btn-sm me-1 mb-1"
+                     style="background:#eff6ff;color:#1e3a5f;border:1px solid #bfdbfe;font-size:.74rem;padding:4px 12px;border-radius:6px;white-space:nowrap;">
+                    <i class="bi bi-patch-check me-1"></i>{{ sem.label }}
+                    {% if sem.is_locked %}<i class="bi bi-lock-fill ms-1" style="color:#dc2626;" title="Semestre verrouillé"></i>{% endif %}
+                  </a>
+                  {% empty %}
+                  <span style="font-size:.78rem;color:#94a3b8;">Aucun semestre disponible</span>
+                  {% endfor %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+    {% endwith %}
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="card-section">
+    <div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+      <i class="bi bi-people d-block mb-3" style="font-size:2.5rem;color:#cbd5e1;"></i>
+      <div style="font-size:.9rem;font-weight:600;">Aucune classe trouvée pour cette année académique</div>
+    </div>
+  </div>
+  {% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleLevel(id) {
+  var panel = document.getElementById(id);
+  var btnId = 'btn-' + id;
+  var iconId = 'icon-' + id;
+  var icon = document.getElementById(iconId);
+  if (!panel) return;
+  var isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (icon) icon.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+// Ouvrir le premier niveau par défaut
+document.addEventListener('DOMContentLoaded', function() {
+  var first = document.querySelector('[id^="niveau"]');
+  if (first) {
+    toggleLevel(first.id);
+  }
+});
+</script>
+{% endblock %}

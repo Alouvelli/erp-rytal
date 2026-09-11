@@ -1,0 +1,143 @@
+{% extends 'base/base.html' %}
+{% block title %}Partager un support de cours{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'timetable:teacher_supports_list' %}">Mes supports</a></li>
+<li class="breadcrumb-item active">Partager un support</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card shadow-sm border-0 rounded-3">
+      <div class="card-header py-3" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;">
+        <h5 class="mb-0 fw-bold">
+          <i class="bi bi-cloud-upload me-2"></i>Partager un support de cours
+        </h5>
+        <small class="opacity-75">Les étudiants de la classe recevront une notification automatique.</small>
+      </div>
+      <div class="card-body p-4">
+        <form method="post" enctype="multipart/form-data" id="uploadForm">
+          {% csrf_token %}
+
+          <!-- Sélection matière / classe / semestre -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">
+              Module (EC) — Classe <span class="text-muted fw-normal" style="font-size:.83rem;">(groupé par semestre)</span>
+              <span class="text-danger">*</span>
+            </label>
+            {% if combos_by_semester %}
+              <select name="combo_select" id="combo_select" class="form-select" required>
+                <option value="">— Choisir un module (EC) —</option>
+                {% for group in combos_by_semester %}
+                <optgroup label="── Semestre {{ group.semester.number }} — {{ group.semester.academic_year.label }} ──">
+                  {% for c in group.items %}
+                  <option value="{{ c.subject.pk }}|{{ c.class_group.pk }}|{{ c.semester.pk }}">
+                    {{ c.subject.title }} — {{ c.class_group.name }}
+                  </option>
+                  {% endfor %}
+                </optgroup>
+                {% endfor %}
+              </select>
+              <input type="hidden" name="subject_id"     id="id_subject_id">
+              <input type="hidden" name="class_group_id" id="id_class_group_id">
+              <input type="hidden" name="semester_id"    id="id_semester_id">
+              <!-- Affichage de la sélection courante -->
+              <div id="combo_display" style="display:none;margin-top:8px;padding:8px 14px;
+                   background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:.82rem;color:#1e3a5f;">
+                <i class="bi bi-info-circle me-1"></i>
+                <strong id="combo_subject"></strong>
+                <span style="color:#64748b;"> — Classe : </span><strong id="combo_class"></strong>
+                <span style="color:#64748b;"> — </span><span id="combo_semester" style="background:#dbeafe;color:#1e3a5f;border-radius:10px;padding:1px 8px;font-size:.78rem;font-weight:600;"></span>
+              </div>
+            {% else %}
+              <div class="alert alert-warning py-2">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                Aucune séance trouvée dans votre emploi du temps. Vérifiez votre planning.
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Type de support -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Type de support <span class="text-danger">*</span></label>
+            <div class="d-flex gap-3 flex-wrap">
+              {% for val, label in support_types %}
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="support_type" id="type_{{ val }}"
+                       value="{{ val }}" {% if forloop.first %}checked{% endif %}>
+                <label class="form-check-label" for="type_{{ val }}">
+                  <span class="badge"
+                    style="background:{% if val == 'CM' %}#7c3aed{% elif val == 'TD' %}#0891b2{% elif val == 'TP' %}#059669{% else %}#6b7280{% endif %};">
+                    {{ label }}
+                  </span>
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Titre -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="id_title">Titre du support <span class="text-danger">*</span></label>
+            <input type="text" name="title" id="id_title" class="form-control"
+                   placeholder="Ex : Chapitre 3 — Algorithmique des graphes" required maxlength="255">
+          </div>
+
+          <!-- Description -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="id_description">Description (optionnel)</label>
+            <textarea name="description" id="id_description" class="form-control" rows="3"
+                      placeholder="Brève description du contenu du support…"></textarea>
+          </div>
+
+          <!-- Fichier -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold" for="id_file">Fichier <span class="text-danger">*</span></label>
+            <input type="file" name="file" id="id_file" class="form-control" required
+                   accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.png,.jpg,.jpeg">
+            <div class="form-text">Formats acceptés : PDF, Word, PowerPoint, Excel, ZIP, images. Taille max recommandée : 50 Mo.</div>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'timetable:teacher_supports_list' %}" class="btn btn-outline-secondary">
+              <i class="bi bi-x-circle me-1"></i>Annuler
+            </a>
+            <button type="submit" class="btn btn-primary" {% if not combos %}disabled{% endif %}>
+              <i class="bi bi-cloud-upload me-1"></i>Partager et notifier les étudiants
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('combo_select')?.addEventListener('change', function() {
+  const parts = this.value.split('|');
+  document.getElementById('id_subject_id').value     = parts[0] || '';
+  document.getElementById('id_class_group_id').value = parts[1] || '';
+  document.getElementById('id_semester_id').value    = parts[2] || '';
+
+  const display = document.getElementById('combo_display');
+  if (this.value && this.selectedOptions[0]) {
+    const opt      = this.selectedOptions[0];
+    const optText  = opt.text.trim();           // "Algèbre — L1 TR"
+    const grpLabel = opt.parentElement.label;   // "── Semestre 2 — 2025-2026 ──"
+    // Extraire "Semestre 2 — 2025-2026" en retirant les tirets décoratifs
+    const semLabel = grpLabel.replace(/^──\s*/,'').replace(/\s*──$/,'').trim();
+
+    const [subject, classe] = optText.split(' — ');
+    document.getElementById('combo_subject').textContent  = subject  || optText;
+    document.getElementById('combo_class').textContent    = classe   || '';
+    document.getElementById('combo_semester').textContent = semLabel;
+    display.style.display = 'block';
+  } else {
+    display.style.display = 'none';
+  }
+});
+</script>
+{% endblock %}

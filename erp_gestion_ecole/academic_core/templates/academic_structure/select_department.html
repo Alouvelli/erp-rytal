@@ -1,0 +1,116 @@
+{% extends 'base/base.html' %}
+{% block title %}Sélectionner un département{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Sélection du département</li>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--accent);"><i class="bi bi-building-gear"></i></span>
+    Sélection du département
+  </h1>
+  {% if active_department %}
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="department_id" value="">
+    <button type="submit" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-x-circle me-1"></i>Désélectionner
+    </button>
+  </form>
+  {% endif %}
+</div>
+
+{% if active_department %}
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 18px;margin-bottom:20px;display:flex;align-items:center;gap:10px;">
+  <i class="bi bi-check-circle-fill" style="color:var(--navy);font-size:1.1rem;"></i>
+  <span style="font-size:.88rem;color:#1e40af;">
+    Département actuel : <strong>{{ active_department.name }}</strong> ({{ active_department.code }})
+  </span>
+</div>
+{% endif %}
+
+{% if teacher_dept_ids %}
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:.82rem;color:#166534;">
+  <i class="bi bi-info-circle-fill me-1"></i>
+  Les départements <strong>surlignés en vert</strong> sont ceux où vous avez des séances planifiées.
+</div>
+{% endif %}
+
+<div class="row g-3">
+  {% for dept in departments %}
+  <div class="col-md-6 col-lg-4">
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="department_id" value="{{ dept.pk }}">
+      {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+      <button type="submit" style="all:unset;display:block;width:100%;cursor:pointer;">
+        <div class="card-section h-100"
+             style="transition:all .18s;border:2px solid {% if active_department.pk == dept.pk %}var(--navy){% elif dept.pk in teacher_dept_ids %}#16a34a{% else %}var(--border){% endif %};"
+             onmouseover="this.style.borderColor='var(--navy)';this.style.boxShadow='0 4px 16px rgba(0,61,130,.12)'"
+             onmouseout="this.style.borderColor='{% if active_department.pk == dept.pk %}var(--navy){% elif dept.pk in teacher_dept_ids %}#16a34a{% else %}var(--border){% endif %}';this.style.boxShadow=''">
+          <div class="card-section-header" style="border-bottom:none;">
+            <div style="display:flex;align-items:center;gap:10px;flex:1;">
+              <div style="width:42px;height:42px;border-radius:10px;background:{% if active_department.pk == dept.pk %}var(--navy){% elif dept.pk in teacher_dept_ids %}#dcfce7{% else %}#eff6ff{% endif %};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-building" style="font-size:1.1rem;color:{% if active_department.pk == dept.pk %}#fff{% elif dept.pk in teacher_dept_ids %}#16a34a{% else %}var(--navy){% endif %};"></i>
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:.9rem;color:#1e293b;">{{ dept.name }}</div>
+                <div style="font-size:.75rem;color:#94a3b8;">{{ dept.code }}</div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+              {% if active_department.pk == dept.pk %}
+              <span style="padding:3px 8px;background:var(--navy);color:#fff;border-radius:20px;font-size:.72rem;font-weight:700;">Actif</span>
+              {% endif %}
+              {% if dept.pk in teacher_dept_ids %}
+              <span style="padding:3px 8px;background:#dcfce7;color:#16a34a;border-radius:20px;font-size:.7rem;font-weight:700;border:1px solid #bbf7d0;">
+                <i class="bi bi-calendar-check me-1"></i>Mes séances
+              </span>
+              {% endif %}
+            </div>
+          </div>
+          <div style="padding:0 16px 16px;">
+            <div style="font-size:.8rem;color:#64748b;margin-bottom:10px;">{{ dept.faculty.name|default:"—" }}</div>
+            {% if dept.description %}
+            <div style="font-size:.78rem;color:#94a3b8;margin-bottom:10px;">{{ dept.description|truncatechars:80 }}</div>
+            {% endif %}
+            <div style="display:flex;gap:10px;">
+              <div style="flex:1;text-align:center;padding:8px;background:#f8fafc;border-radius:8px;">
+                <div style="font-size:1.2rem;font-weight:800;color:var(--navy);">{{ dept.programs.count }}</div>
+                <div style="font-size:.7rem;color:#94a3b8;">filières</div>
+              </div>
+              <div style="flex:1;text-align:center;padding:8px;background:#f8fafc;border-radius:8px;">
+                <div style="font-size:1.2rem;font-weight:800;color:#16a34a;">{{ dept.users.count }}</div>
+                <div style="font-size:.7rem;color:#94a3b8;">utilisateurs</div>
+              </div>
+              <div style="flex:1;text-align:center;padding:8px;background:#f8fafc;border-radius:8px;">
+                {% if dept.admin %}
+                <div style="font-size:.72rem;font-weight:700;color:#7c3aed;">{{ dept.admin.get_full_name|truncatechars:12 }}</div>
+                {% else %}
+                <div style="font-size:.72rem;color:#fbbf24;font-weight:600;">Sans admin</div>
+                {% endif %}
+                <div style="font-size:.7rem;color:#94a3b8;">responsable</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </button>
+    </form>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card-section">
+      <div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+        <i class="bi bi-building-slash d-block mb-3" style="font-size:3rem;color:#cbd5e1;"></i>
+        <div style="font-size:1rem;font-weight:600;margin-bottom:8px;">Aucun département créé</div>
+        <div style="font-size:.85rem;margin-bottom:20px;">Créez d'abord un département pour commencer.</div>
+        {% if user.role_name == 'ADMIN' %}
+        <a href="{% url 'academic_structure:departments_manage' %}" class="btn btn-primary btn-sm">
+          <i class="bi bi-plus-lg me-1"></i>Créer un département
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

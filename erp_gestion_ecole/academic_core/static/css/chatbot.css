@@ -1,0 +1,199 @@
+/* RYTAL — bulle de chat flottante */
+
+#rytal-widget {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1050;
+}
+
+#rytal-bubble {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: none;
+  background: var(--navy);
+  color: #fff;
+  font-size: 1.4rem;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+#rytal-bubble:hover {
+  background: var(--navy-light);
+  transform: scale(1.05);
+}
+
+#rytal-bubble .rytal-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: var(--accent);
+  color: #1e293b;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  font-size: .65rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#rytal-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 96px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  height: 520px;
+  max-height: calc(100vh - 140px);
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 1049;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+#rytal-panel.d-none { display: none; }
+
+#rytal-panel-header {
+  background: var(--navy);
+  color: #fff;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+#rytal-panel-header span {
+  font-weight: 600;
+  font-size: .95rem;
+}
+
+#rytal-close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: .85;
+}
+
+#rytal-close:hover { opacity: 1; }
+
+#rytal-clear {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  opacity: .75;
+}
+
+#rytal-clear:hover { opacity: 1; }
+
+#rytal-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #f1f5f9;
+}
+
+.rytal-msg {
+  max-width: 82%;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: .88rem;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.rytal-msg-assistant {
+  align-self: flex-start;
+  background: #fff;
+  border: 1px solid var(--border);
+  color: #1e293b;
+}
+
+.rytal-msg-user {
+  align-self: flex-end;
+  background: var(--navy);
+  color: #fff;
+}
+
+.rytal-msg-link {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--navy);
+  text-decoration: underline;
+}
+
+.rytal-msg-user .rytal-msg-link {
+  color: #fff;
+}
+
+#rytal-typing {
+  padding: 0 14px 8px;
+  font-size: .8rem;
+  color: #64748b;
+  font-style: italic;
+  flex-shrink: 0;
+}
+
+#rytal-typing.d-none { display: none; }
+
+#rytal-form {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+#rytal-input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: .88rem;
+}
+
+#rytal-input:focus { outline: none; border-color: var(--navy-light); }
+
+#rytal-send {
+  border: none;
+  background: var(--navy);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  width: 40px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+#rytal-send:hover { background: var(--navy-light); }
+#rytal-send:disabled { opacity: .6; cursor: default; }
+
+@media (max-width: 480px) {
+  #rytal-panel {
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+  #rytal-widget { right: 16px; bottom: 16px; }
+}

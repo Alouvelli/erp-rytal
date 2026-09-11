@@ -1,0 +1,455 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Taux de recouvrement{% endblock %}
+
+{% block content %}
+<style>
+.recouv-tab {
+  padding: 8px 20px; border-radius: 8px; border: 2px solid #e2e8f0;
+  background: #fff; font-weight: 600; font-size: .88rem;
+  cursor: pointer; transition: all .15s; color: #374151;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.recouv-tab.active { background: #0d2244; border-color: #0d2244; color: #fff; }
+.recouv-tab:hover:not(.active) { border-color: #93c5fd; color: #1d4ed8; }
+.taux-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 999px; font-size: .74rem; font-weight: 700;
+}
+.taux-high { background: #dcfce7; color: #166534; }
+.taux-mid  { background: #fef9c3; color: #92400e; }
+.taux-low  { background: #fee2e2; color: #991b1b; }
+.taux-none { background: #f1f5f9; color: #64748b; }
+.month-future { opacity: .45; }
+.recouv-bar-wrap { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
+.recouv-bar { height: 100%; border-radius: 3px; transition: width .3s; }
+.recouv-panel { display: none; }
+.recouv-panel.active { display: block; }
+.etu-toggle-btn {
+  border: 1px solid #dbeafe; background: #eff6ff; color: #1d4ed8;
+  border-radius: 999px; padding: 4px 12px; font-size: .78rem; font-weight: 700;
+  cursor: pointer; transition: background .15s;
+}
+.etu-toggle-btn:hover { background: #dbeafe; }
+.etu-chevron { transition: transform .2s; font-size: .7rem; }
+.etu-toggle-btn.open .etu-chevron { transform: rotate(180deg); }
+.detail-row > td { padding: 0; }
+</style>
+
+<!-- En-tête page -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-graph-up-arrow me-2" style="color:#0891b2;"></i>Taux de recouvrement
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">
+      Niveau de paiement des étudiants — par classe et par département
+    </p>
+  </div>
+</div>
+
+<!-- Onglets -->
+<div class="d-flex gap-2 mb-3">
+  <button type="button" class="recouv-tab active" id="tab-btn-classe" onclick="switchRecouvTab('classe')">
+    <i class="bi bi-mortarboard-fill"></i> Par classe
+  </button>
+  <button type="button" class="recouv-tab" id="tab-btn-departement" onclick="switchRecouvTab('departement')">
+    <i class="bi bi-building"></i> Global département
+  </button>
+</div>
+
+<!-- ══════════════════════════ Onglet : Par classe ══════════════════════════ -->
+<div id="panel-classe" class="recouv-panel active">
+
+  <!-- Filtres -->
+  <div class="card-section mb-3" style="padding:16px 20px;">
+    <form method="get" class="row g-2 align-items-end">
+      <input type="hidden" name="departement" value="{{ selected_dept.pk|default:'' }}">
+      <div class="col-md-3">
+        <label class="form-label" style="font-size:.78rem;font-weight:600;">Année académique</label>
+        <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for y in years %}
+          <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" style="font-size:.78rem;font-weight:600;">Classe</label>
+        <select name="classe" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for c in classes %}
+          <option value="{{ c.pk }}" {% if selected_class and c.pk == selected_class.pk %}selected{% endif %}>
+            {{ c.name }}{% if c.level %} — {{ c.level.name }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+  </div>
+
+  {% if not classes %}
+  <div class="card-section text-center py-5 text-muted">
+    <i class="bi bi-inboxes" style="font-size:2rem;opacity:.4;"></i>
+    <p class="mt-2 mb-0">Aucune classe trouvée pour les critères sélectionnés.</p>
+  </div>
+  {% elif class_recouvrement %}
+  {% with cr=class_recouvrement %}
+  <!-- Résumé -->
+  <div class="row g-2 mb-3">
+    <div class="col-md-3">
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;">
+        <div style="font-size:.72rem;color:#166534;font-weight:600;text-transform:uppercase;">Étudiants actifs</div>
+        <div style="font-size:1.6rem;font-weight:800;color:#166534;">{{ cr.nb_students }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;">
+        <div style="font-size:.72rem;color:#1e40af;font-weight:600;text-transform:uppercase;">Montant attendu</div>
+        <div style="font-size:1.3rem;font-weight:800;color:#1e40af;">{{ cr.total_attendu|floatformat:0|intcomma }} F</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px 16px;">
+        <div style="font-size:.72rem;color:#9a3412;font-weight:600;text-transform:uppercase;">Montant encaissé</div>
+        <div style="font-size:1.3rem;font-weight:800;color:#9a3412;">{{ cr.total_encaisse|floatformat:0|intcomma }} F</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:12px 16px;">
+        <div style="font-size:.72rem;color:#6b21a8;font-weight:600;text-transform:uppercase;">Taux de recouvrement</div>
+        <div style="font-size:1.6rem;font-weight:800;color:#6b21a8;">
+          {% if cr.taux_global is not None %}{{ cr.taux_global|floatformat:1 }} %{% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Détail mensuel -->
+  <div class="card-section" style="padding:0;">
+    <div id="detail-mensuel-header" onclick="toggleDetailMensuel()"
+         style="padding:14px 20px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;user-select:none;">
+      <span style="font-weight:700;font-size:.92rem;color:var(--navy);">
+        <i class="bi bi-table me-1"></i>Détail mensuel — {{ selected_class.name }}
+        {% if selected_class.level %}— {{ selected_class.level.name }}{% endif %}
+      </span>
+      <i id="detail-mensuel-chevron" class="bi bi-chevron-up" style="color:#64748b;font-size:.9rem;transition:transform .25s;"></i>
+    </div>
+    <div id="detail-mensuel-body" style="overflow-x:auto;">
+      <table class="table table-hover mb-0" style="font-size:.84rem;">
+        <thead>
+          <tr style="background:#f1f5f9;">
+            <th style="padding:10px 16px;">Mois</th>
+            <th class="text-center">Étudiants</th>
+            <th class="text-end">Montant attendu</th>
+            <th class="text-end">Montant encaissé</th>
+            <th style="min-width:160px;">Progression</th>
+            <th class="text-center">Taux</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in cr.months %}
+          {% with rid=forloop.counter %}
+          <tr class="{% if m.is_future %}month-future{% endif %}">
+            <td style="padding:8px 16px;font-weight:600;">
+              {{ m.label_long }} {{ m.year }}
+              {% if m.is_future %}<span class="text-muted" style="font-size:.7rem;">(à venir)</span>{% endif %}
+            </td>
+            <td class="text-center">
+              <button type="button" class="etu-toggle-btn" id="etbtn-{{ rid }}"
+                      onclick="toggleMonthDetail({{ rid }})" title="Voir le détail par étudiant">
+                <i class="bi bi-people-fill me-1"></i>{{ m.students|length }}
+                <i class="bi bi-chevron-down etu-chevron ms-1"></i>
+              </button>
+            </td>
+            <td class="text-end">{{ m.attendu|floatformat:0|intcomma }} F</td>
+            <td class="text-end">{{ m.encaisse|floatformat:0|intcomma }} F</td>
+            <td>
+              {% if not m.is_future %}
+              <div class="recouv-bar-wrap">
+                <div class="recouv-bar" style="width:{% widthratio m.encaisse m.attendu 100 %}%;
+                     background:{% if m.taux >= 90 %}#22c55e{% elif m.taux >= 50 %}#f59e0b{% else %}#ef4444{% endif %};"></div>
+              </div>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if m.is_future %}
+                <span class="taux-badge taux-none">À venir</span>
+              {% elif m.taux is None %}
+                <span class="taux-badge taux-none">N/A</span>
+              {% elif m.taux >= 90 %}
+                <span class="taux-badge taux-high">{{ m.taux|floatformat:1 }} %</span>
+              {% elif m.taux >= 50 %}
+                <span class="taux-badge taux-mid">{{ m.taux|floatformat:1 }} %</span>
+              {% else %}
+                <span class="taux-badge taux-low">{{ m.taux|floatformat:1 }} %</span>
+              {% endif %}
+            </td>
+          </tr>
+          <tr class="detail-row" id="detail-{{ rid }}" style="display:none;">
+            <td colspan="6" style="padding:0;background:#f8fafc;">
+              <div style="padding:10px 20px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+                  <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;">
+                    Recouvrement par étudiant — {{ m.label_long }} {{ m.year }}
+                  </div>
+                  <div class="input-group input-group-sm" style="max-width:220px;">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" placeholder="Rechercher un étudiant…"
+                           oninput="filterRecouvStudents({{ rid }}, this.value)">
+                  </div>
+                </div>
+                <table class="table table-sm mb-0" style="font-size:.8rem;background:#fff;border-radius:8px;overflow:hidden;">
+                  <thead>
+                    <tr style="background:#eef2f7;">
+                      <th style="padding:6px 12px;">Étudiant</th>
+                      <th>Matricule</th>
+                      <th class="text-end">Montant attendu</th>
+                      <th class="text-end">Montant encaissé</th>
+                      <th class="text-center">Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody id="etu-tbody-{{ rid }}">
+                    {% for st in m.students %}
+                    <tr data-name="{{ st.student.user.get_full_name|lower }}">
+                      <td style="padding:6px 12px;">{{ st.student.user.get_full_name }}</td>
+                      <td style="color:#64748b;">{{ st.student.matricule }}</td>
+                      <td class="text-end">{{ st.attendu|floatformat:0|intcomma }} F</td>
+                      <td class="text-end">{{ st.encaisse|floatformat:0|intcomma }} F</td>
+                      <td class="text-center">
+                        {% if st.is_paid %}
+                          <span class="taux-badge taux-high"><i class="bi bi-check-circle-fill me-1"></i>Payé</span>
+                        {% else %}
+                          <span class="taux-badge taux-low"><i class="bi bi-x-circle-fill me-1"></i>Impayé</span>
+                        {% endif %}
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+          {% endwith %}
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr style="background:#f8fafc;border-top:2px solid #e2e8f0;font-weight:700;">
+            <td style="padding:10px 16px;">Total année (mois entamés)</td>
+            <td></td>
+            <td class="text-end">{{ cr.total_attendu|floatformat:0|intcomma }} F</td>
+            <td class="text-end">{{ cr.total_encaisse|floatformat:0|intcomma }} F</td>
+            <td></td>
+            <td class="text-center">
+              {% if cr.taux_global is not None %}
+                {% if cr.taux_global >= 90 %}
+                  <span class="taux-badge taux-high">{{ cr.taux_global|floatformat:1 }} %</span>
+                {% elif cr.taux_global >= 50 %}
+                  <span class="taux-badge taux-mid">{{ cr.taux_global|floatformat:1 }} %</span>
+                {% else %}
+                  <span class="taux-badge taux-low">{{ cr.taux_global|floatformat:1 }} %</span>
+                {% endif %}
+              {% else %}
+                <span class="taux-badge taux-none">N/A</span>
+              {% endif %}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+  {% endwith %}
+  {% else %}
+  <div class="card-section text-center py-5 text-muted">
+    <i class="bi bi-calendar-x" style="font-size:2rem;opacity:.4;"></i>
+    <p class="mt-2 mb-0">Sélectionnez une classe et une année académique.</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ═══════════════════════ Onglet : Global département ═══════════════════════ -->
+<div id="panel-departement" class="recouv-panel">
+
+  <!-- Filtres -->
+  <div class="card-section mb-3" style="padding:16px 20px;">
+    <form method="get" class="row g-2 align-items-end">
+      <input type="hidden" name="classe" value="{{ selected_class.pk|default:'' }}">
+      <input type="hidden" name="tab" value="departement">
+      <div class="col-md-3">
+        <label class="form-label" style="font-size:.78rem;font-weight:600;">Année académique</label>
+        <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for y in years %}
+          <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if departments %}
+      <div class="col-md-4">
+        <label class="form-label" style="font-size:.78rem;font-weight:600;">Département</label>
+        <select name="departement" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for d in departments %}
+          <option value="{{ d.pk }}" {% if selected_dept and d.pk == selected_dept.pk %}selected{% endif %}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Résumé global -->
+  <div class="row g-2 mb-3">
+    <div class="col-md-3">
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;">
+        <div style="font-size:.72rem;color:#166534;font-weight:600;text-transform:uppercase;">Classes</div>
+        <div style="font-size:1.6rem;font-weight:800;color:#166534;">{{ dept_rows|length }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;">
+        <div style="font-size:.72rem;color:#1e40af;font-weight:600;text-transform:uppercase;">Montant attendu</div>
+        <div style="font-size:1.3rem;font-weight:800;color:#1e40af;">{{ dept_total_attendu|floatformat:0|intcomma }} F</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px 16px;">
+        <div style="font-size:.72rem;color:#9a3412;font-weight:600;text-transform:uppercase;">Montant encaissé</div>
+        <div style="font-size:1.3rem;font-weight:800;color:#9a3412;">{{ dept_total_encaisse|floatformat:0|intcomma }} F</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:12px 16px;">
+        <div style="font-size:.72rem;color:#6b21a8;font-weight:600;text-transform:uppercase;">Taux global</div>
+        <div style="font-size:1.6rem;font-weight:800;color:#6b21a8;">
+          {% if dept_taux_global is not None %}{{ dept_taux_global|floatformat:1 }} %{% else %}—{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if not dept_rows %}
+  <div class="card-section text-center py-5 text-muted">
+    <i class="bi bi-inboxes" style="font-size:2rem;opacity:.4;"></i>
+    <p class="mt-2 mb-0">Aucune classe trouvée pour ce département et cette année académique.</p>
+  </div>
+  {% else %}
+  <div class="card-section" style="padding:0;">
+    <div style="padding:14px 20px;border-bottom:1px solid #e2e8f0;">
+      <span style="font-weight:700;font-size:.92rem;color:var(--navy);">
+        <i class="bi bi-building me-1"></i>Recouvrement par classe
+        {% if selected_dept %}— {{ selected_dept.name }}{% endif %}
+      </span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="table table-hover mb-0" style="font-size:.84rem;">
+        <thead>
+          <tr style="background:#f1f5f9;">
+            <th style="padding:10px 16px;">Classe</th>
+            <th>Niveau</th>
+            <th class="text-center">Étudiants</th>
+            <th class="text-end">Montant attendu</th>
+            <th class="text-end">Montant encaissé</th>
+            <th style="min-width:160px;">Progression</th>
+            <th class="text-center">Taux</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in dept_rows %}
+          <tr>
+            <td style="padding:8px 16px;font-weight:600;">{{ row.class_group.name }}</td>
+            <td style="color:#64748b;">{{ row.class_group.level.name|default:"—" }}</td>
+            <td class="text-center">{{ row.nb_students }}</td>
+            <td class="text-end">{{ row.total_attendu|floatformat:0|intcomma }} F</td>
+            <td class="text-end">{{ row.total_encaisse|floatformat:0|intcomma }} F</td>
+            <td>
+              {% if row.total_attendu > 0 %}
+              <div class="recouv-bar-wrap">
+                <div class="recouv-bar" style="width:{% widthratio row.total_encaisse row.total_attendu 100 %}%;
+                     background:{% if row.taux_global >= 90 %}#22c55e{% elif row.taux_global >= 50 %}#f59e0b{% else %}#ef4444{% endif %};"></div>
+              </div>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if row.taux_global is None %}
+                <span class="taux-badge taux-none">N/A</span>
+              {% elif row.taux_global >= 90 %}
+                <span class="taux-badge taux-high">{{ row.taux_global|floatformat:1 }} %</span>
+              {% elif row.taux_global >= 50 %}
+                <span class="taux-badge taux-mid">{{ row.taux_global|floatformat:1 }} %</span>
+              {% else %}
+                <span class="taux-badge taux-low">{{ row.taux_global|floatformat:1 }} %</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr style="background:#f8fafc;border-top:2px solid #e2e8f0;font-weight:700;">
+            <td colspan="3" style="padding:10px 16px;">Total département</td>
+            <td class="text-end">{{ dept_total_attendu|floatformat:0|intcomma }} F</td>
+            <td class="text-end">{{ dept_total_encaisse|floatformat:0|intcomma }} F</td>
+            <td></td>
+            <td class="text-center">
+              {% if dept_taux_global is not None %}
+                {% if dept_taux_global >= 90 %}
+                  <span class="taux-badge taux-high">{{ dept_taux_global|floatformat:1 }} %</span>
+                {% elif dept_taux_global >= 50 %}
+                  <span class="taux-badge taux-mid">{{ dept_taux_global|floatformat:1 }} %</span>
+                {% else %}
+                  <span class="taux-badge taux-low">{{ dept_taux_global|floatformat:1 }} %</span>
+                {% endif %}
+              {% else %}
+                <span class="taux-badge taux-none">N/A</span>
+              {% endif %}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function toggleMonthDetail(rid) {
+  const row = document.getElementById('detail-' + rid);
+  const btn = document.getElementById('etbtn-' + rid);
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : 'table-row';
+  btn.classList.toggle('open', !open);
+}
+
+function filterRecouvStudents(rid, query) {
+  const tbody = document.getElementById('etu-tbody-' + rid);
+  if (!tbody) return;
+  const q = query.trim().toLowerCase();
+  tbody.querySelectorAll('tr').forEach(row => {
+    const name = row.getAttribute('data-name') || '';
+    row.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+}
+
+function toggleDetailMensuel() {
+  const body    = document.getElementById('detail-mensuel-body');
+  const chevron = document.getElementById('detail-mensuel-chevron');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display    = open ? 'none' : '';
+  chevron.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+function switchRecouvTab(tab) {
+  document.getElementById('panel-classe').classList.toggle('active', tab === 'classe');
+  document.getElementById('panel-departement').classList.toggle('active', tab === 'departement');
+  document.getElementById('tab-btn-classe').classList.toggle('active', tab === 'classe');
+  document.getElementById('tab-btn-departement').classList.toggle('active', tab === 'departement');
+  try { sessionStorage.setItem('recouv-tab', tab); } catch (e) {}
+}
+document.addEventListener('DOMContentLoaded', function () {
+  var params = new URLSearchParams(window.location.search);
+  var tab = params.get('tab');
+  if (!tab) {
+    try { tab = sessionStorage.getItem('recouv-tab'); } catch (e) {}
+  }
+  if (tab === 'departement') switchRecouvTab('departement');
+});
+</script>
+{% endblock %}

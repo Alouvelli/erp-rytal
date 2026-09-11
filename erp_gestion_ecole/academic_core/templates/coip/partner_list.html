@@ -1,0 +1,74 @@
+{% extends 'base/base.html' %}
+{% block title %}COIP — Partenaires{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item active">Partenaires</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-building"></i></span>
+    Partenaires
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'coip:partnership_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-text me-1"></i>Conventions</a>
+    <a href="{% url 'coip:partner_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Nouveau partenaire</a>
+  </div>
+</div>
+
+<div class="card-section mb-3">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Recherche</label>
+        <input type="text" name="q" class="form-control form-control-sm" value="{{ request.GET.q }}" placeholder="Raison sociale, secteur, ville…">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Type</label>
+        <select name="type" class="form-select form-select-sm">
+          <option value="">Tous</option>
+          {% for code, label in type_choices %}
+          <option value="{{ code }}" {% if selected_type == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{% url 'coip:partner_list' %}" class="btn btn-outline-secondary btn-sm">Réinit.</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="table-responsive">
+    <table class="table" id="tbl-partners">
+      <thead><tr><th>Raison sociale</th><th>Type</th><th>Secteur</th><th>Ville</th><th>Contact</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for p in partners %}
+        <tr>
+          <td style="font-size:.85rem;font-weight:600;"><a href="{% url 'coip:partner_detail' p.pk %}">{{ p.raison_sociale }}</a></td>
+          <td style="font-size:.82rem;">{{ p.get_type_partenaire_display }}</td>
+          <td style="font-size:.82rem;color:#64748b;">{{ p.secteur|default:"—" }}</td>
+          <td style="font-size:.82rem;color:#64748b;">{{ p.ville|default:"—" }}</td>
+          <td style="font-size:.82rem;">{{ p.email|default:"—" }}</td>
+          <td>{% if p.is_active %}<span class="badge bg-success">Actif</span>{% else %}<span class="badge bg-secondary">Inactif</span>{% endif %}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'coip:partner_detail' p.pk %}" class="btn-action" title="Voir"><i class="bi bi-eye"></i></a>
+              <a href="{% url 'coip:partner_edit' p.pk %}" class="btn-action edit" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'coip:partner_delete' p.pk %}" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+$(document).ready(function(){ $('#tbl-partners').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}}); });
+</script>
+{% endblock %}

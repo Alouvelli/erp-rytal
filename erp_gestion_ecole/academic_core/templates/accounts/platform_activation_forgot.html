@@ -1,0 +1,26 @@
+{% extends "base/base.html" %}
+
+{% block title %}Code d'activation oublié{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-envelope-lock-fill me-2"></i>Réinitialiser le code d'activation
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Réservé au Super Administrateur</p>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card-section" style="padding:24px;">
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-send me-1"></i>Envoyer le lien de réinitialisation</button>
+        <a href="{% url 'accounts:platform_activation_rotate' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

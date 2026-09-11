@@ -1,0 +1,124 @@
+{% extends 'base/base.html' %}
+{% block title %}Nouvelle inscription{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:validation_inscription_list' %}">Inscriptions</a></li>
+<li class="breadcrumb-item active">Nouvelle inscription</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+  <div>
+    <h4 class="mb-0 fw-bold" style="color:var(--navy);"><i class="bi bi-person-plus-fill me-2" style="color:var(--accent);"></i>Nouvelle inscription</h4>
+    <p class="text-muted mb-0" style="font-size:.82rem;">Enregistrer une demande d'inscription en attente de validation</p>
+  </div>
+  <a href="{% url 'accounting:validation_inscription_list' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <form method="post">
+      {% csrf_token %}
+
+      <!-- Étudiant & Classe -->
+      <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
+        <div class="card-header border-0 py-3" style="background:var(--navy);border-radius:14px 14px 0 0;">
+          <h6 class="mb-0 fw-bold text-white"><i class="bi bi-person-fill me-2"></i>Informations de l'étudiant</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-12">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Étudiant <span class="text-danger">*</span></label>
+              <select name="student" class="form-select" required style="border-radius:9px;">
+                <option value="">— Sélectionner un étudiant —</option>
+                {% for s in students %}
+                <option value="{{ s.pk }}">{{ s.full_name }} ({{ s.matricule }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Année académique <span class="text-danger">*</span></label>
+              <select name="academic_year" class="form-select" required style="border-radius:9px;">
+                <option value="">— Sélectionner —</option>
+                {% for yr in academic_years %}
+                <option value="{{ yr.pk }}" {% if yr.is_current %}selected{% endif %}>{{ yr.label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Classe <span class="text-danger">*</span></label>
+              <select name="class_group" class="form-select" required style="border-radius:9px;">
+                <option value="">— Sélectionner une classe —</option>
+                {% for cls in classes %}
+                <option value="{{ cls.pk }}">{{ cls.name }} — {{ cls.program.department.code }} ({{ cls.academic_year.label }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Type d'inscription <span class="text-danger">*</span></label>
+              <select name="enrollment_type" id="enrollment-type" class="form-select" style="border-radius:9px;" onchange="togglePreviousClass(this.value)">
+                <option value="{{ TYPE_NEW }}">Nouvelle inscription</option>
+                <option value="{{ TYPE_REINSCRIPTION }}">Réinscription</option>
+              </select>
+            </div>
+            <div class="col-md-6" id="previous-class-block" style="display:none;">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Classe précédente</label>
+              <select name="previous_class" class="form-select" style="border-radius:9px;">
+                <option value="">— Sélectionner —</option>
+                {% for cls in classes %}
+                <option value="{{ cls.pk }}">{{ cls.name }} ({{ cls.academic_year.label }})</option>
+                {% endfor %}
+              </select>
+              <div class="form-text">Classe que l'étudiant quitte (pour l'attestation de passage)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paiement -->
+      <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
+        <div class="card-header border-0 py-3" style="background:#166534;border-radius:14px 14px 0 0;">
+          <h6 class="mb-0 fw-bold text-white"><i class="bi bi-cash-coin me-2"></i>Informations de paiement</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Montant payé (FCFA)</label>
+              <input type="number" name="payment_amount" class="form-control" min="0" step="500" placeholder="0" style="border-radius:9px;">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Date de paiement</label>
+              <input type="date" name="payment_date" class="form-control" style="border-radius:9px;">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Référence / Reçu</label>
+              <input type="text" name="payment_reference" class="form-control" placeholder="N° de reçu…" style="border-radius:9px;">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Observations</label>
+              <textarea name="notes" class="form-control" rows="2" placeholder="Notes éventuelles…" style="border-radius:9px;"></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 justify-content-end">
+        <a href="{% url 'accounting:validation_inscription_list' %}" class="btn btn-outline-secondary" style="border-radius:9px;">Annuler</a>
+        <button type="submit" class="btn" style="background:var(--navy);color:#fff;border-radius:9px;">
+          <i class="bi bi-save me-1"></i>Enregistrer en attente
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePreviousClass(val) {
+  document.getElementById('previous-class-block').style.display = (val === '{{ TYPE_REINSCRIPTION }}') ? '' : 'none';
+}
+</script>
+{% endblock %}

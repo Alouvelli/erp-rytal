@@ -1,0 +1,421 @@
+{% extends 'base/base.html' %}
+{% block title %}Cahier de Texte — Mes Séances{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Cahier de Texte</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-journal-richtext me-2" style="color:#7c3aed;"></i>Cahier de Texte — Mes Séances
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Renseignez les objectifs et le contenu de chaque séance passée.</p>
+  </div>
+  <form method="get" class="d-flex gap-2 align-items-center flex-wrap">
+    <select name="semester" class="form-select form-select-sm" style="min-width:240px;" onchange="this.form.submit()">
+      <option value="" {% if not semester %}selected{% endif %}>— Tous les semestres —</option>
+      {% for sem in semesters %}
+      <option value="{{ sem.pk }}" {% if semester and sem.pk == semester.pk %}selected{% endif %}>
+        {{ sem.label }} — {{ sem.academic_year }}{% if sem.is_locked %} 🔒 verrouillé{% endif %}
+      </option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-3">
+  <div class="col-sm-4">
+    <div class="card-section" style="padding:14px 20px;display:flex;align-items:center;gap:14px;">
+      <div style="width:42px;height:42px;border-radius:10px;background:#7c3aed;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;flex-shrink:0;"><i class="bi bi-calendar3"></i></div>
+      <div>
+        <div style="font-size:1.6rem;font-weight:900;color:#1e3a5f;line-height:1;">{{ total_sessions }}</div>
+        <div style="font-size:.72rem;color:#64748b;">séances passées</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card-section" style="padding:14px 20px;display:flex;align-items:center;gap:14px;">
+      <div style="width:42px;height:42px;border-radius:10px;background:#16a34a;display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.1rem;flex-shrink:0;"><i class="bi bi-check-circle-fill"></i></div>
+      <div>
+        <div style="font-size:1.6rem;font-weight:900;color:#166534;line-height:1;">{{ filled_sessions }}</div>
+        <div style="font-size:.72rem;color:#64748b;">séances renseignées</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="card-section" style="padding:14px 20px;">
+      <div class="d-flex justify-content-between mb-1">
+        <span style="font-size:.8rem;font-weight:700;color:#1e3a5f;">Taux de remplissage</span>
+        <span style="font-size:.85rem;font-weight:800;color:#7c3aed;">
+          {% if total_sessions %}{% widthratio filled_sessions total_sessions 100 %}{% else %}0{% endif %} %
+        </span>
+      </div>
+      <div style="height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden;">
+        <div style="height:100%;background:#7c3aed;border-radius:4px;
+                    width:{% if total_sessions %}{% widthratio filled_sessions total_sessions 100 %}{% else %}0{% endif %}%;
+                    transition:width .5s ease;"></div>
+      </div>
+      <div style="font-size:.68rem;color:#94a3b8;margin-top:4px;">{{ filled_sessions }} / {{ total_sessions }} séances</div>
+    </div>
+  </div>
+</div>
+
+{# ─────────────────────────────────────────────────────────────────────────── #}
+{# Macro : affiche les classes d'un semestre                                   #}
+{# Utilisé dans les deux modes (tous semesters / semestre unique)              #}
+{# ─────────────────────────────────────────────────────────────────────────── #}
+
+{% if semester_groups %}
+{# ── MODE TOUS LES SEMESTRES ── #}
+{% if not semester_groups %}
+<div class="card-section" style="padding:40px;text-align:center;color:#94a3b8;">
+  <i class="bi bi-calendar-x" style="font-size:2.5rem;color:#e2e8f0;display:block;margin-bottom:10px;"></i>
+  <div style="font-size:.88rem;font-weight:600;color:#64748b;">Aucune séance passée trouvée.</div>
+</div>
+{% endif %}
+
+{% for sem_block in semester_groups %}
+{% with semblockid=forloop.counter %}
+{# Bandeau semestre #}
+<div class="mb-1" style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;margin-bottom:6px !important;box-shadow:0 1px 4px rgba(0,0,0,.05);">
+  <div onclick="toggleSemBlock({{ semblockid }})"
+       style="display:flex;align-items:center;gap:12px;padding:11px 20px;
+              background:var(--navy);cursor:pointer;user-select:none;">
+    <span style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;flex-shrink:0;">
+      <i class="bi bi-calendar3-week-fill"></i>
+    </span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:800;color:#fff;font-size:.88rem;">{{ sem_block.semester.label }}</div>
+      <div style="font-size:.7rem;color:#93c5fd;">{{ sem_block.semester.academic_year }}{% if sem_block.semester.is_locked %} &nbsp;🔒 verrouillé{% endif %}</div>
+    </div>
+    <div style="text-align:right;margin-right:10px;">
+      <div style="font-size:.73rem;font-weight:700;color:{% if sem_block.pct >= 75 %}#86efac{% elif sem_block.pct >= 40 %}#fde68a{% else %}#fca5a5{% endif %};">
+        {{ sem_block.filled }}/{{ sem_block.total }} séances — {{ sem_block.pct }}%
+      </div>
+      <div style="height:4px;background:rgba(255,255,255,.2);border-radius:3px;overflow:hidden;width:120px;margin-top:4px;margin-left:auto;">
+        <div style="height:100%;background:{% if sem_block.pct >= 75 %}#22c55e{% elif sem_block.pct >= 40 %}#f59e0b{% else %}#ef4444{% endif %};width:{{ sem_block.pct }}%;border-radius:3px;"></div>
+      </div>
+    </div>
+    <i id="sem-block-arrow-{{ semblockid }}" class="bi bi-chevron-down" style="color:#93c5fd;transition:transform .25s;flex-shrink:0;font-size:.9rem;"></i>
+  </div>
+
+  <div id="sem-block-body-{{ semblockid }}" style="display:block;">
+  {% for cg_group in sem_block.grouped %}
+  {% with cgid=semblockid|stringformat:"s"|add:"_"|add:forloop.counter|stringformat:"s" %}
+  <div class="card-section mb-0" style="overflow:hidden;border-radius:0;border:none;border-bottom:1px solid #e2e8f0;box-shadow:none;">
+    <div onclick="toggleCG('{{ cgid }}')"
+         style="display:flex;align-items:center;gap:12px;padding:11px 20px;
+                background:#f5f3ff;border-left:4px solid #7c3aed;
+                cursor:pointer;user-select:none;">
+      <div style="width:32px;height:32px;border-radius:8px;background:#7c3aed;
+                  display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;flex-shrink:0;">
+        <i class="bi bi-people-fill"></i>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:800;color:#1e3a5f;font-size:.88rem;">{{ cg_group.class_group.name }}</div>
+        {% if cg_group.class_group.level %}<div style="font-size:.68rem;color:#7c3aed;">{{ cg_group.class_group.level }}</div>{% endif %}
+      </div>
+      <div style="text-align:right;min-width:120px;">
+        <div style="font-size:.72rem;font-weight:700;color:{% if cg_group.pct >= 75 %}#16a34a{% elif cg_group.pct >= 40 %}#d97706{% else %}#dc2626{% endif %};margin-bottom:3px;">
+          {{ cg_group.filled }}/{{ cg_group.total }} — {{ cg_group.pct }}%
+        </div>
+        <div style="height:5px;background:#ddd6fe;border-radius:3px;overflow:hidden;width:120px;">
+          <div style="height:100%;background:{% if cg_group.pct >= 75 %}#16a34a{% elif cg_group.pct >= 40 %}#d97706{% else %}#dc2626{% endif %};width:{{ cg_group.pct }}%;border-radius:3px;"></div>
+        </div>
+      </div>
+      <i id="cg-arrow-{{ cgid }}" class="bi bi-chevron-right" style="color:#7c3aed;transition:transform .25s;flex-shrink:0;"></i>
+    </div>
+    <div id="cg-body-{{ cgid }}" style="display:none;">
+      {% include "timetable/_seances_ec_rows.html" with cg_group=cg_group cgid=cgid %}
+    </div>
+  </div>
+  {% endwith %}
+  {% endfor %}
+  </div>
+</div>
+{% endwith %}
+{% endfor %}
+
+{% elif grouped %}
+{# ── MODE SEMESTRE UNIQUE ── #}
+{% for cg_group in grouped %}
+{% with cgid=forloop.counter %}
+<div class="card-section mb-3" style="overflow:hidden;">
+  <div onclick="toggleCG({{ cgid }})"
+       style="display:flex;align-items:center;gap:12px;padding:13px 20px;
+              background:#f5f3ff;border-left:4px solid #7c3aed;
+              cursor:pointer;user-select:none;border-bottom:1px solid #e2e8f0;">
+    <div style="width:36px;height:36px;border-radius:8px;background:#7c3aed;
+                display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;flex-shrink:0;">
+      <i class="bi bi-people-fill"></i>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:800;color:#1e3a5f;font-size:.9rem;">{{ cg_group.class_group.name }}</div>
+      {% if cg_group.class_group.level %}
+      <div style="font-size:.7rem;color:#7c3aed;">{{ cg_group.class_group.level }}</div>
+      {% endif %}
+    </div>
+    <div style="text-align:right;min-width:130px;">
+      <div style="font-size:.75rem;font-weight:700;color:{% if cg_group.pct >= 75 %}#16a34a{% elif cg_group.pct >= 40 %}#d97706{% else %}#dc2626{% endif %};margin-bottom:4px;">
+        {{ cg_group.filled }}/{{ cg_group.total }} — {{ cg_group.pct }}%
+      </div>
+      <div style="height:6px;background:#ddd6fe;border-radius:3px;overflow:hidden;width:130px;">
+        <div style="height:100%;background:{% if cg_group.pct >= 75 %}#16a34a{% elif cg_group.pct >= 40 %}#d97706{% else %}#dc2626{% endif %};width:{{ cg_group.pct }}%;border-radius:3px;"></div>
+      </div>
+    </div>
+    <i id="cg-arrow-{{ cgid }}" class="bi bi-chevron-right" style="color:#7c3aed;transition:transform .25s;flex-shrink:0;"></i>
+  </div>
+  <div id="cg-body-{{ cgid }}" style="display:none;">
+    {% include "timetable/_seances_ec_rows.html" with cg_group=cg_group cgid=cgid %}
+  </div>
+</div>
+{% endwith %}
+{% endfor %}
+
+{% else %}
+<div class="card-section" style="padding:40px;text-align:center;color:#94a3b8;">
+  <i class="bi bi-calendar-x" style="font-size:2.5rem;color:#e2e8f0;display:block;margin-bottom:10px;"></i>
+  <div style="font-size:.88rem;font-weight:600;color:#64748b;">Aucune séance passée trouvée.</div>
+</div>
+{% endif %}
+
+<!-- ── Modal remplissage ──────────────────────────────────────────────────── -->
+<div class="modal fade" id="logModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 20px 60px rgba(0,0,0,.2);">
+      <div class="modal-header" style="background:#7c3aed;border-radius:14px 14px 0 0;padding:16px 24px;">
+        <div style="flex:1;">
+          <h5 class="modal-title text-white fw-bold mb-1" id="logModalTitle">Cahier de Texte</h5>
+          <div id="logModalSubtitle" style="font-size:.77rem;color:rgba(255,255,255,.75);"></div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="padding:24px;">
+        <!-- Info séance -->
+        <div id="modal-session-info"
+             style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;padding:12px 16px;margin-bottom:20px;display:flex;gap:24px;flex-wrap:wrap;">
+        </div>
+        <!-- Alerte erreur -->
+        <div id="modal-error" class="alert alert-danger d-none" style="font-size:.82rem;padding:10px 14px;border-radius:8px;"></div>
+        <!-- Champs -->
+        <div class="mb-3">
+          <label style="font-size:.78rem;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">
+            <i class="bi bi-bullseye me-1"></i>Objectifs de la séance <span class="text-danger">*</span>
+          </label>
+          <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 12px;font-size:.78rem;color:#92400e;margin-bottom:8px;">
+            <i class="bi bi-info-circle-fill me-1"></i>Décrivez ce que les étudiants devront savoir ou savoir-faire à l'issue de cette séance.
+          </div>
+          <textarea id="modal-objectives" rows="4" class="form-control"
+                    placeholder="Ex : À la fin de cette séance, l'étudiant devra être capable de…"
+                    style="font-size:.85rem;resize:vertical;"></textarea>
+        </div>
+        <div class="mb-3">
+          <label style="font-size:.78rem;font-weight:700;color:#0e7490;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">
+            <i class="bi bi-text-paragraph me-1"></i>Contenu réalisé
+          </label>
+          <textarea id="modal-content" rows="5" class="form-control"
+                    placeholder="Points du cours abordés, exercices traités, documents distribués…"
+                    style="font-size:.85rem;resize:vertical;"></textarea>
+        </div>
+        <div>
+          <label style="font-size:.78rem;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">
+            <i class="bi bi-chat-left-text me-1"></i>Observations / Remarques
+          </label>
+          <textarea id="modal-remarks" rows="2" class="form-control"
+                    placeholder="Difficultés rencontrées, points à reprendre, absences notables…"
+                    style="font-size:.85rem;resize:vertical;"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:14px 24px;border-top:1px solid #f1f5f9;">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-primary btn-sm px-4" id="modal-save-btn" style="background:#7c3aed;border-color:#7c3aed;">
+          <i class="bi bi-journal-check me-1"></i>Enregistrer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CSRF_LOG   = '{{ csrf_token }}';
+const LOG_BASE   = "{% url 'timetable:session_log_edit' 0 '0000-00-00' %}".replace('/0/0000-00-00/', '/');
+
+let _currentEntryPk  = null;
+let _currentDateStr  = null;
+let _currentRowKey   = null;
+
+function toggleSemBlock(id) {
+  const body  = document.getElementById('sem-block-body-' + id);
+  const arrow = document.getElementById('sem-block-arrow-' + id);
+  const open  = body.style.display !== 'none';
+  body.style.display    = open ? 'none' : 'block';
+  arrow.style.transform = open ? 'rotate(-90deg)' : '';
+}
+function toggleCG(id) {
+  const body  = document.getElementById('cg-body-' + id);
+  const arrow = document.getElementById('cg-arrow-' + id);
+  const open  = body.style.display === 'block';
+  body.style.display    = open ? 'none' : 'block';
+  arrow.style.transform = open ? '' : 'rotate(90deg)';
+}
+function toggleEC(id) {
+  const body  = document.getElementById('ec-body-' + id);
+  const arrow = document.getElementById('ec-arrow-' + id);
+  const open  = body.style.display === 'block';
+  body.style.display    = open ? 'none' : 'block';
+  arrow.style.transform = open ? '' : 'rotate(90deg)';
+}
+
+// Ouvrir automatiquement les classes ayant des séances non renseignées
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('[id^="cg-body-"]').forEach(function(body) {
+    const hasUnfilled = body.querySelector('[style*="fff9f9"]');
+    if (hasUnfilled) {
+      body.style.display = 'block';
+      const arrow = document.getElementById('cg-arrow-' + body.id.replace('cg-body-', ''));
+      if (arrow) arrow.style.transform = 'rotate(90deg)';
+    }
+  });
+  // Si une seule classe, l'ouvrir directement
+  const bodies = document.querySelectorAll('[id^="cg-body-"]');
+  if (bodies.length === 1) {
+    bodies[0].style.display = 'block';
+    const arrow = document.getElementById('cg-arrow-' + bodies[0].id.replace('cg-body-', ''));
+    if (arrow) arrow.style.transform = 'rotate(90deg)';
+  }
+});
+
+// Ouvrir modal au clic sur Modifier/Remplir
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.btn-open-log');
+  if (!btn) return;
+
+  _currentEntryPk = btn.dataset.entryPk;
+  _currentDateStr = btn.dataset.dateStr;
+  _currentRowKey  = _currentEntryPk + '-' + _currentDateStr.replace(/-/g, '');
+
+  // Remplir l'en-tête modal
+  document.getElementById('logModalTitle').textContent = btn.dataset.subject;
+  document.getElementById('logModalSubtitle').innerHTML =
+    `<i class="bi bi-people-fill me-1"></i>${btn.dataset.class} &nbsp;·&nbsp; `
+    + `<i class="bi bi-clock me-1"></i>${btn.dataset.horaire}`;
+
+  // Info séance
+  document.getElementById('modal-session-info').innerHTML = `
+    <div><div style="font-size:.65rem;color:#7c3aed;font-weight:700;text-transform:uppercase;">Date</div>
+         <div style="font-weight:700;color:#1e3a5f;font-size:.85rem;">${btn.dataset.dateFr}</div>
+         <div style="font-size:.68rem;color:#94a3b8;">${btn.dataset.day}</div></div>
+    <div><div style="font-size:.65rem;color:#7c3aed;font-weight:700;text-transform:uppercase;">Horaire</div>
+         <div style="font-weight:700;color:#1e3a5f;font-size:.85rem;">${btn.dataset.horaire}</div></div>
+    <div><div style="font-size:.65rem;color:#7c3aed;font-weight:700;text-transform:uppercase;">Classe</div>
+         <div style="font-weight:700;color:#1e3a5f;font-size:.85rem;">${btn.dataset.class}</div></div>`;
+
+  // Pré-remplir les champs
+  document.getElementById('modal-objectives').value = btn.dataset.objectives || '';
+  document.getElementById('modal-content').value    = btn.dataset.content    || '';
+  document.getElementById('modal-remarks').value    = btn.dataset.remarks    || '';
+  document.getElementById('modal-error').classList.add('d-none');
+
+  const modal = new bootstrap.Modal(document.getElementById('logModal'));
+  modal.show();
+});
+
+// Enregistrer via AJAX
+document.getElementById('modal-save-btn').addEventListener('click', function() {
+  const objectives = document.getElementById('modal-objectives').value.trim();
+  const content    = document.getElementById('modal-content').value.trim();
+  const remarks    = document.getElementById('modal-remarks').value.trim();
+  const errDiv     = document.getElementById('modal-error');
+
+  if (!objectives) {
+    errDiv.textContent = "Les objectifs sont obligatoires.";
+    errDiv.classList.remove('d-none');
+    document.getElementById('modal-objectives').focus();
+    return;
+  }
+  errDiv.classList.add('d-none');
+
+  const saveBtn = this;
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Enregistrement…';
+
+  const url = `${LOG_BASE}${_currentEntryPk}/${_currentDateStr}/`;
+  fetch(url, {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': CSRF_LOG,
+      'X-Requested-With': 'XMLHttpRequest',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({ objectives, content, remarks }),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) {
+      errDiv.textContent = data.error;
+      errDiv.classList.remove('d-none');
+      return;
+    }
+    // Fermer le modal
+    bootstrap.Modal.getInstance(document.getElementById('logModal')).hide();
+
+    // Mettre à jour l'affichage inline
+    const rowEl = document.getElementById('session-row-' + _currentRowKey);
+    if (rowEl) {
+      rowEl.style.background = '';
+      // Mettre à jour le badge statut
+      const badgeEl = rowEl.querySelector('[data-badge]') || rowEl.querySelector('span[style*="fee2e2"]') || rowEl.querySelector('span[style*="dcfce7"]');
+      if (badgeEl) {
+        badgeEl.style.background = '#dcfce7';
+        badgeEl.style.color      = '#166534';
+        badgeEl.innerHTML        = '<i class="bi bi-check-circle-fill me-1"></i>Renseigné';
+      }
+      // Mettre à jour la zone de contenu
+      const displayEl = document.getElementById('content-display-' + _currentRowKey);
+      if (displayEl) {
+        let html = '';
+        if (data.objectives) html += `
+          <div style="margin-bottom:6px;">
+            <div style="font-size:.68rem;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Objectifs</div>
+            <div style="font-size:.78rem;color:#374151;background:#f0f4ff;border-left:3px solid #6366f1;padding:6px 10px;border-radius:0 6px 6px 0;">${escHtml(data.objectives)}</div>
+          </div>`;
+        if (data.content) html += `
+          <div style="margin-bottom:6px;">
+            <div style="font-size:.68rem;font-weight:700;color:#0e7490;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Contenu réalisé</div>
+            <div style="font-size:.78rem;color:#374151;background:#f0f9ff;border-left:3px solid #0e7490;padding:6px 10px;border-radius:0 6px 6px 0;">${escHtml(data.content)}</div>
+          </div>`;
+        if (data.remarks) html += `
+          <div>
+            <div style="font-size:.68rem;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Observations</div>
+            <div style="font-size:.78rem;color:#374151;background:#fffbeb;border-left:3px solid #d97706;padding:6px 10px;border-radius:0 6px 6px 0;">${escHtml(data.remarks)}</div>
+          </div>`;
+        displayEl.innerHTML = html;
+      }
+      // Mettre à jour le bouton
+      const openBtn = rowEl.querySelector('.btn-open-log');
+      if (openBtn) {
+        openBtn.className = 'btn btn-sm btn-outline-primary btn-open-log';
+        openBtn.innerHTML = '<i class="bi bi-pencil-square me-1"></i>Modifier';
+        openBtn.dataset.objectives = data.objectives;
+        openBtn.dataset.content    = data.content;
+        openBtn.dataset.remarks    = data.remarks;
+      }
+    }
+  })
+  .catch(() => {
+    errDiv.textContent = 'Erreur réseau. Veuillez réessayer.';
+    errDiv.classList.remove('d-none');
+  })
+  .finally(() => {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i class="bi bi-journal-check me-1"></i>Enregistrer';
+  });
+});
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+{% endblock %}

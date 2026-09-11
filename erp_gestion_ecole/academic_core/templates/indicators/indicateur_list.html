@@ -1,0 +1,142 @@
+{% extends "base/base.html" %}
+
+{% block title %}Indicateurs{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-speedometer2 me-2"></i>Indicateurs
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Pilotage et Suivi Budgétaire</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap no-print">
+    <a href="{% url 'accounting:budget_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    <a href="{% url 'indicators:indicateur_import' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-file-earmark-arrow-up-fill me-1"></i>Importer
+    </a>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+      <i class="bi bi-printer-fill me-1"></i>Imprimer
+    </button>
+    <a href="{% url 'indicators:indicateur_pdf' %}" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>Télécharger PDF
+    </a>
+    <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('indModal')).show()">
+      <i class="bi bi-plus-lg me-1"></i>Nouvel indicateur
+    </button>
+  </div>
+</div>
+
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Code</th>
+          <th>Libellé</th>
+          <th>Responsable</th>
+          <th class="text-end">Cible</th>
+          <th class="text-end">Actuelle</th>
+          <th class="text-center">Réalisation</th>
+          <th class="text-center no-print" style="width:150px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in indicateurs %}
+        <tr>
+          <td style="padding:8px 16px;font-weight:700;color:var(--navy);">
+            <a href="{% url 'indicators:indicateur_detail' i.pk %}" style="text-decoration:none;color:inherit;">{{ i.code }}</a>
+          </td>
+          <td>{{ i.libelle }}</td>
+          <td style="font-size:.78rem;">{{ i.responsable.get_full_name|default:"—" }}</td>
+          <td class="text-end">{{ i.valeur_cible|floatformat:2 }} {{ i.unite }}</td>
+          <td class="text-end">{{ i.valeur_actuelle|floatformat:2 }} {{ i.unite }}</td>
+          <td class="text-center">
+            <span style="border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;
+              {% if i.etat == 'vert' %}background:#dcfce7;color:#166534;
+              {% elif i.etat == 'orange' %}background:#fef3c7;color:#92400e;
+              {% else %}background:#fee2e2;color:#991b1b;{% endif %}">
+              {{ i.taux_realisation|floatformat:0 }}%
+            </span>
+          </td>
+          <td class="text-center no-print">
+            <div class="d-flex gap-1 justify-content-center">
+              <a href="{% url 'indicators:indicateur_detail' i.pk %}" class="btn btn-sm" style="background:#f1f5f9;color:#334155;border-radius:7px;padding:3px 10px;font-size:.72rem;">Détail</a>
+              <form method="post" action="{% url 'indicators:indicateur_delete' i.pk %}" onsubmit="return confirm('Supprimer cet indicateur ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:3px 10px;font-size:.72rem;">Supprimer</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:40px;">Aucun indicateur défini.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="indModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nouvel indicateur</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'indicators:indicateur_create' %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="row mb-3">
+            <div class="col-6"><label class="form-label fw-semibold" style="font-size:.82rem;">Code <span class="text-danger">*</span></label>
+              <input type="text" name="code" class="form-control" required></div>
+            <div class="col-6"><label class="form-label fw-semibold" style="font-size:.82rem;">Libellé <span class="text-danger">*</span></label>
+              <input type="text" name="libelle" class="form-control" required></div>
+          </div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Formule de calcul</label>
+            <input type="text" name="formule" class="form-control"></div>
+          <div class="row mb-3">
+            <div class="col-6"><label class="form-label fw-semibold" style="font-size:.82rem;">Source de la donnée</label>
+              <input type="text" name="source" class="form-control"></div>
+            <div class="col-6"><label class="form-label fw-semibold" style="font-size:.82rem;">Responsable</label>
+              <select name="responsable" class="form-select">
+                <option value="">— Aucun —</option>{% for u in users %}<option value="{{ u.pk }}">{{ u.get_full_name }}</option>{% endfor %}
+              </select></div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-4"><label class="form-label fw-semibold" style="font-size:.82rem;">Périodicité</label>
+              <select name="periodicite" class="form-select">
+                {% for val, label in PERIODICITE_CHOICES %}<option value="{{ val }}" {% if val == 'trimestrielle' %}selected{% endif %}>{{ label }}</option>{% endfor %}
+              </select></div>
+            <div class="col-4"><label class="form-label fw-semibold" style="font-size:.82rem;">Unité</label>
+              <input type="text" name="unite" class="form-control" placeholder="%, FCFA, nombre…"></div>
+            <div class="col-4"><label class="form-label fw-semibold" style="font-size:.82rem;">Sens d'amélioration</label>
+              <select name="sens_amelioration" class="form-select">
+                {% for val, label in SENS_CHOICES %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+              </select></div>
+          </div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Valeur cible <span class="text-danger">*</span></label>
+            <input type="number" name="valeur_cible" class="form-control" step="0.01" required></div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Rattachement au Plan Stratégique</label>
+            <select name="rattachement" class="form-select">
+              <option value="">— Aucun —</option>
+              {% for label, ct, objs in rattachements %}
+              <optgroup label="{{ label }}">
+                {% for o in objs %}<option value="{{ ct.pk }}|{{ o.pk }}">{{ o.code }} — {{ o.libelle }}</option>{% endfor %}
+              </optgroup>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

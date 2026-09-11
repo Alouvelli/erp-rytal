@@ -1,0 +1,64 @@
+{% extends 'base/base.html' %}
+{% block title %}Mes demandes de recommandation{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Mes recommandations</li>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-envelope-paper-fill"></i></span>
+    Mes demandes de recommandation
+  </h1>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title">Nouvelle demande</h6></div>
+      <div class="p-3">
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Destinataire</label>
+            {{ form.destinataire }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Programme / poste concerné</label>
+            {{ form.programme_concerne }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Motif de la demande <span class="text-danger">*</span></label>
+            {{ form.motif }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Observations complémentaires</label>
+            {{ form.observations_etudiant }}
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-send me-1"></i>Soumettre la demande</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title">Mes demandes</h6></div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Destinataire</th><th>Statut</th><th>Date</th><th></th></tr></thead>
+          <tbody>
+            {% for r in requests %}
+            <tr>
+              <td style="font-size:.82rem;">{{ r.destinataire|default:"—" }}</td>
+              <td><span class="badge bg-{{ r.statut_color }}">{{ r.get_status_display }}</span></td>
+              <td style="font-size:.82rem;">{{ r.date_demande|date:"d/m/Y" }}</td>
+              <td>{% if r.lettre_pdf %}<a href="{{ r.lettre_pdf.url }}" target="_blank"><i class="bi bi-file-earmark-pdf"></i></a>{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Aucune demande soumise.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

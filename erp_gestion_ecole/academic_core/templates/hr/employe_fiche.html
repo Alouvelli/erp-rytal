@@ -1,0 +1,406 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Fiche — {{ employe.get_full_name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-statut { display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:.73rem;font-weight:600; }
+.bs-PRESENT      { background:#dcfce7;color:#15803d; }
+.bs-ABSENT       { background:#fee2e2;color:#b91c1c; }
+.bs-RETARD       { background:#fef3c7;color:#92400e; }
+.bs-CONGE        { background:#e0f2fe;color:#0369a1; }
+.bs-DEMI_JOURNEE { background:#f1f5f9;color:#475569; }
+.bs-TELETRAVAIL  { background:#ede9fe;color:#5b21b6; }
+.bs-FERIE        { background:#f1f5f9;color:#374151; }
+
+.cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.cal-header { text-align:center; font-size:.68rem; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:4px 0; }
+.cal-day {
+  aspect-ratio:1; border-radius:8px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; font-size:.72rem; font-weight:600;
+  border:1.5px solid transparent; cursor:default; position:relative;
+  min-height:40px;
+}
+.cal-day.weekend  { background:#f8fafc; color:#cbd5e1; }
+.cal-day.empty    { background:transparent; }
+.cal-day.today    { border-color:#0ea5e9 !important; }
+.cal-day .day-num { font-size:.7rem; color:#94a3b8; margin-bottom:2px; }
+.cal-day .dot     { width:8px;height:8px;border-radius:50%;margin-top:1px; }
+
+.cal-PRESENT      { background:#dcfce7; border-color:#86efac; color:#15803d; }
+.cal-ABSENT       { background:#fee2e2; border-color:#fca5a5; color:#b91c1c; }
+.cal-RETARD       { background:#fef3c7; border-color:#fde68a; color:#92400e; }
+.cal-CONGE        { background:#e0f2fe; border-color:#7dd3fc; color:#0369a1; }
+.cal-DEMI_JOURNEE { background:#f1f5f9; border-color:#cbd5e1; color:#475569; }
+.cal-TELETRAVAIL  { background:#ede9fe; border-color:#c4b5fd; color:#5b21b6; }
+.cal-FERIE        { background:#e5e7eb; border-color:#9ca3af; color:#4b5563; }
+
+.stat-pill {
+  border-radius:10px; padding:12px 16px; text-align:center;
+  flex:1; min-width:80px;
+}
+.month-nav a { display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;border-radius:8px;border:1.5px solid #e2e8f0;
+  color:#374151;text-decoration:none; }
+.month-nav a:hover { background:#eff6ff;border-color:#93c5fd; }
+
+.badge-conge-statut { padding:3px 10px;border-radius:999px;font-size:.72rem;font-weight:600; }
+.bc-EN_ATTENTE { background:#fef3c7;color:#92400e; }
+.bc-APPROUVE   { background:#dcfce7;color:#15803d; }
+.bc-REJETE     { background:#fee2e2;color:#b91c1c; }
+
+.badge-contrat-statut { padding:3px 10px;border-radius:999px;font-size:.72rem;font-weight:600; }
+.ct-ACTIF     { background:#dcfce7;color:#15803d; }
+.ct-SUSPENDU  { background:#fef3c7;color:#92400e; }
+.ct-TERMINE   { background:#f1f5f9;color:#475569; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'hr:dashboard' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+      <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#0d2244,#1a3a6b);
+                  display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span style="color:#fff;font-size:1.1rem;font-weight:700;">
+          {{ employe.first_name|first|upper }}{{ employe.last_name|first|upper }}
+        </span>
+      </div>
+      <div>
+        <h5 class="mb-0 fw-bold">{{ employe.get_full_name }}</h5>
+        <small class="text-muted">{{ employe.role.get_name_display|default:'—' }} — {{ employe.email }}</small>
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'hr:conge_create' %}" class="btn btn-sm btn-outline-primary fw-semibold">
+        <i class="bi bi-calendar-plus me-1"></i>Congé
+      </a>
+      <a href="{% url 'hr:pointage_jour' %}?date={{ today|date:'Y-m-d' }}" class="btn btn-sm btn-primary fw-semibold">
+        <i class="bi bi-pencil-square me-1"></i>Pointer aujourd'hui
+      </a>
+    </div>
+  </div>
+
+  <!-- Nav mois -->
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <div class="month-nav d-flex align-items-center gap-2">
+      <a href="?year={{ prev_year }}&month={{ prev_month }}"><i class="bi bi-chevron-left"></i></a>
+      <span class="fw-bold" style="min-width:150px;text-align:center;">{{ month_label }} {{ year }}</span>
+      <a href="?year={{ next_year }}&month={{ next_month }}"><i class="bi bi-chevron-right"></i></a>
+    </div>
+    <a href="?year={{ today.year }}&month={{ today.month }}" class="btn btn-sm btn-outline-secondary">Ce mois</a>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- Calendrier + stats -->
+    <div class="col-lg-7">
+
+      <!-- Stats du mois -->
+      <div class="d-flex gap-2 mb-3 flex-wrap">
+        <div class="stat-pill" style="background:#dcfce7;color:#15803d;">
+          <div class="fw-bold fs-5">{{ stats_map.PRESENT|default:0 }}</div>
+          <div style="font-size:.7rem;">Présents</div>
+        </div>
+        <div class="stat-pill" style="background:#fee2e2;color:#b91c1c;">
+          <div class="fw-bold fs-5">{{ stats_map.ABSENT|default:0 }}</div>
+          <div style="font-size:.7rem;">Absents</div>
+        </div>
+        <div class="stat-pill" style="background:#fef3c7;color:#92400e;">
+          <div class="fw-bold fs-5">{{ stats_map.RETARD|default:0 }}</div>
+          <div style="font-size:.7rem;">Retards</div>
+        </div>
+        <div class="stat-pill" style="background:#e0f2fe;color:#0369a1;">
+          <div class="fw-bold fs-5">{{ stats_map.CONGE|default:0 }}</div>
+          <div style="font-size:.7rem;">Congés</div>
+        </div>
+        <div class="stat-pill" style="background:#ede9fe;color:#5b21b6;">
+          <div class="fw-bold fs-5">{{ stats_map.TELETRAVAIL|default:0 }}</div>
+          <div style="font-size:.7rem;">Télétravail</div>
+        </div>
+        <div class="stat-pill" style="background:#f1f5f9;color:#475569;">
+          <div class="fw-bold fs-5">{{ stats_map.DEMI_JOURNEE|default:0 }}</div>
+          <div style="font-size:.7rem;">½ journée</div>
+        </div>
+      </div>
+
+      <!-- Calendrier -->
+      <div class="card border-0 shadow-sm p-3">
+        <div class="cal-grid mb-2">
+          {% for j in "LunMarMerJeuVenSamDim"|make_list %}{% endfor %}
+          <div class="cal-header">Lun</div>
+          <div class="cal-header">Mar</div>
+          <div class="cal-header">Mer</div>
+          <div class="cal-header">Jeu</div>
+          <div class="cal-header">Ven</div>
+          <div class="cal-header">Sam</div>
+          <div class="cal-header">Dim</div>
+        </div>
+
+        <div class="cal-grid">
+          {% for entry in cal_days %}
+          {% if forloop.first %}
+            {% with pad=entry.date.weekday %}
+              {% for i in "0123456"|slice:":pad" %}<div class="cal-day empty"></div>{% endfor %}
+            {% endwith %}
+          {% endif %}
+
+          {% if entry.presence %}
+          <div class="cal-day cal-{{ entry.presence.statut }}{% if entry.date == today %} today{% endif %}"
+               title="{{ entry.date|date:'d/m/Y' }} — {{ entry.presence.get_statut_display }}{% if entry.presence.heure_arrivee %} ({{ entry.presence.heure_arrivee|time:'H:i' }}){% endif %}">
+            <div class="day-num">{{ entry.date.day }}</div>
+            <div style="font-size:.6rem;font-weight:700;">{{ entry.presence.statut|slice:":1" }}</div>
+          </div>
+          {% elif entry.is_weekend %}
+          <div class="cal-day weekend{% if entry.date == today %} today{% endif %}" title="{{ entry.date|date:'d/m/Y' }} — Weekend">
+            <div class="day-num">{{ entry.date.day }}</div>
+          </div>
+          {% else %}
+          <div class="cal-day{% if entry.date == today %} today{% endif %}" style="background:#f8fafc;color:#cbd5e1;" title="{{ entry.date|date:'d/m/Y' }} — Non pointé">
+            <div class="day-num">{{ entry.date.day }}</div>
+            <div style="font-size:.6rem;color:#e2e8f0;">—</div>
+          </div>
+          {% endif %}
+          {% endfor %}
+        </div>
+
+        <!-- Légende -->
+        <div class="d-flex flex-wrap gap-2 mt-3 pt-3 border-top">
+          {% for code, label in STATUT_CHOICES %}
+          <span class="badge-statut bs-{{ code }}" style="font-size:.67rem;">{{ label }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Historique présences + congés -->
+    <div class="col-lg-5">
+
+      <!-- Dernières présences du mois -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3 fw-bold d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-clock-history text-primary me-2"></i>Présences du mois</span>
+          <a href="{% url 'hr:presence_list' %}?user_id={{ employe.pk }}&year={{ year }}&month={{ month }}" class="btn btn-xs btn-outline-secondary" style="font-size:.72rem;padding:3px 9px;">Tout voir</a>
+        </div>
+        <div class="card-body p-0" style="max-height:300px;overflow-y:auto;">
+          {% if presences %}
+          <ul class="list-group list-group-flush">
+            {% for p in presences|dictsortreversed:"date" %}
+            <li class="list-group-item d-flex align-items-center gap-3 py-2 px-3">
+              <div style="font-size:.78rem;color:#64748b;white-space:nowrap;min-width:60px;">{{ p.date|date:"d/m/Y" }}</div>
+              <span class="badge-statut bs-{{ p.statut }}" style="flex-shrink:0;">{{ p.get_statut_display }}</span>
+              <div style="font-size:.75rem;color:#94a3b8;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                {% if p.heure_arrivee %}{{ p.heure_arrivee|time:"H:i" }}{% if p.heure_depart %} → {{ p.heure_depart|time:"H:i" }} ({{ p.duree_label }}){% endif %}{% endif %}
+                {% if p.justification %} — {{ p.justification|truncatechars:30 }}{% endif %}
+              </div>
+              {% if is_manager %}
+              <div class="d-flex gap-1">
+                <a href="{% url 'hr:presence_edit' pk=p.pk %}" class="btn btn-xs btn-outline-primary" style="padding:2px 6px;font-size:.68rem;"><i class="bi bi-pencil"></i></a>
+                <form method="post" action="{% url 'hr:presence_delete' pk=p.pk %}" onsubmit="return confirm('Supprimer ?');" style="display:inline;">
+                  {% csrf_token %}<button class="btn btn-xs btn-outline-danger" style="padding:2px 6px;font-size:.68rem;"><i class="bi bi-trash"></i></button>
+                </form>
+              </div>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="text-center py-4 text-muted" style="font-size:.85rem;">
+            <i class="bi bi-clipboard-x d-block" style="font-size:1.5rem;opacity:.3;"></i>
+            Aucune présence ce mois-ci
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Congés récents -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3 fw-bold d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-calendar-range text-info me-2"></i>Congés récents</span>
+          <a href="{% url 'hr:conge_create' %}" class="btn btn-xs btn-outline-primary" style="font-size:.72rem;padding:3px 9px;">
+            <i class="bi bi-plus"></i> Nouveau
+          </a>
+        </div>
+        <div class="card-body p-0">
+          {% if conges %}
+          <ul class="list-group list-group-flush">
+            {% for c in conges %}
+            <li class="list-group-item py-2 px-3">
+              <div class="d-flex align-items-start justify-content-between gap-2">
+                <div>
+                  <div class="fw-semibold" style="font-size:.83rem;">{{ c.get_type_conge_display }}</div>
+                  <div style="font-size:.74rem;color:#64748b;">
+                    {{ c.date_debut|date:"d/m/Y" }} → {{ c.date_fin|date:"d/m/Y" }}
+                    <span class="text-muted">({{ c.nombre_jours }} j)</span>
+                  </div>
+                  {% if c.motif %}<div style="font-size:.72rem;color:#94a3b8;">{{ c.motif|truncatechars:50 }}</div>{% endif %}
+                </div>
+                <div class="d-flex flex-column align-items-end gap-1">
+                  <span class="badge-conge-statut bc-{{ c.statut }}">{{ c.get_statut_display }}</span>
+                  {% if c.statut == 'EN_ATTENTE' and is_manager %}
+                  <a href="{% url 'hr:conge_review' pk=c.pk %}" class="btn btn-xs btn-warning" style="font-size:.68rem;padding:2px 7px;">Traiter</a>
+                  {% endif %}
+                </div>
+              </div>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="text-center py-4 text-muted" style="font-size:.85rem;">
+            <i class="bi bi-calendar-x d-block" style="font-size:1.5rem;opacity:.3;"></i>
+            Aucun congé enregistré
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Carrière & Contrats -->
+  <div class="row g-4 mt-1">
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3 fw-bold d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-file-earmark-text text-primary me-2"></i>Contrats</span>
+          {% if is_manager %}
+          <button class="btn btn-xs btn-outline-primary" style="font-size:.72rem;padding:3px 9px;" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#form-contrat">
+            <i class="bi bi-plus"></i> Nouveau
+          </button>
+          {% endif %}
+        </div>
+        {% if is_manager %}
+        <div class="collapse" id="form-contrat">
+          <form method="post" action="{% url 'hr:contract_create' user_pk=employe.pk %}" class="p-3 border-bottom bg-light">
+            {% csrf_token %}
+            <div class="row g-2">
+              <div class="col-6">
+                <select name="type_contrat" class="form-select form-select-sm">
+                  <option value="CDI">CDI</option>
+                  <option value="CDD">CDD</option>
+                  <option value="STAGE">Stage</option>
+                  <option value="INTERIM">Intérim</option>
+                  <option value="PRESTATION">Prestation</option>
+                </select>
+              </div>
+              <div class="col-6"><input type="number" step="1" name="salaire_brut" class="form-control form-control-sm" placeholder="Salaire brut"></div>
+              <div class="col-6"><input type="date" name="date_debut" class="form-control form-control-sm" required></div>
+              <div class="col-6"><input type="date" name="date_fin" class="form-control form-control-sm" placeholder="Date de fin"></div>
+              <div class="col-6"><input type="date" name="signe_le" class="form-control form-control-sm" placeholder="Signé le"></div>
+              <div class="col-6"><button class="btn btn-sm btn-primary w-100">Enregistrer</button></div>
+            </div>
+          </form>
+        </div>
+        {% endif %}
+        <div class="card-body p-0" style="max-height:340px;overflow-y:auto;">
+          {% if contrats %}
+          <ul class="list-group list-group-flush">
+            {% for c in contrats %}
+            <li class="list-group-item py-2 px-3">
+              <div class="d-flex align-items-start justify-content-between gap-2">
+                <div>
+                  <div class="fw-semibold" style="font-size:.83rem;">{{ c.get_type_contrat_display }}</div>
+                  <div style="font-size:.74rem;color:#64748b;">
+                    {{ c.date_debut|date:"d/m/Y" }} {% if c.date_fin %}→ {{ c.date_fin|date:"d/m/Y" }}{% else %}(en cours){% endif %}
+                    {% if c.salaire_brut %} — {{ c.salaire_brut|floatformat:0 }} FCFA{% endif %}
+                  </div>
+                  {% for a in c.avenants.all %}
+                  <div style="font-size:.7rem;color:#94a3b8;" class="ps-2 border-start mt-1">
+                    <i class="bi bi-arrow-return-right"></i> {{ a.objet }} ({{ a.date_effet|date:"d/m/Y" }})
+                  </div>
+                  {% endfor %}
+                </div>
+                <span class="badge-contrat-statut ct-{{ c.statut }}">{{ c.get_statut_display }}</span>
+              </div>
+              {% if is_manager %}
+              <button class="btn btn-xs btn-link p-0 mt-1" style="font-size:.7rem;" type="button"
+                      data-bs-toggle="collapse" data-bs-target="#avenant-{{ c.pk }}">+ avenant</button>
+              <div class="collapse mt-1" id="avenant-{{ c.pk }}">
+                <form method="post" action="{% url 'hr:contract_amendment_create' pk=c.pk %}" class="d-flex gap-1">
+                  {% csrf_token %}
+                  <input type="date" name="date_effet" class="form-control form-control-sm" style="max-width:130px;" required>
+                  <input type="text" name="objet" class="form-control form-control-sm" placeholder="Objet" required>
+                  <button class="btn btn-sm btn-outline-primary">OK</button>
+                </form>
+              </div>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="text-center py-4 text-muted" style="font-size:.85rem;">
+            <i class="bi bi-file-earmark-x d-block" style="font-size:1.5rem;opacity:.3;"></i>
+            Aucun contrat enregistré
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3 fw-bold d-flex justify-content-between align-items-center">
+          <span><i class="bi bi-signpost-split text-info me-2"></i>Carrière</span>
+          {% if is_manager %}
+          <button class="btn btn-xs btn-outline-primary" style="font-size:.72rem;padding:3px 9px;" type="button"
+                  data-bs-toggle="collapse" data-bs-target="#form-affectation">
+            <i class="bi bi-plus"></i> Nouvelle affectation
+          </button>
+          {% endif %}
+        </div>
+        {% if is_manager %}
+        <div class="collapse" id="form-affectation">
+          <form method="post" action="{% url 'hr:assignment_create' user_pk=employe.pk %}" class="p-3 border-bottom bg-light">
+            {% csrf_token %}
+            <div class="row g-2">
+              <div class="col-6">
+                <select name="type_affectation" class="form-select form-select-sm">
+                  <option value="RECRUTEMENT">Recrutement</option>
+                  <option value="PROMOTION">Promotion</option>
+                  <option value="MOBILITE" selected>Mobilité interne</option>
+                </select>
+              </div>
+              <div class="col-6"><input type="date" name="date_effet" class="form-control form-control-sm" required></div>
+              <div class="col-6"><input type="text" name="poste" class="form-control form-control-sm" placeholder="Poste"></div>
+              <div class="col-6">
+                <select name="department" class="form-select form-select-sm">
+                  <option value="">— Département —</option>
+                  {% for d in departments %}<option value="{{ d.pk }}">{{ d.name }}</option>{% endfor %}
+                </select>
+              </div>
+              <div class="col-12"><input type="text" name="note" class="form-control form-control-sm" placeholder="Note"></div>
+              <div class="col-12"><button class="btn btn-sm btn-primary w-100">Enregistrer</button></div>
+            </div>
+          </form>
+        </div>
+        {% endif %}
+        <div class="card-body p-0" style="max-height:340px;overflow-y:auto;">
+          {% if affectations %}
+          <ul class="list-group list-group-flush">
+            {% for a in affectations %}
+            <li class="list-group-item py-2 px-3">
+              <div class="fw-semibold" style="font-size:.83rem;">{{ a.get_type_affectation_display }}{% if a.poste %} — {{ a.poste }}{% endif %}</div>
+              <div style="font-size:.74rem;color:#64748b;">
+                {{ a.date_effet|date:"d/m/Y" }}{% if a.department %} — {{ a.department.name }}{% endif %}
+              </div>
+              {% if a.note %}<div style="font-size:.72rem;color:#94a3b8;">{{ a.note|truncatechars:60 }}</div>{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="text-center py-4 text-muted" style="font-size:.85rem;">
+            <i class="bi bi-signpost-split d-block" style="font-size:1.5rem;opacity:.3;"></i>
+            Aucune affectation enregistrée
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

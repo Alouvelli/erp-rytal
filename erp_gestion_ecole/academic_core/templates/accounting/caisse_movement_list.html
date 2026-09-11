@@ -1,0 +1,549 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Entrée & Sortie Caisse{% endblock %}
+
+{% block content %}
+<style>
+.taux-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 999px; font-size: .74rem; font-weight: 700;
+}
+.taux-high { background: #dcfce7; color: #166534; }
+.taux-low  { background: #fee2e2; color: #991b1b; }
+.taux-mid  { background: #fef3c7; color: #92400e; }
+.taux-none { background: #f1f5f9; color: #64748b; }
+.compte-badge-mandatory { color:#dc2626;font-weight:700; }
+</style>
+
+<!-- En-tête page -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-arrow-left-right me-2" style="color:#0891b2;"></i>Entrée & Sortie Caisse
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">
+      Saisie des opérations de trésorerie — Brouillard
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounting:etat_journalier' %}" class="btn btn-sm" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;">
+      <i class="bi bi-journal-text me-1"></i>Brouillard / Clôture Journée
+    </a>
+    <a href="{% url 'accounting:etat_journalier_pdf' %}?date={{ today|date:'Y-m-d' }}" target="_blank" class="btn btn-sm" style="background:#0891b2;color:#fff;">
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>PDF du jour
+    </a>
+    <a href="{% url 'accounting:demande_depense_list' %}" class="btn btn-sm" style="background:#dc2626;color:#fff;">
+      <i class="bi bi-receipt-cutoff me-1"></i>Demandes de dépense
+    </a>
+    {% if can_create %}
+    <button type="button" class="btn btn-primary btn-sm" onclick="openMovementModal('create')">
+      <i class="bi bi-plus-lg me-1"></i>Nouveau
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Bandeau compte de caisse / banque (N° compte / Nom compte) -->
+<div class="card-section mb-3" style="padding:14px 20px;background:linear-gradient(90deg,#0d2244,#173a6b);">
+  <form method="get" class="row g-2 align-items-end">
+    <input type="hidden" name="from" value="{{ date_from|date:'Y-m-d' }}">
+    <input type="hidden" name="to" value="{{ date_to|date:'Y-m-d' }}">
+    <div class="col-auto">
+      <label class="form-label mb-0" style="font-size:.72rem;font-weight:700;color:#93c5fd;">N° COMPTE</label>
+      {% if comptes_tresorerie|length > 1 %}
+      <select name="compte" class="form-select form-select-sm" onchange="this.form.submit()" style="min-width:150px;">
+        {% for c in comptes_tresorerie %}
+        <option value="{{ c.pk }}" {% if compte_caisse_defaut.pk == c.pk %}selected{% endif %}>{{ c.matricule }}</option>
+        {% endfor %}
+      </select>
+      {% else %}
+      <div class="fw-bold" style="color:#fff;font-size:.95rem;">{{ compte_caisse_defaut.matricule|default:"—" }}</div>
+      {% endif %}
+    </div>
+    <div class="col-auto">
+      <label class="form-label mb-0" style="font-size:.72rem;font-weight:700;color:#93c5fd;">NOM COMPTE</label>
+      <div class="fw-bold" style="color:#fff;font-size:.95rem;">{{ compte_caisse_defaut.libelle|default:"Aucun compte de trésorerie défini" }}</div>
+    </div>
+    {% if not compte_caisse_defaut %}
+    <div class="col-auto">
+      <a href="{% url 'accounting:compte_comptable_list' %}" class="btn btn-sm btn-warning">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>Définir un compte de caisse
+      </a>
+    </div>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Cartes résumé -->
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:1.25rem;font-weight:800;color:#166534;">{{ total_entrees|floatformat:0|intcomma }} F</div>
+      <div class="text-muted" style="font-size:.78rem;">Total entrées (période)</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:1.25rem;font-weight:800;color:#991b1b;">{{ total_sorties|floatformat:0|intcomma }} F</div>
+      <div class="text-muted" style="font-size:.78rem;">Total sorties (période)</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:1.25rem;font-weight:800;color:var(--navy);">{{ solde|floatformat:0|intcomma }} F</div>
+      <div class="text-muted" style="font-size:.78rem;">Solde net (période)</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:1.4rem;font-weight:800;color:#92400e;">{{ nb_attente }}</div>
+      <div class="text-muted" style="font-size:.78rem;">Sorties en attente de décaissement</div>
+    </div>
+  </div>
+</div>
+
+{% if not can_create %}
+<div class="alert alert-info d-flex align-items-center gap-2 mb-3" style="border-radius:10px;font-size:.82rem;">
+  <i class="bi bi-info-circle-fill"></i>
+  Seul le Trésorier Général peut saisir une entrée ou une sortie de caisse. Vous pouvez consulter les mouvements et décaisser une sortie déjà autorisée.
+</div>
+{% endif %}
+
+<!-- Filtres -->
+<div class="card-section mb-3" style="padding:16px 20px;">
+  <form method="get" class="row g-2 align-items-end">
+    <input type="hidden" name="compte" value="{{ compte_caisse_defaut.pk|default:'' }}">
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Année académique</label>
+      <select name="annee" class="form-select form-select-sm">
+        {% for y in academic_years %}
+        <option value="{{ y.pk }}" {% if selected_year.pk == y.pk %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Date début</label>
+      <input type="date" name="from" value="{{ date_from|date:'Y-m-d' }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Date Fin</label>
+      <input type="date" name="to" value="{{ date_to|date:'Y-m-d' }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Type</label>
+      <select name="type" class="form-select form-select-sm">
+        <option value="" {% if not type_filter %}selected{% endif %}>Tous</option>
+        <option value="{{ TYPE_ENTREE }}" {% if type_filter == TYPE_ENTREE %}selected{% endif %}>Entrée</option>
+        <option value="{{ TYPE_SORTIE }}" {% if type_filter == TYPE_SORTIE %}selected{% endif %}>Sortie</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Statut</label>
+      <select name="status" class="form-select form-select-sm">
+        <option value="" {% if not status_filter %}selected{% endif %}>Tous</option>
+        <option value="attente" {% if status_filter == 'attente' %}selected{% endif %}>En attente de décaissement</option>
+        <option value="execute" {% if status_filter == 'execute' %}selected{% endif %}>Exécuté</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Direction</label>
+      <select name="direction" class="form-select form-select-sm">
+        <option value="" {% if not direction_filter %}selected{% endif %}>Toutes</option>
+        {% for d in directions %}
+        <option value="{{ d.pk }}" {% if direction_filter == d.pk|stringformat:'s' %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+    </div>
+  </form>
+</div>
+
+<!-- Liste -->
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#0d2244;color:#fff;">
+          <th style="padding:10px 16px;">Num Opération</th>
+          <th>Date</th>
+          <th>Libellé</th>
+          <th class="text-end" style="color:#86efac;">Entrée</th>
+          <th class="text-end" style="color:#fca5a5;">Sortie</th>
+          <th>Bénéficiaire</th>
+          <th>Direction</th>
+          <th>N° compte</th>
+          <th>Compte associé</th>
+          <th>Saisi par</th>
+          <th class="text-center">Statut</th>
+          <th class="text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in movements %}
+        <tr>
+          <td style="padding:8px 16px;color:#94a3b8;">{{ m.pk }}</td>
+          <td>{{ m.movement_date|date:"d/m/Y" }}</td>
+          <td>
+            <div>{{ m.motif }}</div>
+            {% if m.notes %}<div style="font-size:.72rem;color:#94a3b8;">{{ m.notes }}</div>{% endif %}
+          </td>
+          <td class="text-end fw-bold" style="color:#166534;">
+            {% if m.movement_type == TYPE_ENTREE %}{{ m.amount|floatformat:0|intcomma }} F{% else %}0,00{% endif %}
+          </td>
+          <td class="text-end fw-bold" style="color:#991b1b;">
+            {% if m.movement_type == TYPE_SORTIE %}{{ m.amount|floatformat:0|intcomma }} F{% else %}0,00{% endif %}
+          </td>
+          <td style="font-size:.83rem;">{{ m.beneficiaire|default:"—" }}</td>
+          <td style="font-size:.78rem;">
+            {% if m.direction %}<span class="badge" style="background:#eef2ff;color:#4338ca;font-weight:600;">{{ m.direction.name }}</span>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td style="font-size:.78rem;color:#64748b;">{{ m.compte_caisse.matricule|default:"—" }}</td>
+          <td style="font-size:.78rem;">
+            {% if m.compte_associe %}
+            <span title="{{ m.compte_associe.libelle }}">{{ m.compte_associe.matricule }}</span>
+            {% else %}<span class="text-danger">—</span>{% endif %}
+          </td>
+          <td style="font-size:.78rem;color:#64748b;">{{ m.created_by.get_full_name|default:"—" }}</td>
+          <td class="text-center">
+            {% if m.movement_type == TYPE_ENTREE or m.is_executed %}
+            <span class="taux-badge taux-high" title="{% if m.executed_at %}Le {{ m.executed_at|date:'d/m/Y H:i' }}{% endif %}{% if m.executed_by %} par {{ m.executed_by.get_full_name }}{% endif %}">
+              <i class="bi bi-check-circle-fill me-1"></i>Exécuté
+            </span>
+            {% else %}
+            <span class="taux-badge taux-mid"><i class="bi bi-hourglass-split me-1"></i>En attente</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            <div class="d-flex gap-1 justify-content-center">
+              {% if m.movement_type == TYPE_SORTIE and not m.is_executed %}
+              <form method="post" action="{% url 'accounting:caisse_movement_decaisser' m.pk %}" onsubmit="return confirm('Confirmer le décaissement de {{ m.amount|floatformat:0 }} FCFA ({{ m.motif|escapejs }}) ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#059669;color:#fff;border-radius:7px;padding:3px 10px;font-size:.72rem;" title="Décaisser">
+                  <i class="bi bi-cash-stack me-1"></i>Décaisser
+                </button>
+              </form>
+              {% endif %}
+              {% if can_create and m.movement_type == TYPE_ENTREE or can_create and not m.is_executed %}
+              <button type="button" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 10px;font-size:.72rem;" title="Modifier"
+                      onclick="openMovementModal('edit', {{ m.pk }}, '{{ m.movement_type }}', '{{ m.amount|stringformat:'f' }}', '{{ m.movement_date|date:'Y-m-d' }}', '{{ m.motif|escapejs }}', '{{ m.beneficiaire|default:''|escapejs }}', '{{ m.piece_justificative|default:''|escapejs }}', '{{ m.notes|default:''|escapejs }}', '{{ m.categorie|default:'' }}', {{ m.compte_associe_id|default:'null' }}, {{ m.compte_caisse_id|default:'null' }}, {{ m.direction_id|default:'null' }})">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+              {% endif %}
+              <a href="{% url 'accounting:fiche_depense_detail' m.pk %}" class="btn btn-sm" style="background:#f5f3ff;color:#6d28d9;border-radius:7px;padding:3px 10px;font-size:.72rem;" title="Imprimer Bon">
+                <i class="bi bi-printer-fill"></i>
+              </a>
+              {% if can_create and m.movement_type == TYPE_ENTREE or can_create and not m.is_executed %}
+              <form method="post" action="{% url 'accounting:caisse_movement_delete' m.pk %}" onsubmit="return confirm('Supprimer ce mouvement ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:3px 10px;font-size:.72rem;" title="Supprimer">
+                  <i class="bi bi-trash-fill"></i>
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="12" class="text-center text-muted py-5">
+            <i class="bi bi-arrow-left-right" style="font-size:2rem;opacity:.4;"></i>
+            <p class="mt-2 mb-0">Aucun mouvement de caisse pour cette période.</p>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if movements %}
+      <tfoot>
+        <tr style="background:#f8fafc;border-top:2px solid #e2e8f0;font-weight:700;">
+          <td colspan="3" style="padding:10px 16px;">Total (période)</td>
+          <td class="text-end" style="color:#166534;">{{ total_entrees|floatformat:0|intcomma }} F</td>
+          <td class="text-end" style="color:#991b1b;">{{ total_sorties|floatformat:0|intcomma }} F</td>
+          <td colspan="7" class="text-end" style="padding-right:16px;">Solde : {{ solde|floatformat:0|intcomma }} F</td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+
+{% if can_create %}
+<!-- Modal mouvement (création / modification) — modèle « Saisie des opérations de trésorerie » -->
+<div class="modal fade" id="movementModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0" id="movementModalTitle"><i class="bi bi-plus-circle me-2"></i>Nouveau mouvement de caisse</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="movementForm" action="{% url 'accounting:caisse_movement_create' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="row g-2 mb-2">
+            <div class="col-md-6">
+              <label class="form-label" style="font-size:.72rem;font-weight:700;color:#64748b;">N° compte</label>
+              {% if comptes_tresorerie|length > 1 %}
+              <select name="compte_caisse" id="mv-compte-caisse" class="form-select form-select-sm">
+                {% for c in comptes_tresorerie %}
+                <option value="{{ c.pk }}" {% if compte_caisse_defaut.pk == c.pk %}selected{% endif %}>{{ c.matricule }} — {{ c.libelle }}</option>
+                {% endfor %}
+              </select>
+              {% else %}
+              <input type="hidden" name="compte_caisse" id="mv-compte-caisse" value="{{ compte_caisse_defaut.pk|default:'' }}">
+              <div class="form-control form-control-sm bg-light">{{ compte_caisse_defaut.matricule|default:"—" }} — {{ compte_caisse_defaut.libelle|default:"" }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Libellé <span class="text-danger">*</span></label>
+            <input type="text" name="motif" id="mv-motif" class="form-control" placeholder="Ex : Achat fournitures, Frais de mission, Frais de scolarité…" required>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;color:#166534;">Entrée (FCFA)</label>
+              <input type="number" name="entree_amount" id="mv-entree" class="form-control" min="1" step="500" oninput="mvOnAmountChange()">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;color:#991b1b;">Sortie (FCFA)</label>
+              <input type="number" name="sortie_amount" id="mv-sortie" class="form-control" min="1" step="500" oninput="mvOnAmountChange()">
+            </div>
+            <div class="form-text" style="font-size:.7rem;">Renseignez un montant dans un seul des deux champs.</div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Bénéficiaire ou donneur</label>
+              <input type="text" name="beneficiaire" id="mv-beneficiaire" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Date</label>
+              <input type="date" name="movement_date" id="mv-date" class="form-control" value="{{ today|date:'Y-m-d' }}">
+            </div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Direction (centre de coût)</label>
+              <select name="direction" id="mv-direction" class="form-select">
+                <option value="">— Aucune —</option>
+                {% for d in directions %}
+                <option value="{{ d.pk }}">{{ d.name }}</option>
+                {% endfor %}
+              </select>
+              <div class="form-text" style="font-size:.7rem;">Le bénéficiaire relève toujours d'une direction — permet le suivi du budget par direction.</div>
+            </div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6" id="mv-categorie-wrap">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Catégorie de dépense</label>
+              <select name="categorie" id="mv-categorie" class="form-select" onchange="mvSuggestCompteAssocie()">
+                <option value="">— Sélectionner —</option>
+                {% for val, label in CATEGORIE_CHOICES %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">N° Pièce ou note</label>
+              <input type="text" name="piece_justificative" id="mv-piece" class="form-control" placeholder="Référence pièce justificative">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold compte-badge-mandatory" style="font-size:.82rem;">
+              Compte associé <span>*</span>
+              <span id="mv-compte-filter-badge" class="d-none ms-2" style="font-size:.7rem;background:#dbeafe;color:#1d4ed8;padding:2px 8px;border-radius:10px;font-weight:500;">
+                <i class="bi bi-funnel-fill me-1"></i><span id="mv-compte-filter-label"></span>
+              </span>
+            </label>
+            <select name="compte_associe" id="mv-compte-associe" class="form-select" required>
+              <option value="">— Saisie obligatoire —</option>
+              {% for c in comptes_associes %}
+              <option value="{{ c.pk }}" data-sens="{{ c.sens }}" data-matricule="{{ c.matricule }}" data-categorie="{{ c.categorie }}">
+                {{ c.matricule }} — {{ c.libelle }}
+              </option>
+              {% endfor %}
+            </select>
+            <div id="mv-no-match-warn" class="d-none mt-1" style="font-size:.75rem;color:#b45309;background:#fef3c7;padding:4px 10px;border-radius:6px;">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>Aucun compte spécifique pour cette catégorie — tous les comptes compatibles sont affichés.
+            </div>
+            <div class="form-text" style="font-size:.7rem;">Le compte associé (contrepartie SYSCOHADA) se filtre automatiquement selon la catégorie choisie.</div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Justificatif (scan / photo)</label>
+              <input type="file" name="justificatif" id="mv-justificatif" class="form-control">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Observations</label>
+              <textarea name="notes" id="mv-notes" class="form-control" rows="1"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annulé</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-check-lg me-1"></i>Valider
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CAISSE_MOVEMENT_CREATE_URL = "{% url 'accounting:caisse_movement_create' %}";
+const MV_SENS_ENTREE = "{{ SENS_ENTREE }}";
+const MV_SENS_SORTIE = "{{ SENS_SORTIE }}";
+const MV_SENS_MIXTE  = "{{ SENS_MIXTE }}";
+const MV_CATEGORIE_COMPTE_MATRICULE = {{ CATEGORIE_COMPTE_MATRICULE_JSON|safe }};
+
+function _mvCurrentDirection() {
+  const entreeEl = document.getElementById('mv-entree');
+  const sortieEl = document.getElementById('mv-sortie');
+  if (entreeEl && entreeEl.value) return MV_SENS_ENTREE;
+  if (sortieEl && sortieEl.value) return MV_SENS_SORTIE;
+  return null;
+}
+
+function mvFilterCompteAssocie(direction) {
+  const sel = document.getElementById('mv-compte-associe');
+  const categorie = document.getElementById('mv-categorie') ? document.getElementById('mv-categorie').value : '';
+  const wantedMatricule = categorie ? MV_CATEGORIE_COMPTE_MATRICULE[categorie] : null;
+  const warn = document.getElementById('mv-no-match-warn');
+  const badge = document.getElementById('mv-compte-filter-badge');
+  const badgeLabel = document.getElementById('mv-compte-filter-label');
+
+  // Premier passage : compter les options visibles pour la catégorie
+  let catMatches = 0;
+  if (wantedMatricule) {
+    Array.from(sel.options).forEach(opt => {
+      if (!opt.value) return;
+      const sensOk = !direction || opt.dataset.sens === direction || opt.dataset.sens === MV_SENS_MIXTE;
+      if (sensOk && opt.dataset.matricule === wantedMatricule) catMatches++;
+    });
+  }
+
+  const useCatFilter = wantedMatricule && catMatches > 0;
+  let currentStillVisible = false;
+
+  Array.from(sel.options).forEach(opt => {
+    if (!opt.value) { opt.hidden = false; return; }
+    const sensOk = !direction || opt.dataset.sens === direction || opt.dataset.sens === MV_SENS_MIXTE;
+    const catOk  = !useCatFilter || opt.dataset.matricule === wantedMatricule;
+    const visible = sensOk && catOk;
+    opt.hidden = !visible;
+    if (visible && opt.selected) currentStillVisible = true;
+  });
+
+  if (!currentStillVisible) sel.value = '';
+
+  // Badge de filtre actif
+  if (useCatFilter && badgeLabel) {
+    badgeLabel.textContent = 'Filtre catégorie actif';
+    badge.classList.remove('d-none');
+  } else if (badge) {
+    badge.classList.add('d-none');
+  }
+
+  // Avertissement si aucun compte ne correspond à la catégorie
+  if (warn) {
+    if (wantedMatricule && catMatches === 0 && categorie) {
+      warn.classList.remove('d-none');
+    } else {
+      warn.classList.add('d-none');
+    }
+  }
+}
+
+function mvOnAmountChange() {
+  const entreeEl = document.getElementById('mv-entree');
+  const sortieEl = document.getElementById('mv-sortie');
+  const categorieWrap = document.getElementById('mv-categorie-wrap');
+  if (entreeEl.value) {
+    sortieEl.value = ''; sortieEl.disabled = true; entreeEl.disabled = false;
+    categorieWrap.style.display = 'none';
+    document.getElementById('mv-categorie').value = '';
+    mvFilterCompteAssocie(MV_SENS_ENTREE);
+  } else if (sortieEl.value) {
+    entreeEl.value = ''; entreeEl.disabled = true; sortieEl.disabled = false;
+    categorieWrap.style.display = '';
+    mvFilterCompteAssocie(MV_SENS_SORTIE);
+  } else {
+    entreeEl.disabled = false; sortieEl.disabled = false;
+    categorieWrap.style.display = '';
+    mvFilterCompteAssocie(null);
+  }
+}
+
+function mvSuggestCompteAssocie() {
+  const categorie = document.getElementById('mv-categorie').value;
+  const direction = _mvCurrentDirection();
+
+  // Appliquer le filtre (masque/affiche les options selon catégorie + sens)
+  mvFilterCompteAssocie(direction);
+
+  if (!categorie) return;
+  const wantedMatricule = MV_CATEGORIE_COMPTE_MATRICULE[categorie];
+  if (!wantedMatricule) return;
+
+  // Auto-sélection du premier compte visible correspondant au matricule cible
+  const sel = document.getElementById('mv-compte-associe');
+  const match = Array.from(sel.options).find(o => !o.hidden && o.dataset.matricule === wantedMatricule);
+  if (match) sel.value = match.value;
+}
+
+function openMovementModal(mode, pk, movementType, amount, dateVal, motif, beneficiaire, piece, notes, categorie, compteAssociePk, compteCaissePk, directionPk) {
+  const form  = document.getElementById('movementForm');
+  const title = document.getElementById('movementModalTitle');
+  const entreeEl = document.getElementById('mv-entree');
+  const sortieEl = document.getElementById('mv-sortie');
+
+  entreeEl.disabled = false;
+  sortieEl.disabled = false;
+  entreeEl.value = '';
+  sortieEl.value = '';
+  document.getElementById('mv-compte-associe').value = '';
+  document.getElementById('mv-categorie').value = '';
+  document.getElementById('mv-direction').value = '';
+
+  if (mode === 'edit') {
+    form.action = `/accounting/mouvements-caisse/${pk}/modifier/`;
+    title.innerHTML = '<i class="bi bi-pencil-square me-2"></i>Modifier le mouvement de caisse';
+    if (movementType === 'ENTREE') { entreeEl.value = amount; }
+    else { sortieEl.value = amount; }
+    document.getElementById('mv-date').value = dateVal || '';
+    document.getElementById('mv-motif').value = motif || '';
+    document.getElementById('mv-beneficiaire').value = beneficiaire || '';
+    document.getElementById('mv-piece').value = piece || '';
+    document.getElementById('mv-notes').value = notes || '';
+    document.getElementById('mv-categorie').value = categorie || '';
+    if (directionPk) { document.getElementById('mv-direction').value = directionPk; }
+    if (document.getElementById('mv-compte-caisse') && compteCaissePk) {
+      document.getElementById('mv-compte-caisse').value = compteCaissePk;
+    }
+    // Appliquer le filtre sens+catégorie
+    mvOnAmountChange();
+    // Restaurer le compte associé original et s'assurer qu'il reste visible
+    if (compteAssociePk) {
+      const selAssoc = document.getElementById('mv-compte-associe');
+      const existingOpt = selAssoc.querySelector(`option[value="${compteAssociePk}"]`);
+      if (existingOpt) existingOpt.hidden = false; // toujours visible en édition
+      selAssoc.value = compteAssociePk;
+    }
+  } else {
+    form.action = CAISSE_MOVEMENT_CREATE_URL;
+    title.innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nouveau mouvement de caisse';
+    form.reset();
+    document.getElementById('mv-date').value = "{{ today|date:'Y-m-d' }}";
+    // Réinitialiser le filtre et masques
+    mvFilterCompteAssocie(null);
+  }
+  new bootstrap.Modal(document.getElementById('movementModal')).show();
+}
+</script>
+{% endblock %}

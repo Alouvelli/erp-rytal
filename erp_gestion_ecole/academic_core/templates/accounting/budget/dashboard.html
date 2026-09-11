@@ -1,0 +1,157 @@
+{% extends "base/base.html" %}
+
+{% block title %}Pilotage et Suivi Budgétaire{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-clipboard-data-fill me-2" style="color:#0d2244;"></i>Pilotage et Suivi Budgétaire
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">
+      Contrôleur Interne, Administrateur d'institut, Direction Administrative et Financière
+    </p>
+  </div>
+  <form method="get" class="d-flex gap-2 align-items-end">
+    <div>
+      <label class="form-label mb-0" style="font-size:.75rem;font-weight:600;">Exercice (année académique)</label>
+      <select name="annee" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for y in academic_years %}
+        <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+</div>
+
+<div class="d-flex gap-2 flex-wrap mb-3">
+  <a href="{% url 'accounting:ligne_budgetaire_list' %}{% if selected_year %}?annee={{ selected_year.pk }}{% endif %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-list-columns-reverse me-1"></i>Lignes budgétaires
+  </a>
+  <a href="{% url 'accounting:engagement_list' %}{% if selected_year %}?annee={{ selected_year.pk }}{% endif %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-journal-check me-1"></i>Engagements
+  </a>
+  <a href="{% url 'accounting:rectificatif_list' %}{% if selected_year %}?annee={{ selected_year.pk }}{% endif %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-pencil-square me-1"></i>Rectificatifs
+  </a>
+  <a href="{% url 'accounting:source_financement_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-diagram-3 me-1"></i>Sources de financement
+  </a>
+</div>
+
+{% if not selected_year %}
+<div class="card-section" style="padding:40px;text-align:center;color:#94a3b8;">
+  <i class="bi bi-calendar-x" style="font-size:2rem;"></i>
+  <div class="mt-2">Aucune année académique disponible pour cet institut.</div>
+</div>
+{% else %}
+
+<!-- Cartes KPI -->
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="card-section" style="padding:16px 18px;">
+      <div style="font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase;">Budget révisé</div>
+      <div style="font-size:1.4rem;font-weight:800;color:var(--navy);">{{ totaux.revise|floatformat:0 }} <span style="font-size:.75rem;font-weight:600;color:#94a3b8;">FCFA</span></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card-section" style="padding:16px 18px;">
+      <div style="font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase;">Engagé</div>
+      <div style="font-size:1.4rem;font-weight:800;color:#7c3aed;">{{ totaux.engage|floatformat:0 }} <span style="font-size:.75rem;font-weight:600;color:#94a3b8;">FCFA</span></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card-section" style="padding:16px 18px;">
+      <div style="font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase;">Exécuté</div>
+      <div style="font-size:1.4rem;font-weight:800;color:#0ea5e9;">{{ totaux.execute|floatformat:0 }} <span style="font-size:.75rem;font-weight:600;color:#94a3b8;">FCFA</span></div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card-section" style="padding:16px 18px;">
+      <div style="font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase;">Disponible</div>
+      <div style="font-size:1.4rem;font-weight:800;color:#16a34a;">{{ totaux.disponible|floatformat:0 }} <span style="font-size:.75rem;font-weight:600;color:#94a3b8;">FCFA</span></div>
+      <div style="font-size:.72rem;color:#94a3b8;margin-top:2px;">Taux d'exécution global : {{ totaux.taux|floatformat:2 }}%</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-bar-chart-fill"></i></span>
+          Exécution par Direction
+        </h6>
+      </div>
+      <div class="p-3" style="position:relative;height:320px;">
+        {% if has_chart_data %}
+        <canvas id="budgetChart"></canvas>
+        {% else %}
+        <div style="text-align:center;color:#94a3b8;padding:60px 0;">Aucune ligne budgétaire pour cet exercice.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#dc2626;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-exclamation-triangle-fill"></i></span>
+          Alertes budgétaires
+        </h6>
+      </div>
+      {% if alertes %}
+      <div style="max-height:320px;overflow-y:auto;">
+        {% for l in alertes %}
+        <a href="{% url 'accounting:ligne_budgetaire_detail' l.pk %}" class="d-block" style="padding:10px 16px;border-bottom:1px solid #f1f5f9;text-decoration:none;color:inherit;">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div style="font-weight:700;font-size:.85rem;color:#1e293b;">{{ l.direction.name }}</div>
+              <div style="font-size:.75rem;color:#64748b;">{{ l.compte_comptable }}</div>
+            </div>
+            <span class="badge-kpi-{{ l.statut_kpi }}" style="border-radius:20px;padding:3px 10px;font-size:.72rem;font-weight:700;">
+              {{ l.taux_execution|floatformat:0 }}%
+            </span>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="padding:30px;text-align:center;color:#94a3b8;font-size:.85rem;">
+        <i class="bi bi-check-circle" style="font-size:1.5rem;color:#16a34a;"></i>
+        <div class="mt-2">Aucune alerte — toutes les lignes sont sous le seuil.</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<style>
+.badge-kpi-vert   { background:#dcfce7; color:#166534; }
+.badge-kpi-orange { background:#ffedd5; color:#c2410c; }
+.badge-kpi-rouge  { background:#fee2e2; color:#991b1b; }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+{% if has_chart_data %}
+<script>
+new Chart(document.getElementById('budgetChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ par_direction_labels_json|safe }},
+    datasets: [
+      { label: 'Révisé',  data: {{ par_direction_revise_json|safe }},  backgroundColor: '#1e3a5f' },
+      { label: 'Exécuté', data: {{ par_direction_execute_json|safe }}, backgroundColor: '#0ea5e9' },
+    ],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: { y: { beginAtZero: true } },
+  },
+});
+</script>
+{% endif %}
+{% endblock %}

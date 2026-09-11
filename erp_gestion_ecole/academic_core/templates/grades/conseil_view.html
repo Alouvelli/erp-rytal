@@ -1,0 +1,1066 @@
+{% extends 'base/base.html' %}
+{% block title %}Tableau de Conseil — {{ class_group.name }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'grades:conseil_list' %}">Tableau de Conseil</a></li>
+<li class="breadcrumb-item active">{{ class_group.name }} — {{ semester.label }}</li>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── Table principale ── */
+.conseil-table { font-size:.75rem; border-collapse:collapse; width:100%; }
+.conseil-table th, .conseil-table td {
+  border:1px solid #cbd5e0;
+  padding:5px 7px;
+  text-align:center;
+  vertical-align:middle;
+  white-space:nowrap;
+}
+.conseil-table td.name-col { text-align:left; white-space:normal; min-width:160px; }
+.th-navy  { background:var(--navy,#1e3a5f); color:#fff; font-weight:700; }
+.th-blue  { background:#1e40af; color:#fff; font-weight:700; }
+.th-blue2 { background:#3b82f6; color:#fff; font-weight:600; }
+.th-moy   { background:#1d4ed8; color:#fff; font-weight:700; }
+.note-ok  { color:#166534; font-weight:700; }
+.note-ko  { color:#dc2626; font-weight:700; }
+.note-na  { color:#94a3b8; }
+.ue-ok    { background:#dbeafe; }
+.ue-ko    { background:#fee2e2; }
+.row-even { background:#f8fafc; }
+.row-odd  { background:#ffffff; }
+.moy-ok   { background:#dcfce7; color:#166534; font-weight:800; }
+.moy-ko   { background:#fee2e2; color:#dc2626; font-weight:800; }
+.dec-ok   { background:#dcfce7; color:#166534; font-weight:700; font-size:.8rem; }
+.dec-ratt { background:#fff7ed; color:#c2410c; font-weight:700; font-size:.8rem; }
+
+/* ── Cartes stats ── */
+.stat-card {
+  border-radius:12px; padding:16px 22px; text-align:center; flex:1; min-width:130px;
+  transition:transform .15s;
+}
+.stat-card:hover { transform:translateY(-2px); }
+
+/* ── Tableau récapitulatif ── */
+.recap-section {
+  display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:22px;
+}
+@media(max-width:700px) { .recap-section { grid-template-columns:1fr; } }
+.recap-card { border-radius:12px; overflow:hidden; border:2px solid; }
+.recap-card-header {
+  display:flex; align-items:center; gap:10px;
+  padding:12px 18px; font-weight:700; font-size:.88rem;
+  cursor:pointer; user-select:none;
+}
+.recap-card-header:hover { opacity:.92; }
+.recap-table { width:100%; border-collapse:collapse; font-size:.8rem; }
+.recap-table th { padding:7px 12px; font-size:.72rem; font-weight:700; }
+.recap-table td { padding:6px 12px; border-top:1px solid #f1f5f9; }
+.recap-table tr:hover td { background:rgba(0,0,0,.025); }
+
+/* ── Sections dépliables ── */
+.collapsible-header {
+  cursor:pointer; user-select:none;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.collapsible-header:hover { opacity:.9; }
+.collapsible-body { overflow:hidden; transition:max-height .3s ease; }
+.collapsible-arrow { transition:transform .25s; font-size:.85rem; color:#94a3b8; }
+.collapsible-header.collapsed .collapsible-arrow { transform:rotate(-90deg); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-table"></i></span>
+    Tableau de Conseil
+  </h1>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'grades:conseil_excel' class_id semester_id %}"
+       class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;">
+      <i class="bi bi-file-earmark-excel me-1"></i>Excel
+    </a>
+    <a href="{% url 'grades:conseil_word' class_id semester_id %}"
+       class="btn btn-sm" style="background:#2563eb;color:#fff;border:none;">
+      <i class="bi bi-file-earmark-word me-1"></i>Word
+    </a>
+    <a href="{% url 'grades:conseil_pdf' class_id semester_id %}" target="_blank"
+       class="btn btn-sm" style="background:#dc2626;color:#fff;border:none;">
+      <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+    </a>
+    <a href="{% url 'grades:conseil_list' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Changer
+    </a>
+  </div>
+</div>
+
+<!-- Info classe + semestre -->
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px 18px;
+            background:#f0f6ff;border-radius:10px;border-left:5px solid var(--navy,#1e3a5f);">
+  <i class="bi bi-mortarboard-fill" style="font-size:1.4rem;color:var(--navy,#1e3a5f);"></i>
+  <div>
+    <div style="font-size:1rem;font-weight:700;color:var(--navy,#1e3a5f);">{{ class_group.name }}</div>
+    <div style="font-size:.82rem;color:#64748b;">
+      {{ class_group.program.name|default:"" }}
+      {% if class_group.level %} · Niveau {{ class_group.level.name }}{% endif %}
+      · <strong>{{ semester.label }}</strong> — {{ semester.academic_year }}
+    </div>
+  </div>
+</div>
+
+<!-- Cartes statistiques -->
+<div class="d-flex gap-3 mb-3 flex-wrap">
+  <div class="stat-card" style="background:#f0f6ff;border:1px solid #bfdbfe;">
+    <div style="font-size:1.7rem;font-weight:800;color:var(--navy,#1e3a5f);">{{ nb_total }}</div>
+    <div style="font-size:.75rem;color:#64748b;font-weight:600;">Étudiants</div>
+  </div>
+  <div class="stat-card" style="background:#f0fdf4;border:1px solid #bbf7d0;">
+    <div style="font-size:1.7rem;font-weight:800;color:#166534;">{{ nb_valides }}</div>
+    <div style="font-size:.75rem;color:#64748b;font-weight:600;">Validé(es)</div>
+    <div style="font-size:.72rem;font-weight:700;color:#16a34a;">{{ taux_validation }}%</div>
+  </div>
+  <div class="stat-card" style="background:#fff7ed;border:1px solid #fed7aa;">
+    <div style="font-size:1.7rem;font-weight:800;color:#c2410c;">{{ nb_rattrapages }}</div>
+    <div style="font-size:.75rem;color:#64748b;font-weight:600;">Rattrapage(s)</div>
+    <div style="font-size:.72rem;font-weight:700;color:#ea580c;">{{ taux_rattrapage }}%</div>
+  </div>
+</div>
+
+{% if not ues_headers %}
+<div class="card-section">
+  <div class="text-center py-5" style="color:#94a3b8;">
+    <i class="bi bi-exclamation-circle d-block mb-2" style="font-size:2.5rem;color:#cbd5e0;"></i>
+    <div style="font-weight:600;">Aucune UE définie pour cette filière et ce semestre.</div>
+    <div style="font-size:.85rem;margin-top:6px;">Vérifiez que la maquette pédagogique est configurée.</div>
+  </div>
+</div>
+{% elif not rows %}
+<div class="card-section">
+  <div class="text-center py-5" style="color:#94a3b8;">
+    <i class="bi bi-people d-block mb-2" style="font-size:2.5rem;color:#cbd5e0;"></i>
+    <div style="font-weight:600;">Aucun étudiant validé dans cette classe.</div>
+  </div>
+</div>
+{% else %}
+
+<!-- ══ Tableau principal de délibération ══ -->
+<div class="card-section">
+  <div class="card-section-header collapsible-header" onclick="toggleSection('tbl-results',this)">
+    <h6 class="card-section-title" style="margin:0;">
+      <span style="width:26px;height:26px;border-radius:6px;background:#7c3aed;display:inline-flex;
+                   align-items:center;justify-content:center;font-size:.8rem;color:#fff;">
+        <i class="bi bi-table"></i></span>
+      Résultats — {{ nb_total }} étudiant{{ nb_total|pluralize }}
+    </h6>
+    <i class="bi bi-chevron-down collapsible-arrow"></i>
+  </div>
+  <div id="tbl-results" class="collapsible-body">
+  <div style="overflow-x:auto;padding:0;">
+    <table class="conseil-table">
+      <thead>
+        <!-- Ligne 1 : UE headers -->
+        <tr>
+          <th class="th-navy" rowspan="2" style="min-width:32px;">#</th>
+          <th class="th-navy" rowspan="2" style="min-width:110px;">Matricule</th>
+          <th class="th-navy" rowspan="2" style="min-width:170px;text-align:left;">Nom complet</th>
+          {% for ue_hdr in ues_headers %}
+          <th class="th-blue" colspan="{{ ue_hdr.subjects|length|add:1 }}">
+            {{ ue_hdr.ue.code }} — {{ ue_hdr.ue.title }}
+            <br><span style="font-size:.67rem;font-weight:500;opacity:.85;">{{ ue_hdr.subjects|length }} EC</span>
+          </th>
+          {% endfor %}
+          <th class="th-navy" rowspan="2">Moy<br>Sem.</th>
+          <th class="th-navy" rowspan="2">Crédits</th>
+          <th class="th-navy" rowspan="2">Mention</th>
+          <th class="th-navy" rowspan="2">Décision</th>
+          <th class="th-navy" rowspan="2">Rang</th>
+        </tr>
+        <!-- Ligne 2 : EC sub-headers -->
+        <tr>
+          {% for ue_hdr in ues_headers %}
+            {% for subj in ue_hdr.subjects %}
+            <th class="th-blue2" style="font-size:.67rem;">
+              {{ subj.code }}<br>
+              <span style="font-weight:500;opacity:.9;">{{ subj.title|truncatechars:15 }}</span><br>
+              <span style="font-size:.62rem;opacity:.8;">coef {{ subj.coefficient }}</span>
+            </th>
+            {% endfor %}
+            <th class="th-moy" style="font-size:.7rem;">Moy<br>UE</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr class="{% cycle 'row-odd' 'row-even' %}">
+          <td style="font-weight:600;color:#64748b;">{{ forloop.counter }}</td>
+          <td style="font-size:.72rem;color:#64748b;">{{ row.matricule }}</td>
+          <td class="name-col" style="font-weight:600;">{{ row.full_name }}</td>
+
+          {% for ue_res in row.ue_results %}
+            {% for ec in ue_res.ec_results %}
+            <td>
+              {% if ec and ec.final_average is not None %}
+                <span class="{% if ec.final_average >= 10 %}note-ok{% else %}note-ko{% endif %}">
+                  {{ ec.final_average|floatformat:2 }}
+                </span>
+              {% else %}
+                <span class="note-na">—</span>
+              {% endif %}
+            </td>
+            {% endfor %}
+            <!-- Moyenne UE — cliquable pour popup détail -->
+            <td class="{% if ue_res.is_validated %}ue-ok{% else %}ue-ko{% endif %} moy-ue-cell"
+                style="cursor:pointer;"
+                title="Cliquer pour voir le détail des ECs"
+                onclick="showUeDetail(this)"
+                data-student="{{ row.full_name }}"
+                data-ue-code="{{ ue_res.ue.code }}"
+                data-ue-title="{{ ue_res.ue.title }}"
+                data-validated="{{ ue_res.is_validated|yesno:'true,false' }}"
+                data-average="{% if ue_res.average is not None %}{{ ue_res.average|floatformat:2 }}{% else %}—{% endif %}"
+                data-credits="{{ ue_res.credits_obtained }}/{{ ue_res.credits_possible }}"
+                data-ecs='[{% for ec in ue_res.ec_results %}{% if ec %}{"code":"{{ ec.subject.code|escapejs }}","title":"{{ ec.subject.title|escapejs }}","coef":"{{ ec.subject.coefficient }}","cc":{% if ec.cc_average is not None %}"{{ ec.cc_average|floatformat:2 }}"{% else %}null{% endif %},"exam":{% if ec.exam_score is not None %}"{{ ec.exam_score|floatformat:2 }}"{% else %}null{% endif %},"ratt":{% if ec.rattrapage_score is not None %}"{{ ec.rattrapage_score|floatformat:2 }}"{% else %}null{% endif %},"final":{% if ec.final_average is not None %}"{{ ec.final_average|floatformat:2 }}"{% else %}null{% endif %},"appr":"{{ ec.appreciation|escapejs }}","ok":{{ ec.is_validated|yesno:'true,false' }}}{% else %}{"code":"—","title":"—","coef":"—","cc":null,"exam":null,"ratt":null,"final":null,"appr":"—","ok":false}{% endif %}{% if not forloop.last %},{% endif %}{% endfor %}]'>
+              {% if ue_res.average is not None %}
+                <span class="{% if ue_res.is_validated %}note-ok{% else %}note-ko{% endif %}">
+                  {{ ue_res.average|floatformat:2 }}
+                </span>
+                {% if ue_res.is_validated %}
+                  <i class="bi bi-check-circle-fill" style="font-size:.6rem;color:#16a34a;"></i>
+                {% else %}
+                  <i class="bi bi-x-circle-fill" style="font-size:.6rem;color:#dc2626;"></i>
+                {% endif %}
+                <div style="font-size:.58rem;color:#94a3b8;margin-top:1px;">
+                  <i class="bi bi-zoom-in"></i>
+                </div>
+              {% else %}
+                <span class="note-na">—</span>
+              {% endif %}
+            </td>
+          {% endfor %}
+
+          <!-- Moyenne semestrielle -->
+          <td class="{% if row.semester_average and row.semester_average >= 10 %}moy-ok{% else %}moy-ko{% endif %}" style="font-size:.85rem;">
+            {% if row.semester_average %}{{ row.semester_average|floatformat:2 }}{% else %}—{% endif %}
+          </td>
+          <!-- Crédits -->
+          <td style="font-size:.78rem;font-weight:600;">
+            {{ row.total_credits_obtained }}/{{ row.total_credits_possible }}
+          </td>
+          <!-- Mention -->
+          <td style="font-size:.72rem;">{{ row.mention|default:"—" }}</td>
+          <!-- Décision -->
+          <td class="{% if row.decision == 'Validé' %}dec-ok{% else %}dec-ratt{% endif %}">
+            {% if row.decision == 'Validé' %}
+              <i class="bi bi-patch-check-fill me-1"></i>Validé
+            {% else %}
+              <i class="bi bi-arrow-repeat me-1"></i>Rattrapage
+            {% endif %}
+          </td>
+          <!-- Rang -->
+          <td style="font-weight:800;color:var(--navy,#1e3a5f);">
+            {% if row.rank == 9999 %}—{% else %}{{ row.rank }}{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  </div>{# fin collapsible-body tbl-results #}
+</div>
+
+<!-- ══ Tableaux récapitulatifs ══ -->
+<div class="card-section" style="margin-top:16px;">
+  <div class="card-section-header collapsible-header" onclick="toggleSection('recap-section',this)">
+    <h6 class="card-section-title" style="margin:0;">
+      <span style="width:26px;height:26px;border-radius:6px;background:#0f766e;display:inline-flex;
+                   align-items:center;justify-content:center;font-size:.8rem;color:#fff;">
+        <i class="bi bi-list-check"></i></span>
+      Récapitulatif — Validés &amp; Rattrapages
+    </h6>
+    <i class="bi bi-chevron-down collapsible-arrow"></i>
+  </div>
+  <div id="recap-section" class="collapsible-body">
+  <div class="recap-section" style="padding:16px;">
+
+  <!-- Étudiants ayant validé -->
+  <div class="recap-card" style="border-color:#86efac;">
+    <div class="recap-card-header" onclick="toggleSection('recap-val',this)"
+         style="background:#f0fdf4;color:#166534;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="width:30px;height:30px;border-radius:8px;background:#16a34a;display:inline-flex;
+                     align-items:center;justify-content:center;color:#fff;font-size:.85rem;flex-shrink:0;">
+          <i class="bi bi-patch-check-fill"></i></span>
+        <div>
+          <div>Étudiants ayant validé le semestre</div>
+          <div style="font-size:.75rem;font-weight:400;color:#4b7c59;">
+            {{ nb_valides }} étudiant{{ nb_valides|pluralize }} — {{ taux_validation }}% de réussite
+          </div>
+        </div>
+      </div>
+      <i class="bi bi-chevron-down collapsible-arrow" style="color:#16a34a;"></i>
+    </div>
+    <div id="recap-val" class="collapsible-body">
+    {% if valides %}
+    <table class="recap-table">
+      <thead style="background:#dcfce7;">
+        <tr>
+          <th style="color:#166534;">#</th>
+          <th style="color:#166534;text-align:left;">Nom complet</th>
+          <th style="color:#166534;">Matricule</th>
+          <th style="color:#166534;">Moy. Sem.</th>
+          <th style="color:#166534;">Crédits</th>
+          <th style="color:#166534;">Mention</th>
+          <th style="color:#166534;">Rang</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in valides %}
+        <tr>
+          <td style="color:#64748b;font-weight:600;">{{ r.local_rank }}</td>
+          <td style="text-align:left;font-weight:600;">{{ r.full_name }}</td>
+          <td style="font-size:.72rem;color:#64748b;">{{ r.matricule }}</td>
+          <td style="font-weight:800;color:#166534;">
+            {% if r.semester_average %}{{ r.semester_average|floatformat:2 }}{% else %}—{% endif %}
+          </td>
+          <td style="font-size:.78rem;">{{ r.total_credits_obtained }}/{{ r.total_credits_possible }}</td>
+          <td style="font-size:.72rem;">{{ r.mention|default:"—" }}</td>
+          <td style="font-weight:700;color:var(--navy,#1e3a5f);">{{ r.rank }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-4" style="color:#94a3b8;font-size:.83rem;">
+      <i class="bi bi-info-circle me-1"></i>Aucun étudiant n'a validé ce semestre.
+    </div>
+    {% endif %}
+    </div>
+  </div>
+
+  <!-- Étudiants en rattrapage -->
+  <div class="recap-card" style="border-color:#fdba74;">
+    <div class="recap-card-header" onclick="toggleSection('recap-ratt',this)"
+         style="background:#fff7ed;color:#c2410c;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="width:30px;height:30px;border-radius:8px;background:#ea580c;display:inline-flex;
+                     align-items:center;justify-content:center;color:#fff;font-size:.85rem;flex-shrink:0;">
+          <i class="bi bi-arrow-repeat"></i></span>
+        <div>
+          <div>Étudiants convoqués au rattrapage</div>
+          <div style="font-size:.75rem;font-weight:400;color:#9a4b1e;">
+            {{ nb_rattrapages }} étudiant{{ nb_rattrapages|pluralize }} — {{ taux_rattrapage }}% de l'effectif
+          </div>
+        </div>
+      </div>
+      <i class="bi bi-chevron-down collapsible-arrow" style="color:#ea580c;"></i>
+    </div>
+    <div id="recap-ratt" class="collapsible-body">
+    {% if rattrapages %}
+    <table class="recap-table">
+      <thead style="background:#ffedd5;">
+        <tr>
+          <th style="color:#c2410c;">#</th>
+          <th style="color:#c2410c;text-align:left;">Nom complet</th>
+          <th style="color:#c2410c;">Matricule</th>
+          <th style="color:#c2410c;">Moy. Sem.</th>
+          <th style="color:#c2410c;">Crédits</th>
+          <th style="color:#c2410c;">UEs non validées</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rattrapages %}
+        <tr>
+          <td style="color:#64748b;font-weight:600;">{{ r.local_rank }}</td>
+          <td style="text-align:left;font-weight:600;">{{ r.full_name }}</td>
+          <td style="font-size:.72rem;color:#64748b;">{{ r.matricule }}</td>
+          <td style="font-weight:800;color:#dc2626;">
+            {% if r.semester_average %}{{ r.semester_average|floatformat:2 }}{% else %}—{% endif %}
+          </td>
+          <td style="font-size:.78rem;">{{ r.total_credits_obtained }}/{{ r.total_credits_possible }}</td>
+          <td style="font-size:.72rem;text-align:left;white-space:normal;min-width:160px;">
+            {% for ue_res in r.ue_results %}
+              {% if not ue_res.is_validated %}
+                <span style="background:#fee2e2;color:#dc2626;padding:2px 7px;border-radius:6px;
+                             font-size:.68rem;font-weight:600;display:inline-block;margin:2px 2px;">
+                  {{ ue_res.ue.title }}
+                </span>
+              {% endif %}
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-4" style="color:#94a3b8;font-size:.83rem;">
+      <i class="bi bi-check-circle me-1"></i>Tous les étudiants ont validé ce semestre.
+    </div>
+    {% endif %}
+    </div>
+  </div>
+
+  </div>{# fin .recap-section inner grid #}
+  </div>{# fin collapsible-body recap-section #}
+</div>
+
+{% endif %}
+
+<!-- ══ Récapitulatif Annuel (S2 uniquement) ══ -->
+{% if annual_rows %}
+<div class="card-section" style="margin-top:16px;">
+
+  <div class="card-section-header collapsible-header" onclick="toggleSection('annual-body',this)">
+    <h6 class="card-section-title" style="margin:0;">
+      <span style="width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,#7c3aed,#4f46e5);
+                   display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;">
+        <i class="bi bi-trophy-fill"></i></span>
+      Bilan Annuel — {{ semester_s1.label }} &amp; {{ semester.label }}
+      <span style="font-size:.72rem;font-weight:400;color:#64748b;margin-left:6px;">
+        · {{ class_group.name }} · {{ semester.academic_year }}
+      </span>
+    </h6>
+    <i class="bi bi-chevron-down collapsible-arrow"></i>
+  </div>
+
+  <div id="annual-body" class="collapsible-body">
+  <div style="padding:16px;">
+
+  <!-- Légende décisions -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.2rem;">
+    <span style="background:#dcfce7;color:#166534;border-radius:20px;padding:4px 14px;font-size:.75rem;font-weight:700;">
+      <i class="bi bi-patch-check-fill me-1"></i>Année Validée — 60/60 crédits
+    </span>
+    <span style="background:#fef3c7;color:#92400e;border-radius:20px;padding:4px 14px;font-size:.75rem;font-weight:700;">
+      <i class="bi bi-arrow-right-circle-fill me-1"></i>Passage Conditionnel — 42 à 59 crédits
+    </span>
+    <span style="background:#fee2e2;color:#dc2626;border-radius:20px;padding:4px 14px;font-size:.75rem;font-weight:700;">
+      <i class="bi bi-x-circle-fill me-1"></i>Autorisé à Redoubler — moins de 42 crédits
+    </span>
+  </div>
+
+  <!-- Tableau annuel -->
+  <div style="overflow-x:auto;border-radius:12px;box-shadow:0 2px 16px rgba(30,58,95,.10);">
+    <table style="width:100%;border-collapse:collapse;min-width:800px;font-size:.82rem;">
+      <thead>
+        <tr style="background:#1e3a5f;color:#fff;">
+          <th style="padding:11px 12px;text-align:center;font-size:.73rem;font-weight:700;">#</th>
+          <th style="padding:11px 12px;text-align:left;font-size:.73rem;font-weight:700;">Matricule</th>
+          <th style="padding:11px 14px;text-align:left;font-size:.73rem;font-weight:700;">Nom complet</th>
+          <th colspan="3" style="padding:10px;text-align:center;font-size:.73rem;font-weight:700;
+              background:#1e40af;border-left:2px solid #3b82f6;">
+            {{ semester_s1.label }}
+          </th>
+          <th colspan="3" style="padding:10px;text-align:center;font-size:.73rem;font-weight:700;
+              background:#0f766e;border-left:2px solid #14b8a6;">
+            {{ semester.label }}
+          </th>
+          <th colspan="3" style="padding:10px;text-align:center;font-size:.73rem;font-weight:700;
+              background:#6d28d9;border-left:2px solid #8b5cf6;">
+            Bilan Annuel
+          </th>
+          <th style="padding:11px 12px;text-align:center;font-size:.73rem;font-weight:700;">Rang</th>
+        </tr>
+        <tr style="background:#f1f5f9;font-size:.7rem;color:#475569;border-bottom:2px solid #e2e8f0;">
+          <th style="padding:7px 12px;"></th><th style="padding:7px 12px;text-align:left;"></th><th style="padding:7px 14px;text-align:left;"></th>
+          <th style="padding:7px 10px;text-align:center;border-left:2px solid #3b82f6;">Moy. S1</th>
+          <th style="padding:7px 10px;text-align:center;">Crédits S1</th>
+          <th style="padding:7px 10px;text-align:center;">Décision S1</th>
+          <th style="padding:7px 10px;text-align:center;border-left:2px solid #14b8a6;">Moy. S2</th>
+          <th style="padding:7px 10px;text-align:center;">Crédits S2</th>
+          <th style="padding:7px 10px;text-align:center;">Décision S2</th>
+          <th style="padding:7px 10px;text-align:center;border-left:2px solid #8b5cf6;font-weight:700;">Total Crédits</th>
+          <th style="padding:7px 10px;text-align:center;font-size:.65rem;color:#94a3b8;">
+            / {{ annual_rows.0.total_pos }}
+          </th>
+          <th style="padding:7px 10px;text-align:center;font-weight:800;">Décision Annuelle</th>
+          <th style="padding:7px 12px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ar in annual_rows %}
+        <tr style="background:{% cycle '#f8fafc' '#ffffff' %};border-bottom:1px solid #e2e8f0;"
+            class="annual-row" data-decision="{{ ar.annual_decision }}">
+          <td style="padding:10px 12px;text-align:center;font-weight:700;color:#6d28d9;font-size:.95rem;">{{ ar.rank }}</td>
+          <td style="padding:10px 12px;font-size:.75rem;color:#64748b;">{{ ar.matricule }}</td>
+          <td style="padding:10px 14px;font-weight:700;color:#1e3a5f;">{{ ar.full_name }}</td>
+
+          <!-- S1 -->
+          <td style="padding:10px;text-align:center;border-left:2px solid #dbeafe;">
+            {% if ar.moy_s1 is not None %}
+              <span style="font-weight:700;color:{% if ar.moy_s1 >= 10 %}#166534{% else %}#dc2626{% endif %};">{{ ar.moy_s1|floatformat:2 }}</span>
+            {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+          </td>
+          <td style="padding:10px;text-align:center;font-size:.8rem;font-weight:600;color:#1e3a5f;">{{ ar.cred_s1 }}</td>
+          <td style="padding:10px;text-align:center;">
+            {% if ar.dec_s1 == 'Validé' %}
+              <span style="background:#dcfce7;color:#166534;border-radius:8px;padding:3px 9px;font-size:.68rem;font-weight:700;"><i class="bi bi-check-circle-fill me-1"></i>Validé</span>
+            {% elif ar.dec_s1 == 'Rattrapage' %}
+              <span style="background:#fff7ed;color:#c2410c;border-radius:8px;padding:3px 9px;font-size:.68rem;font-weight:700;"><i class="bi bi-arrow-repeat me-1"></i>Rattrapage</span>
+            {% else %}<span style="color:#94a3b8;font-size:.75rem;">{{ ar.dec_s1 }}</span>{% endif %}
+          </td>
+
+          <!-- S2 -->
+          <td style="padding:10px;text-align:center;border-left:2px solid #ccfbf1;">
+            {% if ar.moy_s2 is not None %}
+              <span style="font-weight:700;color:{% if ar.moy_s2 >= 10 %}#166534{% else %}#dc2626{% endif %};">{{ ar.moy_s2|floatformat:2 }}</span>
+            {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+          </td>
+          <td style="padding:10px;text-align:center;font-size:.8rem;font-weight:600;color:#1e3a5f;">{{ ar.cred_s2 }}</td>
+          <td style="padding:10px;text-align:center;">
+            {% if ar.dec_s2 == 'Validé' %}
+              <span style="background:#dcfce7;color:#166534;border-radius:8px;padding:3px 9px;font-size:.68rem;font-weight:700;"><i class="bi bi-check-circle-fill me-1"></i>Validé</span>
+            {% elif ar.dec_s2 == 'Rattrapage' %}
+              <span style="background:#fff7ed;color:#c2410c;border-radius:8px;padding:3px 9px;font-size:.68rem;font-weight:700;"><i class="bi bi-arrow-repeat me-1"></i>Rattrapage</span>
+            {% else %}<span style="color:#94a3b8;font-size:.75rem;">{{ ar.dec_s2 }}</span>{% endif %}
+          </td>
+
+          <!-- Bilan annuel -->
+          <td style="padding:10px;text-align:center;border-left:2px solid #ede9fe;">
+            <span style="font-size:1.15rem;font-weight:900;
+              color:{% if ar.total_obt >= ar.total_pos %}#166534{% elif ar.total_obt >= 42 %}#92400e{% else %}#dc2626{% endif %};">
+              {{ ar.total_obt }}
+            </span>
+          </td>
+          <td style="padding:10px;text-align:center;font-size:.75rem;color:#64748b;font-weight:600;">/ {{ ar.total_pos }}</td>
+          <td style="padding:10px;text-align:center;">
+            {% if ar.annual_decision == 'Année Validée' %}
+              <span style="background:#dcfce7;color:#166534;border-radius:10px;padding:5px 12px;
+                           font-size:.72rem;font-weight:800;display:inline-flex;align-items:center;gap:5px;">
+                <i class="bi bi-patch-check-fill"></i>Année Validée
+              </span>
+            {% elif ar.annual_decision == 'Passage Conditionnel' %}
+              <span style="background:#fef3c7;color:#92400e;border-radius:10px;padding:5px 12px;
+                           font-size:.72rem;font-weight:800;display:inline-flex;align-items:center;gap:5px;">
+                <i class="bi bi-arrow-right-circle-fill"></i>Passage Conditionnel
+              </span>
+            {% else %}
+              <span style="background:#fee2e2;color:#dc2626;border-radius:10px;padding:5px 12px;
+                           font-size:.72rem;font-weight:800;display:inline-flex;align-items:center;gap:5px;">
+                <i class="bi bi-x-circle-fill"></i>Autorisé à Redoubler
+              </span>
+            {% endif %}
+          </td>
+          <td style="padding:10px 12px;text-align:center;font-weight:800;color:#6d28d9;">{{ ar.rank }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Tableau récapitulatif annuel -->
+  <div style="margin-top:1.8rem;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:.9rem;">
+      <div style="width:28px;height:28px;border-radius:8px;background:#6d28d9;
+                  display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;">
+        <i class="bi bi-bar-chart-fill"></i>
+      </div>
+      <h6 style="margin:0;font-weight:800;color:#1e3a5f;font-size:.9rem;">Résumé Annuel</h6>
+    </div>
+    <div style="overflow-x:auto;border-radius:12px;box-shadow:0 2px 12px rgba(30,58,95,.09);">
+      <table style="width:100%;border-collapse:collapse;font-size:.83rem;min-width:600px;">
+        <thead>
+          <tr style="background:#6d28d9;color:#fff;">
+            <th style="padding:11px 16px;text-align:left;font-size:.73rem;font-weight:700;">Décision Annuelle</th>
+            <th style="padding:11px 14px;text-align:center;font-size:.73rem;font-weight:700;">Nb. Étudiants</th>
+            <th style="padding:11px 14px;text-align:center;font-size:.73rem;font-weight:700;">Pourcentage</th>
+            <th style="padding:11px 14px;text-align:center;font-size:.73rem;font-weight:700;">Eff. Total Classe</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Année Validée -->
+          <tr style="background:#f0fdf4;border-bottom:1px solid #bbf7d0;">
+            <td style="padding:14px 16px;">
+              <span style="display:inline-flex;align-items:center;gap:10px;">
+                <span style="width:36px;height:36px;border-radius:10px;background:#16a34a;
+                             display:inline-flex;align-items:center;justify-content:center;
+                             color:#fff;font-size:.95rem;flex-shrink:0;">
+                  <i class="bi bi-patch-check-fill"></i>
+                </span>
+                <div>
+                  <div style="font-weight:800;color:#166534;font-size:.9rem;">Année Validée</div>
+                  <div style="font-size:.7rem;color:#4b7c59;">60 crédits sur 60</div>
+                </div>
+              </span>
+            </td>
+            <td style="padding:14px;text-align:center;">
+              <span id="sum-val-n" style="font-size:2rem;font-weight:900;color:#166534;line-height:1;display:block;"></span>
+              <div style="font-size:.67rem;color:#86efac;font-weight:600;margin-top:2px;">étudiant(s)</div>
+            </td>
+            <td style="padding:14px;text-align:center;">
+              <span id="sum-val-p" style="font-size:1.3rem;font-weight:800;color:#166534;"></span>
+              <div style="margin-top:6px;height:8px;background:#bbf7d0;border-radius:4px;overflow:hidden;max-width:160px;margin-left:auto;margin-right:auto;">
+                <div id="bar-val" style="height:100%;background:#16a34a;border-radius:4px;width:0%;transition:width .6s ease;"></div>
+              </div>
+            </td>
+            <!-- Eff. Total Classe — rowspan sur les 3 lignes de décision -->
+            <td rowspan="3" style="padding:14px;text-align:center;vertical-align:middle;
+                                   border-left:2px solid #e2e8f0;background:#f0f4ff;">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <span style="width:44px;height:44px;border-radius:50%;background:#1e3a5f;
+                             display:inline-flex;align-items:center;justify-content:center;
+                             color:#fff;font-size:1rem;flex-shrink:0;">
+                  <i class="bi bi-people-fill"></i>
+                </span>
+                <span id="sum-eff-total" style="font-size:2.2rem;font-weight:900;color:#1e3a5f;line-height:1;"></span>
+                <div style="font-size:.68rem;color:#64748b;font-weight:600;">étudiant(s)<br>dans la classe</div>
+              </div>
+            </td>
+          </tr>
+          <!-- Passage Conditionnel -->
+          <tr style="background:#fffbeb;border-bottom:1px solid #fde68a;">
+            <td style="padding:14px 16px;">
+              <span style="display:inline-flex;align-items:center;gap:10px;">
+                <span style="width:36px;height:36px;border-radius:10px;background:#d97706;
+                             display:inline-flex;align-items:center;justify-content:center;
+                             color:#fff;font-size:.95rem;flex-shrink:0;">
+                  <i class="bi bi-arrow-right-circle-fill"></i>
+                </span>
+                <div>
+                  <div style="font-weight:800;color:#92400e;font-size:.9rem;">Passage Conditionnel</div>
+                  <div style="font-size:.7rem;color:#b45309;">42 à 59 crédits</div>
+                </div>
+              </span>
+            </td>
+            <td style="padding:14px;text-align:center;">
+              <span id="sum-pass-n" style="font-size:2rem;font-weight:900;color:#92400e;line-height:1;display:block;"></span>
+              <div style="font-size:.67rem;color:#fbbf24;font-weight:600;margin-top:2px;">étudiant(s)</div>
+            </td>
+            <td style="padding:14px;text-align:center;">
+              <span id="sum-pass-p" style="font-size:1.3rem;font-weight:800;color:#92400e;"></span>
+              <div style="margin-top:6px;height:8px;background:#fde68a;border-radius:4px;overflow:hidden;max-width:160px;margin-left:auto;margin-right:auto;">
+                <div id="bar-pass" style="height:100%;background:#d97706;border-radius:4px;width:0%;transition:width .6s ease;"></div>
+              </div>
+            </td>
+          </tr>
+          <!-- Autorisé à Redoubler -->
+          <tr style="background:#fff5f5;">
+            <td style="padding:14px 16px;">
+              <span style="display:inline-flex;align-items:center;gap:10px;">
+                <span style="width:36px;height:36px;border-radius:10px;background:#dc2626;
+                             display:inline-flex;align-items:center;justify-content:center;
+                             color:#fff;font-size:.95rem;flex-shrink:0;">
+                  <i class="bi bi-x-circle-fill"></i>
+                </span>
+                <div>
+                  <div style="font-weight:800;color:#dc2626;font-size:.9rem;">Autorisé à Redoubler</div>
+                  <div style="font-size:.7rem;color:#ef4444;">moins de 42 crédits</div>
+                </div>
+              </span>
+            </td>
+            <td style="padding:14px;text-align:center;">
+              <span id="sum-red-n" style="font-size:2rem;font-weight:900;color:#dc2626;line-height:1;display:block;"></span>
+              <div style="font-size:.67rem;color:#f87171;font-weight:600;margin-top:2px;">étudiant(s)</div>
+            </td>
+            <td style="padding:14px;text-align:center;">
+              <span id="sum-red-p" style="font-size:1.3rem;font-weight:800;color:#dc2626;"></span>
+              <div style="margin-top:6px;height:8px;background:#fecaca;border-radius:4px;overflow:hidden;max-width:160px;margin-left:auto;margin-right:auto;">
+                <div id="bar-red" style="height:100%;background:#dc2626;border-radius:4px;width:0%;transition:width .6s ease;"></div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr style="background:#f8fafc;border-top:2px solid #e2e8f0;">
+            <td style="padding:11px 16px;font-weight:800;color:#1e3a5f;font-size:.85rem;">
+              <i class="bi bi-people-fill me-1"></i>Total
+            </td>
+            <td style="padding:11px 14px;text-align:center;">
+              <span id="sum-total" style="font-size:1.4rem;font-weight:900;color:#1e3a5f;"></span>
+              <div style="font-size:.67rem;color:#94a3b8;">étudiant(s)</div>
+            </td>
+            <td style="padding:11px 14px;text-align:center;">
+              <span style="font-size:1.2rem;font-weight:800;color:#6d28d9;">100 %</span>
+            </td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+  </div>{# fin padding inner #}
+  </div>{# fin collapsible-body annual-body #}
+</div>{# fin card-section #}
+
+<script>
+(function() {
+  const annualRows = document.querySelectorAll('.annual-row');
+  let nv = 0, np = 0, nr = 0;
+  annualRows.forEach(function(r) {
+    const d = r.dataset.decision;
+    if (d === 'Année Validée')             nv++;
+    else if (d === 'Passage Conditionnel') np++;
+    else                                   nr++;
+  });
+  const total = annualRows.length;
+  function pct(n) { return total ? (n / total * 100).toFixed(1) + ' %' : '0 %'; }
+  function pctn(n){ return total ? n / total * 100 : 0; }
+
+  document.getElementById('sum-total').textContent    = total;
+  document.getElementById('sum-eff-total').textContent = total;
+  document.getElementById('sum-val-n').textContent  = nv;
+  document.getElementById('sum-pass-n').textContent = np;
+  document.getElementById('sum-red-n').textContent  = nr;
+  document.getElementById('sum-val-p').textContent  = pct(nv);
+  document.getElementById('sum-pass-p').textContent = pct(np);
+  document.getElementById('sum-red-p').textContent  = pct(nr);
+
+  setTimeout(function() {
+    document.getElementById('bar-val').style.width  = pctn(nv)  + '%';
+    document.getElementById('bar-pass').style.width = pctn(np) + '%';
+    document.getElementById('bar-red').style.width  = pctn(nr)  + '%';
+  }, 150);
+})();
+</script>
+{% endif %}
+
+<!-- ══ Résumé par UE ══ -->
+{% if ue_stats %}
+<div class="card-section" style="margin-top:1.4rem;">
+  <div class="card-section-header collapsible-header" onclick="toggleSection('ue-summary-body',this)">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:28px;height:28px;border-radius:8px;background:#0891b2;
+                  display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;">
+        <i class="bi bi-diagram-3-fill"></i>
+      </div>
+      <h6 style="margin:0;font-weight:800;color:#1e3a5f;font-size:.9rem;">Résumé par UE</h6>
+    </div>
+    <i class="bi bi-chevron-down collapsible-arrow"></i>
+  </div>
+  <div id="ue-summary-body" class="collapsible-body">
+    <div style="padding:16px 20px;">
+      <div style="overflow-x:auto;border-radius:10px;box-shadow:0 2px 10px rgba(30,58,95,.08);">
+        <table style="width:100%;border-collapse:collapse;font-size:.82rem;min-width:560px;">
+          <thead>
+            <tr style="background:#0891b2;color:#fff;">
+              <th style="padding:10px 14px;text-align:left;font-size:.73rem;font-weight:700;">Code UE</th>
+              <th style="padding:10px 14px;text-align:left;font-size:.73rem;font-weight:700;">Intitulé UE</th>
+              <th style="padding:10px 14px;text-align:center;font-size:.73rem;font-weight:700;">
+                <i class="bi bi-patch-check-fill me-1" style="color:#bbf7d0;"></i>Nb Validé
+              </th>
+              <th style="padding:10px 14px;text-align:center;font-size:.73rem;font-weight:700;">
+                <i class="bi bi-arrow-repeat me-1" style="color:#fed7aa;"></i>Nb Rattrapage
+              </th>
+              <th style="padding:10px 14px;text-align:center;font-size:.73rem;font-weight:700;">% Validé</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for stat in ue_stats %}
+            {% with pct=stat.pct_valide %}
+            <tr style="border-bottom:1px solid #e2e8f0;{% if forloop.counter|divisibleby:2 %}background:#f8fafc;{% else %}background:#fff;{% endif %}">
+              <td style="padding:10px 14px;font-weight:700;color:#0e7490;font-size:.8rem;">
+                {{ stat.ue.code }}
+              </td>
+              <td style="padding:10px 14px;color:#1e3a5f;font-weight:600;">
+                {{ stat.ue.title }}
+                <span style="font-size:.68rem;color:#94a3b8;font-weight:400;margin-left:4px;">
+                  ({{ stat.credits }} cr.)
+                </span>
+              </td>
+              <td style="padding:10px 14px;text-align:center;">
+                <span style="display:inline-flex;align-items:center;justify-content:center;
+                             width:34px;height:34px;border-radius:50%;
+                             background:#dcfce7;color:#166534;font-weight:800;font-size:.95rem;">
+                  {{ stat.nb_valide }}
+                </span>
+              </td>
+              <td style="padding:10px 14px;text-align:center;">
+                <span style="display:inline-flex;align-items:center;justify-content:center;
+                             width:34px;height:34px;border-radius:50%;
+                             background:#fff7ed;color:#c2410c;font-weight:800;font-size:.95rem;">
+                  {{ stat.nb_rattrapage }}
+                </span>
+              </td>
+              <td style="padding:10px 14px;text-align:center;">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                  <span style="font-weight:800;font-size:.9rem;
+                               color:{% if pct >= 75 %}#16a34a{% elif pct >= 50 %}#d97706{% else %}#dc2626{% endif %};">
+                    {{ pct }} %
+                  </span>
+                  <div style="width:90px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+                    <div style="height:100%;border-radius:3px;width:{{ pct }}%;
+                                background:{% if pct >= 75 %}#16a34a{% elif pct >= 50 %}#d97706{% else %}#dc2626{% endif %};
+                                transition:width .6s ease;"></div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            {% endwith %}
+            {% empty %}
+            <tr>
+              <td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;font-size:.82rem;">
+                Aucune UE disponible pour ce semestre.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr style="background:#f0f9ff;border-top:2px solid #bae6fd;">
+              <td colspan="2" style="padding:10px 14px;font-weight:800;color:#0e7490;font-size:.82rem;">
+                <i class="bi bi-sigma me-1"></i>Total — {{ nb_total }} étudiant(s)
+              </td>
+              <td style="padding:10px 14px;text-align:center;">
+                <span style="font-weight:800;color:#166534;font-size:.85rem;">
+                  {{ nb_valides }}
+                </span>
+              </td>
+              <td style="padding:10px 14px;text-align:center;">
+                <span style="font-weight:800;color:#c2410c;font-size:.85rem;">
+                  {{ nb_rattrapages }}
+                </span>
+              </td>
+              <td style="padding:10px 14px;text-align:center;">
+                <span style="font-weight:800;color:#0e7490;font-size:.85rem;">
+                  {{ taux_validation }} %
+                </span>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ Modal détail UE ══ -->
+<div id="ue-modal-overlay" onclick="closeUeModal()"
+     style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);
+            z-index:1050;align-items:center;justify-content:center;">
+  <div id="ue-modal" onclick="event.stopPropagation()"
+       style="background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);
+              max-width:680px;width:94%;max-height:88vh;overflow-y:auto;
+              animation:slideUp .22s ease;">
+    <!-- En-tête modal -->
+    <div id="ue-modal-header" style="padding:18px 22px 14px;border-bottom:1px solid #e2e8f0;
+                                      display:flex;align-items:flex-start;gap:14px;">
+      <div id="ue-modal-icon"
+           style="width:42px;height:42px;border-radius:10px;display:flex;align-items:center;
+                  justify-content:center;font-size:1.1rem;flex-shrink:0;color:#fff;">
+        <i class="bi bi-diagram-3-fill"></i>
+      </div>
+      <div style="flex:1;">
+        <div id="ue-modal-ue-title" style="font-weight:800;font-size:1rem;color:#1e3a5f;"></div>
+        <div id="ue-modal-student" style="font-size:.8rem;color:#64748b;margin-top:2px;"></div>
+        <div id="ue-modal-summary" style="margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+      </div>
+      <button onclick="closeUeModal()"
+              style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1.3rem;
+                     padding:0 4px;line-height:1;flex-shrink:0;">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <!-- Corps modal : tableau ECs -->
+    <div style="padding:18px 22px 22px;">
+      <table style="width:100%;border-collapse:collapse;font-size:.82rem;" id="ue-modal-table">
+        <thead>
+          <tr style="background:#f8fafc;">
+            <th style="padding:8px 10px;text-align:left;font-size:.73rem;color:#64748b;
+                       font-weight:700;border-bottom:2px solid #e2e8f0;">Code EC</th>
+            <th style="padding:8px 10px;text-align:left;font-size:.73rem;color:#64748b;
+                       font-weight:700;border-bottom:2px solid #e2e8f0;">Intitulé</th>
+            <th style="padding:8px 10px;text-align:center;font-size:.73rem;color:#64748b;
+                       font-weight:700;border-bottom:2px solid #e2e8f0;">Coef.</th>
+            <th style="padding:8px 10px;text-align:center;font-size:.73rem;color:#64748b;
+                       font-weight:700;border-bottom:2px solid #e2e8f0;">CC</th>
+            <th style="padding:8px 10px;text-align:center;font-size:.73rem;color:#64748b;
+                       font-weight:700;border-bottom:2px solid #e2e8f0;">EXAM</th>
+            <th style="padding:8px 10px;text-align:center;font-size:.73rem;color:#64748b;
+                       font-weight:700;border-bottom:2px solid #e2e8f0;">RATT.</th>
+            <th style="padding:8px 10px;text-align:center;font-size:.73rem;color:#64748b;
+                       font-weight:700;border-bottom:2px solid #e2e8f0;">Moy. EC</th>
+            <th style="padding:8px 10px;text-align:center;font-size:.73rem;color:#64748b;
+                       font-weight:700;border-bottom:2px solid #e2e8f0;">Résultat</th>
+          </tr>
+        </thead>
+        <tbody id="ue-modal-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(18px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.moy-ue-cell:hover {
+  filter: brightness(.93);
+  transition: filter .15s;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showUeDetail(cell) {
+  const student   = cell.dataset.student;
+  const ueCode    = cell.dataset.ueCode;
+  const ueTitle   = cell.dataset.ueTitle;
+  const validated = cell.dataset.validated === 'true';
+  const average   = cell.dataset.average;
+  const credits   = cell.dataset.credits;
+  const ecs       = JSON.parse(cell.dataset.ecs);
+
+  // ── En-tête ──
+  const icon = document.getElementById('ue-modal-icon');
+  icon.style.background = validated ? '#16a34a' : '#dc2626';
+
+  document.getElementById('ue-modal-ue-title').textContent = ueCode + '  —  ' + ueTitle;
+  document.getElementById('ue-modal-student').innerHTML =
+    '<i class="bi bi-person-fill me-1"></i>' + student;
+
+  const summary = document.getElementById('ue-modal-summary');
+  summary.innerHTML = `
+    <span style="background:${validated?'#dcfce7':'#fee2e2'};color:${validated?'#166534':'#dc2626'};
+                 border-radius:20px;padding:3px 11px;font-size:.75rem;font-weight:700;">
+      <i class="bi bi-${validated?'patch-check-fill':'x-circle-fill'} me-1"></i>
+      Moy UE : ${average}  ${validated?'— Validée':'— Non validée'}
+    </span>
+    <span style="background:#f0f6ff;color:#1e3a5f;border-radius:20px;padding:3px 11px;
+                 font-size:.75rem;font-weight:600;">
+      <i class="bi bi-bookmark-fill me-1"></i>Crédits : ${credits}
+    </span>`;
+
+  // ── Corps : ligne par EC ──
+  const tbody = document.getElementById('ue-modal-body');
+  tbody.innerHTML = '';
+
+  ecs.forEach(function(ec, i) {
+    const ok  = ec.ok;
+    const fin = ec.final !== null ? parseFloat(ec.final) : null;
+    const bg  = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+
+    function noteCell(val) {
+      if (val === null) return '<span style="color:#94a3b8;">—</span>';
+      const v = parseFloat(val);
+      const c = v >= 10 ? '#166534' : '#dc2626';
+      return `<span style="font-weight:700;color:${c};">${parseFloat(val).toFixed(2)}</span>`;
+    }
+
+    const apprBadge = ec.appr === 'Validé'
+      ? `<span style="background:#dcfce7;color:#166534;border-radius:10px;padding:2px 8px;
+                      font-size:.7rem;font-weight:700;">
+           <i class="bi bi-check-circle-fill me-1"></i>Validé
+         </span>`
+      : ec.appr === 'Non Validé'
+      ? `<span style="background:#fee2e2;color:#dc2626;border-radius:10px;padding:2px 8px;
+                      font-size:.7rem;font-weight:700;">
+           <i class="bi bi-x-circle-fill me-1"></i>Non validé
+         </span>`
+      : `<span style="background:#f1f5f9;color:#64748b;border-radius:10px;padding:2px 8px;
+                      font-size:.7rem;font-weight:600;">${ec.appr || '—'}</span>`;
+
+    const finBg = fin !== null ? (fin >= 10 ? '#dcfce7' : '#fee2e2') : bg;
+
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr style="background:${bg};">
+        <td style="padding:8px 10px;font-weight:700;color:#7c3aed;font-size:.79rem;
+                   border-bottom:1px solid #f1f5f9;">${ec.code}</td>
+        <td style="padding:8px 10px;font-size:.8rem;border-bottom:1px solid #f1f5f9;">
+          ${ec.title}<br>
+          <span style="font-size:.69rem;color:#94a3b8;">coef. ${ec.coef}</span>
+        </td>
+        <td style="padding:8px 10px;text-align:center;font-size:.8rem;color:#64748b;
+                   border-bottom:1px solid #f1f5f9;font-weight:600;">${ec.coef}</td>
+        <td style="padding:8px 10px;text-align:center;border-bottom:1px solid #f1f5f9;">
+          ${noteCell(ec.cc)}
+        </td>
+        <td style="padding:8px 10px;text-align:center;border-bottom:1px solid #f1f5f9;">
+          ${noteCell(ec.exam)}
+        </td>
+        <td style="padding:8px 10px;text-align:center;border-bottom:1px solid #f1f5f9;">
+          ${ec.ratt !== null
+            ? `<span style="font-weight:700;color:#c2410c;">${parseFloat(ec.ratt).toFixed(2)}</span>`
+            : '<span style="color:#94a3b8;">—</span>'}
+        </td>
+        <td style="padding:8px 10px;text-align:center;background:${finBg};
+                   border-bottom:1px solid #f1f5f9;border-radius:0;">
+          ${fin !== null
+            ? `<span style="font-weight:800;font-size:.92rem;
+                            color:${fin >= 10 ? '#166534' : '#dc2626'};">${fin.toFixed(2)}</span>`
+            : '<span style="color:#94a3b8;">—</span>'}
+        </td>
+        <td style="padding:8px 10px;text-align:center;border-bottom:1px solid #f1f5f9;">
+          ${apprBadge}
+        </td>
+      </tr>`);
+  });
+
+  // ── Affichage ──
+  const overlay = document.getElementById('ue-modal-overlay');
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeUeModal() {
+  document.getElementById('ue-modal-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeUeModal();
+});
+
+// ── Accordéon — un seul panneau ouvert à la fois ────────────────────────────
+// Groupes d'accordéon : sections de niveau 1 (principaux)
+const ACCORDION_L1 = ['tbl-results', 'recap-section', 'annual-body', 'ue-summary-body'];
+// Groupes de niveau 2 (sous-cartes recap)
+const ACCORDION_L2 = ['recap-val', 'recap-ratt'];
+
+function closeBody(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.maxHeight = '0px';
+  el.style.overflow  = 'hidden';
+  // marquer l'en-tête comme collapsed
+  const hdr = el.previousElementSibling;
+  if (hdr) hdr.classList.add('collapsed');
+}
+
+function openBody(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.overflow  = 'hidden';
+  el.style.maxHeight = el.scrollHeight + 3000 + 'px';
+  const hdr = el.previousElementSibling;
+  if (hdr) hdr.classList.remove('collapsed');
+  // Après transition, passer à visible pour que les sous-éléments soient mesurables
+  el.addEventListener('transitionend', function onEnd() {
+    if (el.style.maxHeight !== '0px') el.style.overflow = 'visible';
+    el.removeEventListener('transitionend', onEnd);
+  });
+}
+
+function toggleSection(bodyId, header) {
+  const body = document.getElementById(bodyId);
+  if (!body) return;
+  const isOpen = body.style.maxHeight && body.style.maxHeight !== '0px';
+
+  // Déterminer le groupe d'appartenance
+  const isL1 = ACCORDION_L1.includes(bodyId);
+  const isL2 = ACCORDION_L2.includes(bodyId);
+
+  if (isOpen) {
+    closeBody(bodyId);
+  } else {
+    // Fermer tous les autres du même groupe
+    if (isL1) ACCORDION_L1.forEach(function(id) { if (id !== bodyId) closeBody(id); });
+    if (isL2) ACCORDION_L2.forEach(function(id) { if (id !== bodyId) closeBody(id); });
+    openBody(bodyId);
+  }
+}
+
+// Initialisation : tout replié par défaut
+document.addEventListener('DOMContentLoaded', function() {
+  ACCORDION_L1.concat(ACCORDION_L2).forEach(function(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.style.maxHeight  = '0px';
+    el.style.overflow   = 'hidden';
+    el.style.transition = 'max-height .3s ease';
+    const hdr = el.previousElementSibling;
+    if (hdr) hdr.classList.add('collapsed');
+  });
+});
+</script>
+{% endblock %}

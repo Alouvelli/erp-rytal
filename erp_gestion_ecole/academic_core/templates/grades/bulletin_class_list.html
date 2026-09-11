@@ -1,0 +1,203 @@
+{% extends 'base/base.html' %}
+{% block title %}Bulletins — Sélection classe{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Bulletins de notes</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#1e3a5f;"><i class="bi bi-journal-text"></i></span>
+    Bulletins de notes LMD
+  </h1>
+  <div class="page-actions" style="margin-left:auto;">
+    {% if user.is_admin or user.is_inst_admin %}
+    <a href="{% url 'grades:bulletin_config_edit' %}" class="btn btn-sm btn-outline-secondary" title="Configurer le signataire du bulletin">
+      <i class="bi bi-gear"></i> Paramètres bulletin
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Filtre année -->
+<div class="card-section mb-4">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#7c3aed;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-calendar3"></i></span>
+      Sélectionner l'année académique
+    </h6>
+  </div>
+  <div class="p-4">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:.84rem;">Année académique</label>
+        <select name="year" class="form-select form-select-sm">
+          <option value="">— Choisir —</option>
+          {% for y in years %}
+          <option value="{{ y.pk }}" {% if selected_year.pk == y.pk %}selected{% endif %}>{{ y.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-sm w-100" style="background:var(--navy);color:#fff;border:none;padding:8px 0;">
+          <i class="bi bi-search me-1"></i>Afficher
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if selected_year %}
+<div class="card-section mb-3">
+  <div class="card-section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-people"></i></span>
+      Classes par niveau — {{ selected_year.label }}
+    </h6>
+    {% if level_groups %}
+    <div style="position:relative;min-width:220px;">
+      <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:.8rem;"></i>
+      <input type="text" id="classSearchInput" placeholder="Rechercher une classe..."
+             class="form-control form-control-sm" style="padding-left:30px;font-size:.82rem;">
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if level_groups %}
+<div class="accordion" id="accordLevels">
+  {% for grp in level_groups %}
+  {% with idx=forloop.counter %}
+  <div class="accordion-item border-0 mb-3 shadow-sm rounded overflow-hidden level-group"
+       data-level-idx="{{ idx }}">
+    <h2 class="accordion-header" id="lhead-{{ idx }}">
+      <button class="accordion-button {% if not grp.classes or not forloop.first %}collapsed{% endif %} py-2 pe-3"
+              type="button"
+              data-bs-toggle="collapse"
+              data-bs-target="#lbody-{{ idx }}"
+              aria-expanded="{% if grp.classes and forloop.first %}true{% else %}false{% endif %}"
+              aria-controls="lbody-{{ idx }}"
+              style="background:var(--navy);color:#fff;font-size:.92rem;">
+        <i class="bi bi-mortarboard-fill me-2" style="font-size:.85rem;"></i>
+        <span class="flex-grow-1 fw-semibold">{{ grp.level.name|default:"Niveau non défini" }}</span>
+        <span style="background:rgba(255,255,255,.15);border-radius:20px;padding:2px 10px;font-size:.74rem;margin-right:6px;">
+          {{ grp.classes|length }} classe{{ grp.classes|length|pluralize }}
+        </span>
+      </button>
+    </h2>
+    <div id="lbody-{{ idx }}"
+         class="accordion-collapse collapse {% if grp.classes and forloop.first %}show{% endif %}"
+         aria-labelledby="lhead-{{ idx }}">
+      <div class="accordion-body p-0">
+        {% if grp.classes %}
+        <div class="table-responsive">
+          <table class="table mb-0" style="font-size:.84rem;">
+            <thead>
+              <tr>
+                <th class="ps-3">Classe</th>
+                <th>Filière</th>
+                <th>Département</th>
+                <th class="text-center">Effectif</th>
+                <th>Semestres</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for cls in grp.classes %}
+              <tr class="class-row" data-class-name="{{ cls.name|lower }}">
+                <td class="ps-3" style="font-weight:700;color:#1e293b;">{{ cls.name }}</td>
+                <td>{{ cls.program.name }}</td>
+                <td style="font-size:.78rem;color:#64748b;">{{ cls.program.department.name }}</td>
+                <td class="text-center">
+                  <span style="font-weight:600;">{{ cls.student_count }}</span>
+                </td>
+                <td>
+                  {% for sem in cls.relevant_semesters %}
+                  <a href="{% url 'grades:bulletin_list' cls.pk sem.pk %}"
+                     class="btn btn-sm me-1 mb-1"
+                     style="{% if sem.session_rattrapage_active %}background:#fef3c7;color:#92400e;border:1px solid #fcd34d;{% else %}background:#eff6ff;color:#1e3a5f;border:1px solid #bfdbfe;{% endif %}font-size:.74rem;padding:3px 10px;">
+                    <i class="bi bi-{% if sem.session_rattrapage_active %}arrow-repeat{% else %}journal-text{% endif %} me-1"></i>{{ sem.label }}
+                    {% if sem.session_rattrapage_active %}
+                    <span style="font-size:.65rem;font-weight:700;margin-left:2px;">RATT.</span>
+                    {% endif %}
+                    {% if sem.is_locked %}<i class="bi bi-lock-fill ms-1" style="color:#dc2626;" title="Semestre verrouillé"></i>{% endif %}
+                  </a>
+                  {% empty %}
+                  <span style="font-size:.78rem;color:#94a3b8;" title="Aucun semestre configuré pour ce niveau">—</span>
+                  {% endfor %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:30px 20px;color:#94a3b8;">
+          <i class="bi bi-inbox d-block mb-2" style="font-size:1.6rem;color:#cbd5e1;"></i>
+          Aucune classe pour ce niveau sur {{ selected_year.label }}.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endwith %}
+  {% endfor %}
+</div>
+<div id="classSearchEmpty" style="display:none;text-align:center;padding:40px 20px;color:#94a3b8;">
+  <i class="bi bi-search d-block mb-2" style="font-size:2rem;color:#cbd5e1;"></i>
+  Aucune classe ne correspond à la recherche.
+</div>
+{% else %}
+<div class="card-section">
+  <div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+    <i class="bi bi-people d-block mb-3" style="font-size:2.5rem;color:#cbd5e1;"></i>
+    <div style="font-size:.9rem;font-weight:600;">Aucune classe trouvée</div>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('classSearchInput')?.addEventListener('input', function (e) {
+  var term = e.target.value.trim().toLowerCase();
+  var anyVisible = false;
+
+  document.querySelectorAll('.level-group').forEach(function (group) {
+    var rows = group.querySelectorAll('.class-row');
+    var groupHasMatch = false;
+
+    rows.forEach(function (row) {
+      var match = !term || row.dataset.className.indexOf(term) !== -1;
+      row.style.display = match ? '' : 'none';
+      if (match) groupHasMatch = true;
+    });
+
+    // Un groupe sans classe du tout (accordéon vide) reste toujours visible
+    // au repos ; en recherche, on ne masque que les groupes SANS résultat.
+    if (rows.length === 0) {
+      group.style.display = term ? 'none' : '';
+    } else {
+      group.style.display = groupHasMatch ? '' : 'none';
+      if (groupHasMatch) anyVisible = true;
+
+      var collapseEl = group.querySelector('.accordion-collapse');
+      var buttonEl = group.querySelector('.accordion-button');
+      if (collapseEl && buttonEl && window.bootstrap) {
+        var collapse = window.bootstrap.Collapse.getOrCreateInstance(collapseEl, { toggle: false });
+        if (term && groupHasMatch) {
+          collapse.show();
+        } else if (!term) {
+          // Retour à l'état par défaut : rien de forcé ici, on laisse tel quel.
+        } else {
+          collapse.hide();
+        }
+      }
+    }
+    if (groupHasMatch) anyVisible = true;
+  });
+
+  document.getElementById('classSearchEmpty').style.display = (term && !anyVisible) ? '' : 'none';
+});
+</script>
+{% endblock %}

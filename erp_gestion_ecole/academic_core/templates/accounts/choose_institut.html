@@ -1,0 +1,55 @@
+{% extends 'base/base.html' %}
+{% block title %}Choisir un institut{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="max-width:760px;">
+
+  <div class="rounded-4 p-4 mb-4 text-white" style="background:linear-gradient(135deg,#0f2547 0%,#1d4ed8 100%);">
+    <h4 class="fw-bold mb-1"><i class="bi bi-buildings-fill me-2"></i>Choisir un institut</h4>
+    <div style="opacity:.75;font-size:.85rem;">
+      Vous êtes Contrôleur Interne pour plusieurs instituts. Sélectionnez celui que vous
+      souhaitez consulter — vous pourrez en changer à tout moment depuis le menu.
+    </div>
+  </div>
+
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="row g-3">
+      {% for inst in instituts %}
+      <div class="col-sm-6">
+        <button type="submit" name="institut_id" value="{{ inst.pk }}"
+                class="btn w-100 text-start p-3 border-0 shadow-sm"
+                style="border-radius:14px;background:{% if inst.db_alias == active_alias %}#eff6ff{% else %}#fff{% endif %};
+                       border:1.5px solid {% if inst.db_alias == active_alias %}#1d4ed8{% else %}#e2e8f0{% endif %} !important;">
+          <div class="d-flex align-items-center gap-3">
+            {% if inst.logo %}
+              <img src="{{ inst.logo.url }}" alt="" style="width:44px;height:44px;object-fit:contain;border-radius:9px;border:1px solid #e0e7ef;padding:3px;background:#fff;flex-shrink:0;">
+            {% else %}
+              <div class="d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
+                   style="width:44px;height:44px;background:#0f2547;border-radius:9px;font-size:.7rem;">
+                {{ inst.sigle|slice:":2"|upper|default:"IN" }}
+              </div>
+            {% endif %}
+            <div class="flex-grow-1" style="min-width:0;">
+              <div class="fw-bold text-truncate" style="font-size:.95rem;color:#1e293b;">{{ inst.nom }}</div>
+              {% if inst.sigle %}<div class="text-muted" style="font-size:.75rem;">{{ inst.sigle }}</div>{% endif %}
+            </div>
+            {% if inst.db_alias == active_alias %}
+              <span class="badge rounded-pill" style="background:#1d4ed8;color:#fff;font-size:.68rem;padding:5px 10px;">Actif</span>
+            {% endif %}
+          </div>
+        </button>
+      </div>
+      {% endfor %}
+    </div>
+  </form>
+
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends 'base/base.html' %}
+{% block title %}Notifications{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Notifications</li>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:var(--navy);"><i class="bi bi-bell-fill"></i></span>Notifications</h1>
+  {% if unread_count %}
+  <form method="post" action="{% url 'notifications:mark_all_read' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-check2-all me-1"></i>Tout marquer lu</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if unread_count %}
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+  <i class="bi bi-info-circle" style="color:var(--navy);"></i>
+  <span style="font-size:.84rem;color:#1e40af;">Vous avez <strong>{{ unread_count }}</strong> notification{{ unread_count|pluralize }} non lue{{ unread_count|pluralize }}.</span>
+</div>
+{% endif %}
+
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ul"></i></span>Toutes les notifications</h6>
+  </div>
+  <div style="padding:0;">
+    {% for notif in notifications %}
+    <div style="display:flex;align-items:flex-start;gap:14px;padding:16px 20px;border-bottom:1px solid var(--border);{% if not notif.is_read %}background:#f8faff;{% endif %}">
+      <div style="width:38px;height:38px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+        {% if notif.notif_type == 'info' %}background:#eff6ff;{% elif notif.notif_type == 'success' %}background:#f0fdf4;{% elif notif.notif_type == 'warning' %}background:#fffbeb;{% else %}background:#fff1f2;{% endif %}">
+        <i class="bi bi-{% if notif.notif_type == 'info' %}info-circle{% elif notif.notif_type == 'success' %}check-circle{% elif notif.notif_type == 'warning' %}exclamation-triangle{% else %}x-circle{% endif %}"
+          style="font-size:1rem;{% if notif.notif_type == 'info' %}color:var(--navy);{% elif notif.notif_type == 'success' %}color:#16a34a;{% elif notif.notif_type == 'warning' %}color:#d97706;{% else %}color:#dc2626;{% endif %}"></i>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:{% if not notif.is_read %}700{% else %}500{% endif %};font-size:.88rem;color:#1e293b;">{{ notif.title }}</div>
+        <div style="font-size:.82rem;color:#64748b;margin-top:2px;">{{ notif.message }}</div>
+        <div style="font-size:.75rem;color:#94a3b8;margin-top:4px;">{{ notif.created_at|timesince }} ago</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        {% if not notif.is_read %}
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--navy);display:inline-block;"></span>
+        <form method="post" action="{% url 'notifications:mark_read' notif.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn-action view" title="Marquer lu"><i class="bi bi-check"></i></button>
+        </form>
+        {% endif %}
+        <form method="post" action="{% url 'notifications:delete' notif.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></button>
+        </form>
+      </div>
+    </div>
+    {% empty %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-bell-slash d-block mb-2" style="font-size:2.5rem;color:#cbd5e1;"></i>
+      <span style="font-size:.88rem;">Aucune notification</span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

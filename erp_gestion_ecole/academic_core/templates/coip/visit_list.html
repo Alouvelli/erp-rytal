@@ -1,0 +1,64 @@
+{% extends 'base/base.html' %}
+{% block title %}COIP — Sorties pédagogiques{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item active">Sorties pédagogiques</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-bus-front-fill"></i></span>
+    Sorties pédagogiques
+  </h1>
+  <a href="{% url 'coip:visit_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Nouvelle sortie</a>
+</div>
+
+<div class="card-section mb-3">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Tous statuts</option>
+          {% for code, label in status_choices %}
+          <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{% url 'coip:visit_list' %}" class="btn btn-outline-secondary btn-sm">Réinit.</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="table-responsive">
+    <table class="table" id="tbl-visits">
+      <thead><tr><th>Intitulé</th><th>Lieu</th><th>Départ</th><th>Places</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for v in visits %}
+        <tr>
+          <td style="font-size:.85rem;font-weight:600;"><a href="{% url 'coip:visit_detail' v.pk %}">{{ v.intitule }}</a></td>
+          <td style="font-size:.82rem;color:#64748b;">{{ v.lieu }}</td>
+          <td style="font-size:.82rem;">{{ v.date_depart|date:"d/m/Y H:i" }}</td>
+          <td style="font-size:.82rem;text-align:center;">{{ v.participants.count }}/{{ v.nombre_places }}</td>
+          <td><span class="badge bg-{{ v.statut_color }}">{{ v.get_status_display }}</span></td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'coip:visit_edit' v.pk %}" class="btn-action edit" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'coip:visit_delete' v.pk %}" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">Aucune sortie enregistrée.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>$(document).ready(function(){ $('#tbl-visits').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}}); });</script>
+{% endblock %}

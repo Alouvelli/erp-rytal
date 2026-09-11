@@ -1,0 +1,530 @@
+{% extends 'base/base.html' %}
+{% block title %}Utilisateurs{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Utilisateurs</li>{% endblock %}
+
+{% block extra_css %}
+<style>
+.student-tree-dept, .student-tree-level {
+  border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;
+}
+.student-tree-level { border-color: #eef2f7; }
+.student-tree-dept > summary, .student-tree-level > summary {
+  cursor: pointer; list-style: none; display: flex; align-items: center;
+  justify-content: space-between;
+}
+.student-tree-dept > summary::-webkit-details-marker,
+.student-tree-level > summary::-webkit-details-marker { display: none; }
+.student-tree-dept > summary { padding: 10px 14px; background: #f8fafc; font-weight: 700; font-size: .85rem; color: #1e293b; }
+.student-tree-level > summary { padding: 7px 12px; background: #fff; font-weight: 600; font-size: .8rem; color: #334155; }
+.student-tree-body { padding: 10px 14px 14px 28px; }
+.student-tree-chevron { transition: transform .2s; }
+details[open] > summary .student-tree-chevron { transform: rotate(180deg); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-people-fill"></i></span>
+    Utilisateurs
+  </h1>
+  <a href="{% url 'accounts:user_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Nouvel utilisateur
+  </a>
+</div>
+
+{% if institut_required %}
+<div class="alert alert-warning d-flex align-items-center gap-3" style="border-radius:12px;">
+  <i class="bi bi-buildings-fill" style="font-size:1.5rem;color:#ca8a04;flex-shrink:0;"></i>
+  <div>
+    <div class="fw-bold">Sélectionnez un institut</div>
+    <div style="font-size:.85rem;">Choisissez un institut dans le sélecteur de la barre latérale pour voir les utilisateurs qui lui sont associés.</div>
+  </div>
+</div>
+{% else %}
+
+<!-- Barre de recherche live -->
+<div class="card-section mb-3">
+  <div style="padding:14px 20px;">
+    <div class="d-flex flex-wrap gap-3 align-items-center">
+      <!-- Recherche live (JS) -->
+      <div style="flex:1;min-width:260px;">
+        <label style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">
+          <i class="bi bi-search me-1"></i>Recherche rapide
+        </label>
+        <input type="text" id="live-search" placeholder="Nom, matricule, email, identifiant…"
+               autocomplete="off"
+               style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px 14px;font-size:.85rem;background:#f8fafc;color:#1e293b;outline:none;transition:border-color .2s;"
+               onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='#e2e8f0'">
+      </div>
+      <!-- Filtre par rôle (ouvre/ferme l'accordéon) -->
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px;">Rôle</label>
+        <select id="role-filter"
+                style="border:1.5px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:.83rem;background:#f8fafc;color:#1e293b;outline:none;min-width:180px;">
+          <option value="">Tous les rôles</option>
+          {% for group in user_groups %}
+          <option value="{{ group.role_name }}">{{ group.label }} ({{ group.users|length }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <!-- Compteur résultats -->
+      <div style="margin-left:auto;font-size:.82rem;color:#64748b;font-weight:600;">
+        <span id="result-count">{{ total_users }}</span> utilisateur<span id="result-plural">{% if total_users != 1 %}s{% endif %}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Accordéon des groupes par rôle -->
+<div id="accordion-groups">
+{% if user_groups %}
+  {% for group in user_groups %}
+  <div class="accord-group mb-2" data-role="{{ group.role_name }}" data-count="{{ group.users|length }}" style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;">
+
+    <!-- Header cliquable -->
+    <button class="accord-header w-100 d-flex align-items-center justify-content-between"
+            data-target="body-{{ forloop.counter }}"
+            style="padding:12px 18px;background:{{ group.bg }}30;border:none;border-left:4px solid {{ group.color }};cursor:pointer;text-align:left;transition:background .15s;"
+            onclick="toggleGroup(this)">
+      <div class="d-flex align-items-center gap-3">
+        <span style="width:30px;height:30px;border-radius:8px;background:{{ group.color }};display:inline-flex;align-items:center;justify-content:center;font-size:.85rem;color:#fff;flex-shrink:0;">
+          <i class="bi {{ group.icon }}"></i>
+        </span>
+        <span style="font-weight:700;font-size:.92rem;color:{{ group.color }};">{{ group.label }}</span>
+        <span class="group-count" style="font-size:.73rem;font-weight:700;color:{{ group.color }};background:{{ group.bg }};padding:2px 10px;border-radius:20px;border:1px solid {{ group.color }}40;">
+          {{ group.users|length }} utilisateur{{ group.users|length|pluralize }}
+        </span>
+      </div>
+      <i class="bi bi-chevron-down accord-arrow" style="color:{{ group.color }};font-size:.85rem;transition:transform .25s;"></i>
+    </button>
+
+    <!-- Corps déroulant -->
+    <div class="accord-body" id="body-{{ forloop.counter }}" style="display:none;">
+      {% if group.student_departments %}
+      <!-- Rôle Étudiants : arborescence Département > Niveau > Classe (avec
+           effectif), en listes déroulantes imbriquées — seules les classes
+           ayant des étudiants inscrits (statut validé + actif) apparaissent. -->
+      <div class="p-3">
+        <div class="mb-3 text-end">
+          <a href="{% url 'students:list' %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-list-ul me-1"></i>Voir la liste complète des étudiants (modifier / supprimer)
+          </a>
+        </div>
+        {% for dept in group.student_departments %}
+        <details class="student-tree-dept mb-2">
+          <summary>
+            <span><i class="bi bi-building me-2" style="color:{{ group.color }};"></i>{{ dept.name }}</span>
+            <span class="d-flex align-items-center gap-2">
+              <span style="font-size:.75rem;font-weight:700;color:{{ group.color }};background:{{ group.bg }};padding:2px 10px;border-radius:20px;">
+                {{ dept.total }} étudiant{{ dept.total|pluralize }}
+              </span>
+              <i class="bi bi-chevron-down student-tree-chevron" style="font-size:.75rem;color:#94a3b8;"></i>
+            </span>
+          </summary>
+          <div class="student-tree-body">
+            {% for level in dept.levels %}
+            <details class="student-tree-level mb-1">
+              <summary>
+                <span><i class="bi bi-bar-chart-steps me-2" style="color:#94a3b8;"></i>{{ level.name }}</span>
+                <span class="d-flex align-items-center gap-2">
+                  <span style="font-size:.72rem;font-weight:700;color:#475569;background:#f1f5f9;padding:2px 8px;border-radius:20px;">
+                    {{ level.total }} étudiant{{ level.total|pluralize }}
+                  </span>
+                  <i class="bi bi-chevron-down student-tree-chevron" style="font-size:.7rem;color:#94a3b8;"></i>
+                </span>
+              </summary>
+              <div class="row g-2 p-2">
+                {% for cls in level.classes %}
+                <div class="col-md-4 col-sm-6">
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                    <span style="font-size:.82rem;font-weight:600;color:#1e293b;">{{ cls.name }}</span>
+                    <span style="font-size:.75rem;font-weight:700;color:{{ group.color }};background:{{ group.bg }};padding:2px 8px;border-radius:20px;">
+                      {{ cls.count }}
+                    </span>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+            </details>
+            {% endfor %}
+          </div>
+        </details>
+        {% empty %}
+        <div class="text-muted" style="font-size:.85rem;">Aucune classe avec étudiant inscrit (statut validé et actif).</div>
+        {% endfor %}
+      </div>
+      {% elif group.dept_counts %}
+      <!-- Rôle Enseignants : décompte par département uniquement, pas la
+           liste individuelle -->
+      <div class="p-3">
+        <div class="mb-3 text-end">
+          <a href="{% url 'teachers:list' %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-list-ul me-1"></i>Voir la liste complète des enseignants (modifier / supprimer / nommer chef de département)
+          </a>
+        </div>
+        <div class="row g-2">
+          {% for dept_label, dept_count in group.dept_counts %}
+          <div class="col-md-4 col-sm-6">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+              <span style="font-size:.85rem;font-weight:600;color:#1e293b;">{{ dept_label }}</span>
+              <span style="font-size:.78rem;font-weight:700;color:{{ group.color }};background:{{ group.bg }};padding:2px 10px;border-radius:20px;">
+                {{ dept_count }} utilisateur{{ dept_count|pluralize }}
+              </span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="table-responsive">
+        <table class="table user-table" style="margin:0;">
+          <thead style="background:#f8fafc;">
+            <tr>
+              <th style="font-size:.75rem;color:#64748b;font-weight:700;padding:10px 16px;">Utilisateur</th>
+              <th style="font-size:.75rem;color:#64748b;font-weight:700;">Matricule</th>
+              <th style="font-size:.75rem;color:#64748b;font-weight:700;">Email</th>
+              <th style="font-size:.75rem;color:#64748b;font-weight:700;">Département</th>
+              <th style="font-size:.75rem;color:#64748b;font-weight:700;">Direction</th>
+              <th style="font-size:.75rem;color:#64748b;font-weight:700;">Dernière connexion</th>
+              <th style="font-size:.75rem;color:#64748b;font-weight:700;">Statut</th>
+              <th style="font-size:.75rem;color:#64748b;font-weight:700;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in group.users %}
+            <tr class="user-row"
+                data-name="{{ u.get_full_name|lower|default:u.username|lower }}"
+                data-email="{{ u.email|lower|default:'' }}"
+                data-username="{{ u.username|lower }}"
+                data-matricule="{{ u.matricule_employe|lower|default:'' }}">
+              <td style="padding:10px 16px;">
+                <div class="d-flex align-items-center gap-2">
+                  <div style="width:34px;height:34px;border-radius:50%;background:{{ group.color }};display:flex;align-items:center;justify-content:center;color:#fff;font-size:.72rem;font-weight:700;flex-shrink:0;">
+                    {% if u.get_full_name %}{{ u.get_full_name|slice:":1"|upper }}{% else %}{{ u.username|slice:":1"|upper }}{% endif %}
+                  </div>
+                  <div>
+                    <div style="font-weight:600;font-size:.85rem;color:#1e293b;">
+                      {% if u.get_full_name %}{{ u.get_full_name }}{% else %}{{ u.username }}{% endif %}
+                    </div>
+                    <div style="font-size:.73rem;color:#94a3b8;">{{ u.username }}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="font-size:.82rem;color:#64748b;">
+                {% if u.matricule_employe %}
+                <span style="font-weight:600;color:#1e293b;">{{ u.matricule_employe }}</span>
+                {% else %}—{% endif %}
+              </td>
+              <td style="font-size:.82rem;color:#64748b;">{{ u.email|default:"—" }}</td>
+              <!-- Département -->
+              <td style="font-size:.82rem;">
+                <div style="display:flex;align-items:center;gap:5px;">
+                  {% if u.department %}
+                  <span style="font-size:.73rem;background:#eff6ff;color:var(--navy);padding:2px 8px;border-radius:8px;font-weight:600;">
+                    {{ u.department.name }}
+                  </span>
+                  {% else %}
+                  <span style="color:#cbd5e1;font-size:.8rem;">—</span>
+                  {% endif %}
+                  {% if can_manage %}
+                  <button type="button" title="Modifier l'affectation"
+                          data-bs-toggle="modal" data-bs-target="#modal-affect-{{ u.pk }}"
+                          style="border:none;background:none;padding:2px 4px;cursor:pointer;color:#94a3b8;line-height:1;"
+                          onmouseover="this.style.color='var(--navy)'" onmouseout="this.style.color='#94a3b8'">
+                    <i class="bi bi-pencil-square" style="font-size:.78rem;"></i>
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+              <!-- Direction -->
+              <td style="font-size:.82rem;">
+                <div style="display:flex;align-items:center;gap:5px;">
+                  {% if u.direction %}
+                  <span style="font-size:.7rem;background:#f0fdf4;color:#166534;padding:2px 7px;border-radius:8px;font-weight:600;border:1px solid #bbf7d0;white-space:nowrap;">
+                    {{ u.direction.name }}
+                  </span>
+                  {% else %}
+                  <span style="color:#cbd5e1;font-size:.8rem;">—</span>
+                  {% endif %}
+                  {% if can_manage %}
+                  <button type="button" title="Modifier l'affectation"
+                          data-bs-toggle="modal" data-bs-target="#modal-affect-{{ u.pk }}"
+                          style="border:none;background:none;padding:2px 4px;cursor:pointer;color:#94a3b8;line-height:1;"
+                          onmouseover="this.style.color='#166534'" onmouseout="this.style.color='#94a3b8'">
+                    <i class="bi bi-pencil-square" style="font-size:.78rem;"></i>
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+              <td style="font-size:.82rem;color:#64748b;white-space:nowrap;">
+                {{ u.last_login|date:"d/m/Y H:i"|default:"Jamais" }}
+              </td>
+              <td>
+                {% if u.is_active %}
+                  <span style="font-size:.73rem;background:#dcfce7;color:#166534;padding:3px 9px;border-radius:10px;font-weight:600;">
+                    <i class="bi bi-check-circle me-1"></i>Actif
+                  </span>
+                {% else %}
+                  <span style="font-size:.73rem;background:#fee2e2;color:#991b1b;padding:3px 9px;border-radius:10px;font-weight:600;">
+                    <i class="bi bi-x-circle me-1"></i>Inactif
+                  </span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="d-flex gap-1">
+                  <a href="{% url 'accounts:user_edit' u.pk %}" class="btn-action edit" title="Modifier">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  {% if u != request.user %}
+                  <button type="button" class="btn-action delete" title="Supprimer"
+                    onclick="confirmDelete({{ u.pk }}, '{{ u.get_full_name|default:u.username|escapejs }}')">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <!-- Message aucun résultat dans le groupe -->
+      <div class="no-match-msg" style="display:none;text-align:center;padding:20px;font-size:.83rem;color:#94a3b8;">
+        <i class="bi bi-search me-1"></i>Aucun résultat dans ce groupe.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+
+{% else %}
+<div class="card-section">
+  <div class="text-center py-5" style="color:#94a3b8;">
+    <i class="bi bi-people d-block mb-2" style="font-size:2.5rem;color:#cbd5e1;"></i>
+    <div style="font-weight:600;">Aucun utilisateur trouvé</div>
+  </div>
+</div>
+{% endif %}
+</div>
+
+<!-- Modals affectation rapide (un par utilisateur) -->
+{% if can_manage %}
+{% for group in user_groups %}{% for u in group.users %}
+<div class="modal fade" id="modal-affect-{{ u.pk }}" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-1">
+        <h6 class="modal-title fw-bold">
+          <i class="bi bi-person-plus-fill me-2" style="color:var(--navy);"></i>
+          Modifier l'affectation — {{ u.get_full_name|default:u.username }}
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-1">
+        {% include "accounts/_modal_current_assign.html" with u=u %}
+        <form method="post" action="{% url 'accounts:assign_user_department' u.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="assign_type" class="modal-assign-type" value="">
+          <input type="hidden" name="target_id"   class="modal-target-id"   value="">
+          <input type="hidden" name="next" value="{{ request.path }}">
+          {% include "accounts/_modal_assign_fields.html" with inst_qs=inst_qs dept_qs=dept_qs dir_qs=dir_qs %}
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-check-lg me-1"></i>Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}{% endfor %}
+{% endif %}
+
+<!-- Modal suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#fee2e2;border-bottom:1px solid #fecaca;">
+        <h6 class="modal-title" style="color:#991b1b;font-weight:700;">
+          <i class="bi bi-exclamation-triangle me-2"></i>Supprimer l'utilisateur
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="font-size:.84rem;">
+        Voulez-vous vraiment supprimer <strong id="deleteUserName"></strong> ?
+        <div style="margin-top:8px;font-size:.78rem;color:#94a3b8;">Cette action est irréversible.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+        <form id="deleteForm" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm" style="background:#dc2626;color:#fff;border:none;">
+            <i class="bi bi-trash me-1"></i>Supprimer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endif %}{# institut_required #}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Accordéon : un seul rôle ouvert à la fois, tous repliés par défaut ── */
+function toggleGroup(btn) {
+  const bodyId = btn.getAttribute('data-target');
+  const body   = document.getElementById(bodyId);
+  const isOpen = body.style.display !== 'none';
+
+  document.querySelectorAll('.accord-body').forEach(function (b) { b.style.display = 'none'; });
+  document.querySelectorAll('.accord-arrow').forEach(function (a) { a.style.transform = 'rotate(0deg)'; });
+
+  if (!isOpen) {
+    body.style.display = 'block';
+    btn.querySelector('.accord-arrow').style.transform = 'rotate(180deg)';
+  }
+}
+
+/* ── Recherche live ────────────────────────────────────────────── */
+const searchInput  = document.getElementById('live-search');
+const roleFilter   = document.getElementById('role-filter');
+const resultCount  = document.getElementById('result-count');
+const resultPlural = document.getElementById('result-plural');
+
+function applyFilters() {
+  const q    = searchInput.value.toLowerCase().trim();
+  const role = roleFilter.value;
+  let total  = 0;
+
+  document.querySelectorAll('.accord-group').forEach(function (group) {
+    const groupRole  = group.getAttribute('data-role');
+    const body       = group.querySelector('.accord-body');
+    const arrow      = group.querySelector('.accord-arrow');
+    const noMatch    = group.querySelector('.no-match-msg');
+    const countBadge = group.querySelector('.group-count');
+    const userRows   = group.querySelectorAll('.user-row');
+
+    // Filtre par rôle : masquer le groupe entier si rôle ne correspond pas
+    if (role && groupRole !== role) {
+      group.style.display = 'none';
+      return;
+    }
+    group.style.display = '';
+
+    // Groupe sans lignes individuelles filtrables (ex. Étudiants : décompte
+    // par département uniquement) — jamais masqué par la recherche texte, mais
+    // exclu du total pendant une recherche texte active (impossible de savoir
+    // si un étudiant correspond, faute de lignes nom/matricule à comparer).
+    if (userRows.length === 0) {
+      if (!q) total += parseInt(group.getAttribute('data-count') || '0', 10);
+      if (role) {
+        body.style.display    = 'block';
+        arrow.style.transform = 'rotate(180deg)';
+      }
+      return;
+    }
+
+    // Filtrer les lignes par texte
+    let visibleRows = 0;
+    userRows.forEach(function (row) {
+      const name      = row.getAttribute('data-name') || '';
+      const email     = row.getAttribute('data-email') || '';
+      const username  = row.getAttribute('data-username') || '';
+      const matricule = row.getAttribute('data-matricule') || '';
+      const match    = !q || name.includes(q) || email.includes(q) || username.includes(q) || matricule.includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visibleRows++;
+    });
+
+    total += visibleRows;
+
+    // Ouvrir le groupe automatiquement si recherche active
+    if (q || role) {
+      body.style.display    = visibleRows > 0 ? 'block' : 'none';
+      arrow.style.transform = visibleRows > 0 ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+
+    if (noMatch) noMatch.style.display = visibleRows === 0 ? 'block' : 'none';
+    countBadge.textContent   = visibleRows + ' utilisateur' + (visibleRows !== 1 ? 's' : '');
+  });
+
+  resultCount.textContent  = total;
+  resultPlural.textContent = total !== 1 ? 's' : '';
+}
+
+searchInput.addEventListener('input', applyFilters);
+roleFilter.addEventListener('change', function () {
+  // Fermer tous puis laisser applyFilters rouvrir les bons
+  document.querySelectorAll('.accord-body').forEach(b => b.style.display = 'none');
+  document.querySelectorAll('.accord-arrow').forEach(a => a.style.transform = 'rotate(0deg)');
+  applyFilters();
+});
+
+/* ── Modal suppression ────────────────────────────────────────── */
+function confirmDelete(pk, name) {
+  document.getElementById('deleteUserName').textContent = name;
+  document.getElementById('deleteForm').action = '/accounts/users/' + pk + '/delete/';
+  new bootstrap.Modal(document.getElementById('deleteModal')).show();
+}
+
+/* ── Modals affectation rapide ────────────────────────────────── */
+function filterSelect(sel, facId) {
+  sel.querySelectorAll('option[data-faculty]').forEach(function(o) {
+    var match = !facId || o.dataset.faculty === String(facId) || o.dataset.faculty === '';
+    o.style.display = match ? '' : 'none';
+  });
+}
+
+function modalOnInstitutChange(modal, facId) {
+  modal.querySelector('.modal-assign-type').value = '';
+  modal.querySelector('.modal-target-id').value   = '';
+  var selDir  = modal.querySelector('.m-dir-sel');
+  var selDept = modal.querySelector('.m-dept-sel');
+  var wDir    = modal.querySelector('.m-dir-wrap');
+  var wDept   = modal.querySelector('.m-dept-wrap');
+  if (!facId) {
+    if (wDir)  wDir.style.opacity  = '.4';
+    if (wDept) wDept.style.opacity = '.4';
+    if (selDir)  { selDir.disabled  = true; selDir.value  = ''; }
+    if (selDept) { selDept.disabled = true; selDept.value = ''; }
+    return;
+  }
+  if (selDir)  { filterSelect(selDir,  facId); selDir.disabled  = false; selDir.value  = ''; }
+  if (selDept) { filterSelect(selDept, facId); selDept.disabled = false; selDept.value = ''; }
+  if (wDir)  wDir.style.opacity  = '1';
+  if (wDept) wDept.style.opacity = '1';
+}
+
+function modalOnDestChange(modal, type, val) {
+  if (!val) return;
+  if (type === 'direction') {
+    var d = modal.querySelector('.m-dept-sel'); if (d) d.value = '';
+  } else {
+    var r = modal.querySelector('.m-dir-sel');  if (r) r.value = '';
+  }
+  modal.querySelector('.modal-assign-type').value = type;
+  modal.querySelector('.modal-target-id').value   = val;
+}
+
+/* Init modals affectation : pré-sélectionner l'institut si un seul */
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.modal[id^="modal-affect-"]').forEach(function(modal) {
+    modal.addEventListener('show.bs.modal', function() {
+      var fi = modal.querySelector('.modal-filter-inst');
+      if (fi) {
+        var instOpts = fi.querySelectorAll('option[value]:not([value=""])');
+        if (instOpts.length === 1) { fi.value = instOpts[0].value; }
+        if (fi.value) modalOnInstitutChange(modal, fi.value);
+      }
+      modal.querySelector('.modal-assign-type').value = '';
+      modal.querySelector('.modal-target-id').value   = '';
+    });
+  });
+});
+</script>
+{% endblock %}

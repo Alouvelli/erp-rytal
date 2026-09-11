@@ -1,0 +1,252 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Demande de dépense {{ d.reference }}{% endblock %}
+
+{% block content %}
+<style>
+@media print { .no-print { display: none !important; } .fiche-card { border: none !important; box-shadow: none !important; } }
+.fiche-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f1f5f9; font-size: .88rem; }
+.fiche-row:last-child { border-bottom: none; }
+.fiche-label { color: #64748b; font-weight: 600; }
+.fiche-value { font-weight: 600; color: var(--navy); text-align: right; }
+.dd-badge { display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:.74rem;font-weight:700; }
+.dd-attente { background:#fef3c7;color:#92400e; }
+.dd-validee { background:#dbeafe;color:#1e40af; }
+.dd-rejetee { background:#fee2e2;color:#991b1b; }
+.dd-decaissee { background:#dcfce7;color:#166534; }
+</style>
+
+<div class="d-flex align-items-center justify-content-between mb-3 no-print">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-receipt-cutoff me-2" style="color:#dc2626;"></i>Demande {{ d.reference }}
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">{{ d.direction.name }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounting:demande_depense_list' %}" class="btn btn-sm" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    <button onclick="window.print()" class="btn btn-sm" style="background:#0891b2;color:#fff;">
+      <i class="bi bi-printer-fill me-1"></i>Imprimer
+    </button>
+    <a href="{% url 'accounting:demande_depense_pdf' d.pk %}" target="_blank" class="btn btn-sm" style="background:#dc2626;color:#fff;">
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>Télécharger PDF
+    </a>
+    {% if can_edit %}
+    <button type="button" class="btn btn-sm" style="background:#fef9c3;color:#92400e;" onclick="new bootstrap.Modal(document.getElementById('editDemandeModal')).show()">
+      <i class="bi bi-pencil-square me-1"></i>Modifier
+    </button>
+    <form method="post" action="{% url 'accounting:demande_depense_delete' d.pk %}" onsubmit="return confirm('Supprimer la demande {{ d.reference }} ?');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm" style="background:#991b1b;color:#fff;">
+        <i class="bi bi-trash-fill me-1"></i>Supprimer
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card-section fiche-card" style="padding:28px 32px;">
+      <div class="text-center mb-4">
+        <h5 class="fw-bold mb-0" style="color:var(--navy);">FICHE DE DEMANDE DE DÉPENSE</h5>
+        <p class="text-muted mb-0" style="font-size:.82rem;">{{ d.reference }} — {{ d.direction.name }}</p>
+      </div>
+
+      <div class="fiche-row"><span class="fiche-label">Objet de la demande</span><span class="fiche-value">{{ d.objet }}</span></div>
+      {% if d.categorie %}
+      <div class="fiche-row"><span class="fiche-label">Catégorie de dépense</span><span class="fiche-value">{{ d.get_categorie_display }}</span></div>
+      {% endif %}
+      <div class="fiche-row"><span class="fiche-label">Motif / Description</span><span class="fiche-value">{{ d.motif }}</span></div>
+      <div class="fiche-row"><span class="fiche-label">Montant</span><span class="fiche-value" style="font-size:1.1rem;color:#166534;">{{ d.montant|floatformat:0|intcomma }} FCFA</span></div>
+      {% if d.piece_justificative %}
+      <div class="fiche-row"><span class="fiche-label">Pièce justificative</span><span class="fiche-value">{{ d.piece_justificative }}</span></div>
+      {% endif %}
+      {% if d.justificatif %}
+      <div class="fiche-row"><span class="fiche-label">Justificatif</span><span class="fiche-value"><a href="{{ d.justificatif.url }}" target="_blank">Voir le fichier</a></span></div>
+      {% endif %}
+      <div class="fiche-row"><span class="fiche-label">Soumise par</span><span class="fiche-value">{{ d.requested_by.get_full_name|default:"—" }}</span></div>
+      <div class="fiche-row"><span class="fiche-label">Soumise le</span><span class="fiche-value">{{ d.requested_at|date:"d/m/Y H:i" }}</span></div>
+      <div class="fiche-row">
+        <span class="fiche-label">Statut</span>
+        <span class="fiche-value">
+          {% if d.statut == 'EN_ATTENTE' %}<span class="dd-badge dd-attente">En attente de validation</span>
+          {% elif d.statut == 'VALIDEE' %}<span class="dd-badge dd-validee">Validée — en attente de décaissement</span>
+          {% elif d.statut == 'REJETEE' %}<span class="dd-badge dd-rejetee">Rejetée</span>
+          {% else %}<span class="dd-badge dd-decaissee">Décaissée</span>{% endif %}
+        </span>
+      </div>
+      {% if d.validated_by %}
+      <div class="fiche-row"><span class="fiche-label">{% if d.statut == 'REJETEE' %}Rejetée par{% else %}Validée par{% endif %} (Trésorier Général)</span><span class="fiche-value">{{ d.validated_by.get_full_name }}</span></div>
+      <div class="fiche-row"><span class="fiche-label">{% if d.statut == 'REJETEE' %}Rejetée le{% else %}Validée le{% endif %}</span><span class="fiche-value">{{ d.validated_at|date:"d/m/Y H:i" }}</span></div>
+      {% endif %}
+      {% if d.statut == 'REJETEE' and d.rejection_reason %}
+      <div class="fiche-row"><span class="fiche-label">Motif du rejet</span><span class="fiche-value">{{ d.rejection_reason }}</span></div>
+      {% endif %}
+      {% if d.decaisse_by %}
+      <div class="fiche-row"><span class="fiche-label">Décaissée par (Caissier)</span><span class="fiche-value">{{ d.decaisse_by.get_full_name }}</span></div>
+      <div class="fiche-row"><span class="fiche-label">Décaissée le</span><span class="fiche-value">{{ d.decaisse_at|date:"d/m/Y H:i" }}</span></div>
+      {% endif %}
+
+      <div class="row mt-5 text-center" style="font-size:.85rem;">
+        <div class="col-4">
+          <p class="fw-bold mb-1">Ordonnateur</p>
+          <p class="mb-4">{{ d.ordonnateur|default:"—" }}</p>
+          <p>_________________________</p>
+        </div>
+        <div class="col-4">
+          <p class="fw-bold mb-1">Fournisseur</p>
+          <p class="mb-4">{{ d.fournisseur|default:"—" }}</p>
+          <p>_________________________</p>
+        </div>
+        <div class="col-4">
+          <p class="fw-bold mb-1">Bénéficiaire</p>
+          <p class="mb-4">{{ d.beneficiaire|default:"—" }}</p>
+          <p>_________________________</p>
+        </div>
+      </div>
+
+      {% if can_validate and d.statut == 'EN_ATTENTE' %}
+      <div class="d-flex justify-content-center gap-2 mt-4 no-print">
+        <form method="post" action="{% url 'accounting:demande_depense_valider' d.pk %}" onsubmit="return confirm('Valider cette demande de dépense ?');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm" style="background:#059669;color:#fff;">
+            <i class="bi bi-check-lg me-1"></i>Valider
+          </button>
+        </form>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejetModal">
+          <i class="bi bi-x-lg me-1"></i>Rejeter
+        </button>
+      </div>
+      {% endif %}
+
+      {% if can_decaisser and d.statut == 'VALIDEE' %}
+      <div class="d-flex justify-content-center mt-4 no-print">
+        <form method="post" action="{% url 'accounting:demande_depense_decaisser' d.pk %}" onsubmit="return confirm('Confirmer le décaissement de {{ d.montant|floatformat:0 }} FCFA pour {{ d.reference }} ?');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm" style="background:#059669;color:#fff;">
+            <i class="bi bi-cash-stack me-1"></i>Décaisser
+          </button>
+        </form>
+      </div>
+      {% endif %}
+
+      {% if d.statut == 'DECAISSEE' and d.caisse_movement_id %}
+      <div class="alert alert-success no-print mt-3" style="border-radius:10px;font-size:.82rem;">
+        <i class="bi bi-check-circle-fill me-1"></i>
+        Enregistrée comme sortie de caisse — voir <a href="{% url 'accounting:caisse_movement_list' %}">Entrée & Sortie Caisse</a>.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if can_validate and d.statut == 'EN_ATTENTE' %}
+<div class="modal fade" id="rejetModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:#991b1b;color:#fff;border-radius:14px 14px 0 0;">
+        <h6 class="modal-title mb-0"><i class="bi bi-x-circle me-2"></i>Rejeter la demande</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'accounting:demande_depense_rejeter' d.pk %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Motif du rejet</label>
+          <textarea name="rejection_reason" class="form-control" rows="3" placeholder="Expliquez le motif du rejet…"></textarea>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-sm" style="background:#991b1b;color:#fff;">Confirmer le rejet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if can_edit %}
+<div class="modal fade" id="editDemandeModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;">
+        <h6 class="modal-title mb-0"><i class="bi bi-pencil-square me-2"></i>Modifier la demande {{ d.reference }}</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'accounting:demande_depense_edit' d.pk %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Objet de la demande <span class="text-danger">*</span></label>
+            <input type="text" name="objet" class="form-control" value="{{ d.objet }}" required>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Catégorie de dépense</label>
+              <select name="categorie" class="form-select">
+                <option value="">— Sélectionner —</option>
+                {% for val, label in CATEGORIE_CHOICES %}
+                <option value="{{ val }}" {% if d.categorie == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Montant (FCFA) <span class="text-danger">*</span></label>
+              <input type="number" name="montant" class="form-control" min="1" step="500" value="{{ d.montant|stringformat:'f' }}" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Motif / Description de la dépense <span class="text-danger">*</span></label>
+            <textarea name="motif" class="form-control" rows="2" required>{{ d.motif }}</textarea>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Ordonnateur</label>
+              <input type="text" name="ordonnateur" class="form-control" value="{{ d.ordonnateur }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Fournisseur</label>
+              <input type="text" name="fournisseur" class="form-control" value="{{ d.fournisseur }}">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Bénéficiaire</label>
+              <input type="text" name="beneficiaire" class="form-control" value="{{ d.beneficiaire }}">
+            </div>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Pièce justificative (référence)</label>
+              <input type="text" name="piece_justificative" class="form-control" value="{{ d.piece_justificative }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Justificatif (scan / photo)</label>
+              <input type="file" name="justificatif" class="form-control">
+              {% if d.justificatif %}<div class="form-text" style="font-size:.72rem;">Fichier actuel conservé si non remplacé.</div>{% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if can_edit %}
+<script>
+if (window.location.hash === '#modifier') {
+  document.addEventListener('DOMContentLoaded', function () {
+    new bootstrap.Modal(document.getElementById('editDemandeModal')).show();
+  });
+}
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if form.instance.pk %}Modifier{% else %}Nouvelle{% endif %} séance d'orientation{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:orientation_session_list' %}">Orientation</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Modifier{% else %}Nouvelle{% endif %}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-compass"></i></span>
+    {% if form.instance.pk %}Modifier la séance{% else %}Nouvelle séance d'orientation{% endif %}
+  </h1>
+</div>
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card-section">
+      <div class="p-4">
+        <form method="post">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Étudiant <span class="text-danger">*</span></label>
+              {{ form.student }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Conseiller</label>
+              {{ form.conseiller }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Type de séance</label>
+              {{ form.type_session }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Date de la séance <span class="text-danger">*</span></label>
+              {{ form.date_session }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Durée (minutes)</label>
+              {{ form.duree_minutes }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Objectifs fixés</label>
+              {{ form.objectifs_fixes }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Observations</label>
+              {{ form.observations }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Recommandations</label>
+              {{ form.recommandations }}
+            </div>
+          </div>
+          <div class="d-flex gap-2 justify-content-end border-top pt-3 mt-3">
+            <a href="{% url 'coip:orientation_session_list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

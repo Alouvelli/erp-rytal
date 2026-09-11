@@ -1,0 +1,407 @@
+{% extends 'base/base.html' %}
+{% block title %}Abonnements — {{ config.nom|default:config.sigle }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academic_structure:institut_list' %}">Instituts</a></li>
+<li class="breadcrumb-item active">Abonnements — {{ config.nom|default:config.sigle }}</li>
+{% endblock %}
+
+{% block content %}
+
+<!-- En-tête -->
+<div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+  {% if config.logo %}
+  <img src="{{ config.logo.url }}" alt="Logo" style="height:52px;max-width:90px;object-fit:contain;border-radius:8px;border:1px solid #e2e8f0;background:#fff;padding:4px;flex-shrink:0;">
+  {% endif %}
+  <div style="flex:1;min-width:0;">
+    <h4 class="mb-0 fw-bold" style="color:var(--navy);">
+      <i class="bi bi-calendar-check me-2" style="color:var(--accent);"></i>{{ config.nom|default:config.sigle }}
+    </h4>
+    <p class="text-muted mb-0" style="font-size:.82rem;">Historique et gestion des abonnements annuels</p>
+  </div>
+  <a href="{% url 'academic_structure:institut_list' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;font-size:.82rem;">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<!-- Bandeau statut abonnement actif -->
+{% if abo_actif %}
+  {% with j=abo_actif.jours_restants %}
+  <div class="mb-4 p-3 d-flex align-items-center gap-3 flex-wrap"
+       style="border-radius:12px;
+         {% if j <= 30 %}background:#FEE2E2;border:1px solid #fca5a5;
+         {% elif j <= 90 %}background:#FEF3C7;border:1px solid #fde047;
+         {% else %}background:#DCFCE7;border:1px solid #86efac;{% endif %}">
+    <div style="font-size:2rem;
+      {% if j <= 30 %}color:#dc2626;{% elif j <= 90 %}color:#d97706;{% else %}color:#16a34a;{% endif %}">
+      <i class="bi bi-{% if j <= 30 %}exclamation-triangle-fill{% elif j <= 90 %}clock-history{% else %}shield-check{% endif %}"></i>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div class="fw-bold" style="font-size:.9rem;
+        {% if j <= 30 %}color:#991b1b;{% elif j <= 90 %}color:#92400e;{% else %}color:#166534;{% endif %}">
+        {% if j <= 30 %}Abonnement critique — expire dans {{ j }} jour{% if j > 1 %}s{% endif %}
+        {% elif j <= 90 %}Abonnement à renouveler — expire dans {{ j }} jours
+        {% else %}Abonnement actif — {{ j }} jours restants{% endif %}
+      </div>
+      <div style="font-size:.8rem;color:#475569;">
+        Du <strong>{{ abo_actif.date_debut|date:"d/m/Y" }}</strong> au <strong>{{ abo_actif.date_fin|date:"d/m/Y" }}</strong>
+        · {{ abo_actif.duree_annees }} an{% if abo_actif.duree_annees > 1 %}s{% endif %}
+        · {{ abo_actif.montant|floatformat:0 }} FCFA
+        {% if abo_actif.reference_paiement %} · Réf. <code>{{ abo_actif.reference_paiement }}</code>{% endif %}
+      </div>
+    </div>
+    {% if j <= 90 %}
+    <button type="button" class="btn btn-sm fw-bold" onclick="openAddModal()"
+            style="background:var(--navy);color:#fff;border-radius:8px;font-size:.82rem;white-space:nowrap;">
+      <i class="bi bi-arrow-clockwise me-1"></i>Renouveler
+    </button>
+    {% endif %}
+  </div>
+  {% endwith %}
+{% else %}
+<div class="mb-4 p-3 d-flex align-items-center gap-3"
+     style="border-radius:12px;background:#FEE2E2;border:1px solid #fca5a5;">
+  <i class="bi bi-x-circle-fill" style="font-size:1.8rem;color:#dc2626;"></i>
+  <div style="flex:1;">
+    <div class="fw-bold" style="color:#991b1b;">Aucun abonnement actif</div>
+    <div style="font-size:.8rem;color:#475569;">L'accès à la plateforme est bloqué pour cet institut.</div>
+  </div>
+  <button type="button" class="btn btn-sm fw-bold" onclick="openAddModal()"
+          style="background:#dc2626;color:#fff;border-radius:8px;font-size:.82rem;white-space:nowrap;">
+    <i class="bi bi-plus-lg me-1"></i>Créer un abonnement
+  </button>
+</div>
+{% endif %}
+
+<!-- Historique des abonnements -->
+<div class="card border-0 shadow-sm mb-4" style="border-radius:14px;">
+  <div class="card-header border-0 pt-3 pb-0 px-4 d-flex align-items-center justify-content-between" style="background:transparent;">
+    <h6 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-clock-history me-2" style="color:var(--accent);"></i>Historique des abonnements
+    </h6>
+    <button type="button" class="btn btn-sm" onclick="openAddModal()"
+            style="background:var(--navy);color:#fff;border-radius:8px;font-size:.8rem;">
+      <i class="bi bi-plus-lg me-1"></i>Nouvel abonnement
+    </button>
+  </div>
+  <div class="card-body p-0">
+    {% if abonnements %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:.83rem;">
+        <colgroup>
+          <col style="width:120px;">
+          <col style="width:110px;">
+          <col style="width:110px;">
+          <col style="width:70px;">
+          <col>
+          <col style="width:130px;">
+          <col style="width:110px;">
+          <col style="width:130px;">
+          <col style="width:110px;">
+        </colgroup>
+        <thead>
+          <tr style="background:#F8FAFC;font-size:.77rem;text-transform:uppercase;letter-spacing:.04em;color:#64748b;">
+            <th class="ps-4 py-2">Statut</th>
+            <th class="py-2">Début</th>
+            <th class="py-2">Fin</th>
+            <th class="py-2 text-center">Durée</th>
+            <th class="py-2 text-end pe-3">Montant (FCFA)</th>
+            <th class="py-2">Référence paiement</th>
+            <th class="py-2 text-center">Jours rest.</th>
+            <th class="py-2">Enregistré par</th>
+            <th class="py-2 text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for abo in abonnements %}
+          <tr>
+            <!-- Statut -->
+            <td class="ps-4 py-3" style="vertical-align:middle;">
+              {% if abo.statut == 'ACTIF' and abo.date_fin >= today %}
+                <span class="badge" style="background:#DCFCE7;color:#166534;border-radius:20px;font-size:.75rem;padding:4px 10px;font-weight:600;">
+                  <span style="width:6px;height:6px;border-radius:50%;background:#16a34a;display:inline-block;margin-right:4px;"></span>Actif
+                </span>
+              {% elif abo.statut == 'ACTIF' and abo.date_fin < today %}
+                <span class="badge" style="background:#FEE2E2;color:#991b1b;border-radius:20px;font-size:.75rem;padding:4px 10px;font-weight:600;">
+                  <span style="width:6px;height:6px;border-radius:50%;background:#dc2626;display:inline-block;margin-right:4px;"></span>Expiré
+                </span>
+              {% elif abo.statut == 'EN_ATTENTE' %}
+                <span class="badge" style="background:#FEF3C7;color:#92400e;border-radius:20px;font-size:.75rem;padding:4px 10px;font-weight:600;">
+                  <span style="width:6px;height:6px;border-radius:50%;background:#f59e0b;display:inline-block;margin-right:4px;"></span>En attente
+                </span>
+              {% elif abo.statut == 'SUSPENDU' %}
+                <span class="badge" style="background:#F3E8FF;color:#6b21a8;border-radius:20px;font-size:.75rem;padding:4px 10px;font-weight:600;">
+                  <span style="width:6px;height:6px;border-radius:50%;background:#9333ea;display:inline-block;margin-right:4px;"></span>Suspendu
+                </span>
+              {% else %}
+                <span class="badge" style="background:#F1F5F9;color:#64748b;border-radius:20px;font-size:.75rem;padding:4px 10px;">
+                  {{ abo.get_statut_display }}
+                </span>
+              {% endif %}
+            </td>
+            <!-- Dates -->
+            <td class="py-3" style="vertical-align:middle;font-size:.82rem;">{{ abo.date_debut|date:"d/m/Y" }}</td>
+            <td class="py-3" style="vertical-align:middle;font-size:.82rem;
+              {% if abo.date_fin < today %}color:#dc2626;font-weight:600;{% endif %}">
+              {{ abo.date_fin|date:"d/m/Y" }}
+            </td>
+            <!-- Durée -->
+            <td class="py-3 text-center" style="vertical-align:middle;">
+              <span class="badge" style="background:#E0E7FF;color:#3730a3;border-radius:6px;font-size:.77rem;">
+                {{ abo.duree_annees }} an{% if abo.duree_annees > 1 %}s{% endif %}
+              </span>
+            </td>
+            <!-- Montant -->
+            <td class="py-3 text-end pe-3" style="vertical-align:middle;font-weight:700;color:var(--navy);">
+              {{ abo.montant|floatformat:0 }}
+            </td>
+            <!-- Référence -->
+            <td class="py-3" style="vertical-align:middle;">
+              {% if abo.reference_paiement %}
+              <code style="font-size:.78rem;background:#F1F5F9;padding:2px 7px;border-radius:5px;color:#3730a3;">
+                {{ abo.reference_paiement }}
+              </code>
+              {% else %}<span style="color:#cbd5e1;">—</span>{% endif %}
+            </td>
+            <!-- Jours restants -->
+            <td class="py-3 text-center" style="vertical-align:middle;">
+              {% with j=abo.jours_restants %}
+              {% if abo.statut == 'ACTIF' %}
+                <span style="font-size:.95rem;font-weight:800;
+                  {% if j <= 0 %}color:#dc2626;{% elif j <= 30 %}color:#dc2626;{% elif j <= 90 %}color:#d97706;{% else %}color:#16a34a;{% endif %}">
+                  {{ j|default:0 }}
+                </span>
+                <div style="font-size:.7rem;color:#94a3b8;">j</div>
+              {% else %}
+                <span style="color:#cbd5e1;">—</span>
+              {% endif %}
+              {% endwith %}
+            </td>
+            <!-- Enregistré par -->
+            <td class="py-3" style="vertical-align:middle;font-size:.77rem;color:#64748b;">
+              {% if abo.created_by %}
+              <div style="color:#334155;font-weight:600;">{{ abo.created_by.get_full_name|default:abo.created_by.username }}</div>
+              {% endif %}
+              {{ abo.created_at|date:"d/m/Y" }}
+            </td>
+            <!-- Actions -->
+            <td class="py-3 text-center" style="vertical-align:middle;">
+              <div class="d-flex gap-1 justify-content-center flex-wrap">
+                {% if is_super %}
+                <!-- Super Admin : tous les changements de statut -->
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                          style="border-radius:7px;font-size:.75rem;padding:3px 8px;"
+                          data-bs-toggle="dropdown">
+                    <i class="bi bi-arrow-repeat"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="font-size:.82rem;border-radius:10px;min-width:160px;">
+                    {% for val, lbl in STATUT_CHOICES %}
+                    {% if val != abo.statut %}
+                    <li>
+                      <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="toggle_statut">
+                        <input type="hidden" name="abo_pk" value="{{ abo.pk }}">
+                        <input type="hidden" name="nouveau_statut" value="{{ val }}">
+                        <button type="submit" class="dropdown-item" style="font-size:.82rem;">→ {{ lbl }}</button>
+                      </form>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                  </ul>
+                </div>
+                <!-- Super Admin : supprimer -->
+                <form method="post" style="display:inline;"
+                      onsubmit="return confirm('Supprimer cet abonnement ?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="abo_pk" value="{{ abo.pk }}">
+                  <button type="submit" class="btn btn-sm btn-outline-danger"
+                          style="border-radius:7px;font-size:.75rem;padding:3px 8px;">
+                    <i class="bi bi-trash3-fill"></i>
+                  </button>
+                </form>
+                {% else %}
+                <!-- INST_ADMIN : uniquement résilier si l'abonnement est actif -->
+                {% if abo.statut == 'ACTIF' %}
+                <form method="post" style="display:inline;"
+                      onsubmit="return confirm('Résilier ce contrat ? L\'accès sera suspendu immédiatement.');">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="toggle_statut">
+                  <input type="hidden" name="abo_pk" value="{{ abo.pk }}">
+                  <input type="hidden" name="nouveau_statut" value="SUSPENDU">
+                  <button type="submit" class="btn btn-sm btn-outline-danger"
+                          style="border-radius:7px;font-size:.75rem;padding:3px 10px;">
+                    <i class="bi bi-x-circle me-1"></i>Résilier
+                  </button>
+                </form>
+                {% else %}
+                <span style="color:#cbd5e1;font-size:.75rem;">—</span>
+                {% endif %}
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-calendar-x" style="font-size:2.5rem;display:block;margin-bottom:.5rem;"></i>
+      Aucun abonnement enregistré pour cet institut.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal : Ajouter un abonnement -->
+<div class="modal fade" id="addAboModal" tabindex="-1">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content" style="border-radius:14px;border:0;box-shadow:0 16px 48px rgba(0,0,0,.14);">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-bold" style="color:var(--navy);">
+          <i class="bi bi-calendar-plus me-2" style="color:var(--accent);"></i>Nouvel abonnement
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add">
+        <div class="modal-body px-4">
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Date de début <span class="text-danger">*</span></label>
+              <input type="date" name="date_debut" id="date-debut" class="form-control" required
+                     value="{{ today|date:'Y-m-d' }}" style="border-radius:8px;">
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Durée (années) <span class="text-danger">*</span></label>
+              <div class="d-flex gap-2">
+                {% for n in "123" %}
+                <div class="form-check flex-fill" style="background:#F8FAFC;border:2px solid #e2e8f0;border-radius:9px;padding:10px 14px;cursor:pointer;text-align:center;" id="duree-card-{{ n }}">
+                  <input class="form-check-input d-none" type="radio" name="duree_annees"
+                         id="duree_{{ n }}" value="{{ n }}" {% if n == "1" %}checked{% endif %}
+                         onchange="updateDureeCards(); updatePreview()">
+                  <label class="form-check-label fw-bold d-block" for="duree_{{ n }}" style="cursor:pointer;font-size:1rem;color:var(--navy);">{{ n }} an{% if n != "1" %}s{% endif %}</label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Aperçu date de fin calculée -->
+          <div class="mb-3 p-2 px-3" style="background:#EFF6FF;border-radius:8px;border:1px solid #BFDBFE;">
+            <div style="font-size:.79rem;color:#1d4ed8;">
+              <i class="bi bi-calendar-check me-1"></i>
+              Date d'expiration calculée : <strong id="preview-date-fin">—</strong>
+            </div>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Montant (FCFA) <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <input type="number" name="montant" class="form-control" required
+                       min="1" step="1000" placeholder="Ex : 500 000"
+                       style="border-radius:8px 0 0 8px;">
+                <span class="input-group-text" style="border-radius:0 8px 8px 0;background:#F1F5F9;font-size:.8rem;">FCFA</span>
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Statut initial</label>
+              <select name="statut" class="form-select" style="border-radius:8px;">
+                {% for val, lbl in STATUT_CHOICES %}
+                <option value="{{ val }}" {% if val == 'ACTIF' %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.84rem;">Référence de paiement</label>
+            <input type="text" name="reference_paiement" class="form-control"
+                   placeholder="Ex : REC-2026-00001 ou N° chèque / virement"
+                   style="border-radius:8px;font-family:monospace;font-size:.83rem;">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.84rem;">Notes / Observations</label>
+            <textarea name="notes" class="form-control" rows="2"
+                      placeholder="Informations complémentaires…"
+                      style="border-radius:8px;font-size:.83rem;"></textarea>
+          </div>
+
+          <div class="mb-1 p-2 px-3" style="background:#FFF7ED;border-radius:8px;border:1px solid #FED7AA;">
+            <label class="form-label fw-semibold" style="font-size:.84rem;">
+              <i class="bi bi-shield-lock-fill me-1" style="color:#C2410C;"></i>
+              Code d'activation de la plateforme <span class="text-danger">*</span>
+            </label>
+            <input type="password" name="code_activation" class="form-control" required
+                   autocomplete="off" placeholder="Code d'activation actuellement en vigueur"
+                   style="border-radius:8px;">
+            <div style="font-size:.74rem;color:#9A3412;margin-top:4px;">
+              Requis pour confirmer tout nouvel abonnement — le même code que celui saisi sur
+              la page « Code d'activation » de la plateforme.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal" style="border-radius:8px;">Annuler</button>
+          <button type="submit" class="btn btn-sm px-4" style="background:var(--navy);color:#fff;border-radius:8px;font-weight:600;">
+            <i class="bi bi-check-circle-fill me-1"></i>Enregistrer l'abonnement
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openAddModal() {
+  updateDureeCards();
+  updatePreview();
+  new bootstrap.Modal(document.getElementById('addAboModal')).show();
+}
+
+function updateDureeCards() {
+  document.querySelectorAll('[id^="duree-card-"]').forEach(function(card) {
+    const n = card.id.replace('duree-card-', '');
+    const radio = document.getElementById('duree_' + n);
+    if (radio && radio.checked) {
+      card.style.borderColor = 'var(--navy)';
+      card.style.background  = '#EFF6FF';
+    } else {
+      card.style.borderColor = '#e2e8f0';
+      card.style.background  = '#F8FAFC';
+    }
+  });
+}
+
+function updatePreview() {
+  const dateInput = document.getElementById('date-debut');
+  const checked   = document.querySelector('input[name="duree_annees"]:checked');
+  const preview   = document.getElementById('preview-date-fin');
+  if (!dateInput || !dateInput.value || !checked || !preview) return;
+  const d    = new Date(dateInput.value);
+  const n    = parseInt(checked.value, 10);
+  d.setFullYear(d.getFullYear() + n);
+  preview.textContent = d.toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
+}
+
+// Écouteurs
+document.addEventListener('DOMContentLoaded', function () {
+  const dateInput = document.getElementById('date-debut');
+  if (dateInput) dateInput.addEventListener('change', updatePreview);
+  document.querySelectorAll('input[name="duree_annees"]').forEach(function(r) {
+    r.addEventListener('change', function(){ updateDureeCards(); updatePreview(); });
+  });
+  updateDureeCards();
+  updatePreview();
+});
+</script>
+{% endblock %}

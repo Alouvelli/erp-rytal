@@ -1,0 +1,122 @@
+{% load static admissions_extras %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ program.name }} — {{ config.nom|default:config.sigle }}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    :root { --navy: #003d82; --gold: #d4af37; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f8fafc; padding-bottom: 100px; }
+    .hero { background: linear-gradient(135deg, #003d82, #0066cc); color: #fff; padding: 2.5rem 1rem; }
+    .section-card { border: none; border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.06); margin-bottom: 1.5rem; }
+    .section-card ul, .section-card ol { margin: 0; padding-left: 1.25rem; }
+    .section-card li { margin-bottom: .4rem; line-height: 1.5; }
+    .section-card li:last-child { margin-bottom: 0; }
+    .section-card p:last-child { margin-bottom: 0; }
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; cursor: pointer;
+    }
+    .section-chevron { transition: transform .2s; }
+    .floating-cta {
+      position: fixed; bottom: 24px; right: 24px; z-index: 1000;
+      background: linear-gradient(135deg, var(--gold), #b8942c);
+      color: #1a1a1a; font-weight: 700; padding: 16px 28px;
+      border-radius: 50px; box-shadow: 0 8px 24px rgba(212,175,55,.5);
+      text-decoration: none; font-size: 1rem;
+      animation: pulse 2s infinite;
+    }
+    .floating-cta:hover { color: #1a1a1a; transform: scale(1.05); }
+    @keyframes pulse { 0%,100% { box-shadow: 0 8px 24px rgba(212,175,55,.5); } 50% { box-shadow: 0 8px 32px rgba(212,175,55,.8); } }
+    @media (max-width: 576px) { .floating-cta { right: 12px; bottom: 12px; padding: 14px 20px; font-size: .9rem; } }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="container">
+      <a href="{% url 'admission_portal:portail' institut_code %}" class="text-white-50 small"><i class="bi bi-arrow-left"></i> Retour aux filières</a>
+      <h1 class="h3 fw-bold mt-2 mb-1">{{ program.name }}</h1>
+      <p class="mb-0">{{ program.department.name }} — {{ program.level }} · {{ program.duration_years }} an(s)</p>
+      {% if places_restantes is not None %}
+        <span class="badge {% if places_restantes > 0 %}bg-success{% else %}bg-danger{% endif %} mt-2">
+          {% if places_restantes > 0 %}{{ places_restantes }} place(s) restante(s){% else %}Filière complète{% endif %}
+        </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="container py-4" style="max-width: 800px;">
+    {% if program.objectifs %}
+    <div class="card section-card overflow-hidden">
+      <div class="section-header" data-bs-toggle="collapse" data-bs-target="#fd-objectifs"
+           aria-expanded="false" aria-controls="fd-objectifs" style="background:#1d4ed8;">
+        <h2 class="h6 fw-bold mb-0 text-white"><i class="bi bi-bullseye me-2"></i>Objectifs de la formation</h2>
+        <i class="bi bi-chevron-down text-white section-chevron"></i>
+      </div>
+      <div class="collapse" id="fd-objectifs">
+        <div class="p-4">{{ program.objectifs|bullet_list }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if program.competences %}
+    <div class="card section-card overflow-hidden">
+      <div class="section-header" data-bs-toggle="collapse" data-bs-target="#fd-competences"
+           aria-expanded="false" aria-controls="fd-competences" style="background:#5b21b6;">
+        <h2 class="h6 fw-bold mb-0 text-white"><i class="bi bi-award me-2"></i>Compétences visées</h2>
+        <i class="bi bi-chevron-down text-white section-chevron"></i>
+      </div>
+      <div class="collapse" id="fd-competences">
+        <div class="p-4">{{ program.competences|bullet_list }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if program.debouches %}
+    <div class="card section-card overflow-hidden">
+      <div class="section-header" data-bs-toggle="collapse" data-bs-target="#fd-debouches"
+           aria-expanded="false" aria-controls="fd-debouches" style="background:#0f766e;">
+        <h2 class="h6 fw-bold mb-0 text-white"><i class="bi bi-briefcase me-2"></i>Débouchés</h2>
+        <i class="bi bi-chevron-down text-white section-chevron"></i>
+      </div>
+      <div class="collapse" id="fd-debouches">
+        <div class="p-4">{{ program.debouches|bullet_list }}</div>
+      </div>
+    </div>
+    {% endif %}
+    {% if program.modalites_admission %}
+    <div class="card section-card overflow-hidden">
+      <div class="section-header" data-bs-toggle="collapse" data-bs-target="#fd-modalites"
+           aria-expanded="false" aria-controls="fd-modalites" style="background:#92400e;">
+        <h2 class="h6 fw-bold mb-0 text-white"><i class="bi bi-clipboard-check me-2"></i>Modalités d'admission</h2>
+        <i class="bi bi-chevron-down text-white section-chevron"></i>
+      </div>
+      <div class="collapse" id="fd-modalites">
+        <div class="p-4">{{ program.modalites_admission|bullet_list }}</div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if not admissions_ouvertes %}
+  <div class="floating-cta" style="background:#64748b;color:#fff;animation:none;cursor:default;">
+    <i class="bi bi-lock-fill me-1"></i>Inscriptions fermées
+  </div>
+  {% elif places_restantes is None or places_restantes > 0 %}
+  <a href="{% url 'admission_portal:creer_compte' institut_code %}?filiere={{ program.code }}" class="floating-cta">
+    <i class="bi bi-pencil-square me-1"></i>Inscrivez-vous maintenant
+  </a>
+  {% endif %}
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.querySelectorAll('.section-card .collapse').forEach(function (el) {
+      var chevron = el.previousElementSibling.querySelector('.section-chevron');
+      if (!chevron) return;
+      el.addEventListener('show.bs.collapse', function () { chevron.style.transform = 'rotate(180deg)'; });
+      el.addEventListener('hide.bs.collapse', function () { chevron.style.transform = ''; });
+    });
+  </script>
+</body>
+</html>

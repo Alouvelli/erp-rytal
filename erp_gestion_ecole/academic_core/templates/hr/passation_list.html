@@ -1,0 +1,98 @@
+{% extends "base/base.html" %}
+{% block title %}Passations de service{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-statut { display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:.73rem;font-weight:600; }
+.bp-SOUMISE { background:#fef3c7;color:#92400e; }
+.bp-VALIDEE { background:#dcfce7;color:#15803d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'hr:dashboard' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+      <div>
+        <h5 class="mb-0 fw-bold">Passations de service</h5>
+        <small class="text-muted">{% if vue == 'toutes' %}Toutes les passations{% else %}Mes passations{% endif %}</small>
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      {% if is_manager %}
+      <a href="?vue=mine" class="btn btn-sm {% if vue != 'toutes' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Les miennes</a>
+      <a href="?vue=toutes" class="btn btn-sm {% if vue == 'toutes' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Toutes</a>
+      <button class="btn btn-primary btn-sm fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#form-passation">
+        <i class="bi bi-plus-lg me-1"></i>Nouvelle passation
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if is_manager %}
+  <div class="collapse mb-4" id="form-passation">
+    <form method="post" action="{% url 'hr:handover_create' %}" class="card border-0 shadow-sm p-3">
+      {% csrf_token %}
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label fw-semibold mb-1" style="font-size:.8rem;">Agent sortant</label>
+          <select name="sortant" class="form-select form-select-sm" required>
+            <option value="">—</option>{% for e in staff %}<option value="{{ e.pk }}">{{ e.get_full_name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold mb-1" style="font-size:.8rem;">Agent entrant</label>
+          <select name="entrant" class="form-select form-select-sm" required>
+            <option value="">—</option>{% for e in staff %}<option value="{{ e.pk }}">{{ e.get_full_name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3"><input type="text" name="poste" class="form-control form-control-sm" placeholder="Poste concerné" required></div>
+        <div class="col-md-3"><input type="date" name="date_passation" class="form-control form-control-sm" required></div>
+        <div class="col-12"><textarea name="elements_transferes" class="form-control form-control-sm" rows="2" placeholder="Éléments transférés"></textarea></div>
+        <div class="col-12"><button class="btn btn-primary btn-sm">Enregistrer</button></div>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead style="background:#f8fafc;">
+            <tr style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">
+              <th class="px-3">Poste</th><th>Sortant</th><th>Entrant</th><th>Date</th><th>Statut</th><th class="text-end px-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for h in handovers %}
+            <tr>
+              <td class="px-3 fw-semibold" style="font-size:.85rem;">{{ h.poste }}</td>
+              <td style="font-size:.85rem;">{{ h.sortant.get_full_name }}</td>
+              <td style="font-size:.85rem;">{{ h.entrant.get_full_name|default:'—' }}</td>
+              <td style="font-size:.82rem;">{{ h.date_passation|date:"d/m/Y" }}</td>
+              <td><span class="badge-statut bp-{{ h.statut }}">{{ h.get_statut_display }}</span></td>
+              <td class="text-end px-3">
+                {% if is_manager %}
+                <div class="d-flex gap-1 justify-content-end">
+                  {% if h.statut == 'SOUMISE' %}
+                  <form method="post" action="{% url 'hr:handover_validate' pk=h.pk %}">{% csrf_token %}
+                    <button class="btn btn-xs btn-success" style="font-size:.72rem;padding:3px 9px;">Valider</button></form>
+                  {% endif %}
+                  <form method="post" action="{% url 'hr:handover_delete' pk=h.pk %}" onsubmit="return confirm('Supprimer ?');">{% csrf_token %}
+                    <button class="btn btn-xs btn-outline-danger" style="font-size:.72rem;padding:3px 9px;"><i class="bi bi-trash"></i></button></form>
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center py-5 text-muted">Aucune passation.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

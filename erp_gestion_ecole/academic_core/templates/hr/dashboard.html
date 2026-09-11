@@ -1,0 +1,402 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}RH — Tableau de bord{% endblock %}
+
+{% block extra_head %}
+<style>
+.stat-card {
+  border-radius: 14px; padding: 20px 24px;
+  display: flex; align-items: center; gap: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.08); border: none;
+}
+.stat-icon {
+  width: 52px; height: 52px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; flex-shrink: 0;
+}
+.badge-statut { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 999px; font-size: .75rem; font-weight: 600; }
+.bs-PRESENT      { background:#dcfce7; color:#15803d; }
+.bs-ABSENT       { background:#fee2e2; color:#b91c1c; }
+.bs-RETARD       { background:#fef3c7; color:#92400e; }
+.bs-CONGE        { background:#e0f2fe; color:#0369a1; }
+.bs-DEMI_JOURNEE { background:#f1f5f9; color:#475569; }
+.bs-TELETRAVAIL  { background:#ede9fe; color:#5b21b6; }
+.bs-FERIE        { background:#f1f5f9; color:#374151; }
+
+.presence-row { border-radius: 8px; padding: 8px 12px; margin-bottom: 4px;
+  display: flex; align-items: center; gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; }
+.presence-row:hover { background: #eff6ff; border-color: #bfdbfe; }
+.avatar-circle {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: linear-gradient(135deg, #0d2244, #1a3a6b);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: .75rem; font-weight: 700; flex-shrink: 0;
+}
+.month-nav { display: flex; align-items: center; gap: 10px; }
+.month-nav a { display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 8px; border: 1.5px solid #e2e8f0;
+  color: #374151; text-decoration: none; font-size: .85rem; }
+.month-nav a:hover { background: #eff6ff; border-color: #93c5fd; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <div style="width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#0d2244,#1a3a6b);
+                  display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-people-fill" style="color:#0ea5e9;font-size:1.3rem;"></i>
+      </div>
+      <div>
+        <h4 class="mb-0 fw-bold">Ressources Humaines</h4>
+        <small class="text-muted">Gestion des présences du personnel</small>
+      </div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{% url 'hr:pointage_jour' %}?date={{ today|date:'Y-m-d' }}" class="btn btn-primary btn-sm fw-semibold">
+        <i class="bi bi-pencil-square me-1"></i> Pointage du jour
+      </a>
+      <a href="{% url 'hr:conge_create' %}" class="btn btn-outline-primary btn-sm fw-semibold">
+        <i class="bi bi-calendar-plus me-1"></i> Nouveau congé
+      </a>
+      <a href="{% url 'hr:export_excel' %}?year={{ year }}&month={{ month }}" class="btn btn-outline-success btn-sm fw-semibold">
+        <i class="bi bi-file-earmark-excel me-1"></i> Export Excel
+      </a>
+    </div>
+  </div>
+
+  <!-- Nav mois -->
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <div class="month-nav">
+      <a href="?year={{ prev_year }}&month={{ prev_month }}"><i class="bi bi-chevron-left"></i></a>
+      <span class="fw-bold" style="font-size:1.05rem;min-width:160px;text-align:center;">{{ month_label }} {{ year }}</span>
+      <a href="?year={{ next_year }}&month={{ next_month }}"><i class="bi bi-chevron-right"></i></a>
+    </div>
+    <a href="?year={{ today.year }}&month={{ today.month }}" class="btn btn-sm btn-outline-secondary">Aujourd'hui</a>
+  </div>
+
+  <!-- Stats globales du mois -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="stat-card" style="background:#eff6ff;">
+        <div class="stat-icon" style="background:#dbeafe;"><i class="bi bi-people-fill" style="color:#1d4ed8;"></i></div>
+        <div>
+          <div class="fw-bold fs-4 lh-1">{{ nb_staff }}</div>
+          <div style="font-size:.78rem;color:#64748b;">Employés actifs</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="stat-card" style="background:#f0fdf4;">
+        <div class="stat-icon" style="background:#dcfce7;"><i class="bi bi-check-circle-fill" style="color:#16a34a;"></i></div>
+        <div>
+          <div class="fw-bold fs-4 lh-1">{{ stats_map.PRESENT|default:0 }}</div>
+          <div style="font-size:.78rem;color:#64748b;">Présences (mois)</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="stat-card" style="background:#fef2f2;">
+        <div class="stat-icon" style="background:#fee2e2;"><i class="bi bi-x-circle-fill" style="color:#dc2626;"></i></div>
+        <div>
+          <div class="fw-bold fs-4 lh-1">{{ stats_map.ABSENT|default:0 }}</div>
+          <div style="font-size:.78rem;color:#64748b;">Absences (mois)</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="stat-card" style="background:#fffbeb;">
+        <div class="stat-icon" style="background:#fef3c7;"><i class="bi bi-clock-fill" style="color:#d97706;"></i></div>
+        <div>
+          <div class="fw-bold fs-4 lh-1">{{ stats_map.RETARD|default:0 }}</div>
+          <div style="font-size:.78rem;color:#64748b;">Retards (mois)</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="stat-card" style="background:#f0f9ff;">
+        <div class="stat-icon" style="background:#e0f2fe;"><i class="bi bi-umbrella-fill" style="color:#0369a1;"></i></div>
+        <div>
+          <div class="fw-bold fs-4 lh-1">{{ stats_map.CONGE|default:0 }}</div>
+          <div style="font-size:.78rem;color:#64748b;">Congés (mois)</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <div class="stat-card" style="background:#fefce8;">
+        <div class="stat-icon" style="background:#fef9c3;"><i class="bi bi-hourglass-split" style="color:#ca8a04;"></i></div>
+        <div>
+          <div class="fw-bold fs-4 lh-1">{{ conges_en_attente|length }}</div>
+          <div style="font-size:.78rem;color:#64748b;">Congés en attente</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tuiles des nouveaux modules RH -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3 col-xl-2">
+      <a href="{% url 'hr:discipline_list' %}" class="text-decoration-none">
+        <div class="stat-card" style="background:#fef2f2;">
+          <div class="stat-icon" style="background:#fee2e2;"><i class="bi bi-exclamation-octagon-fill" style="color:#dc2626;"></i></div>
+          <div>
+            <div class="fw-bold fs-4 lh-1 text-dark">{{ discipline_ouverts }}</div>
+            <div style="font-size:.78rem;color:#64748b;">Dossiers disciplinaires</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <a href="{% url 'hr:evaluation_list' %}" class="text-decoration-none">
+        <div class="stat-card" style="background:#eff6ff;">
+          <div class="stat-icon" style="background:#dbeafe;"><i class="bi bi-clipboard2-data-fill" style="color:#1d4ed8;"></i></div>
+          <div>
+            <div class="fw-bold fs-4 lh-1 text-dark">{{ evaluations_a_faire }}</div>
+            <div style="font-size:.78rem;color:#64748b;">Évaluations à faire{% if campagne_ouverte %} ({{ campagne_ouverte.annee }}){% endif %}</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <a href="{% url 'hr:mission_list' %}?vue=toutes" class="text-decoration-none">
+        <div class="stat-card" style="background:#f5f3ff;">
+          <div class="stat-icon" style="background:#ede9fe;"><i class="bi bi-airplane-fill" style="color:#6d28d9;"></i></div>
+          <div>
+            <div class="fw-bold fs-4 lh-1 text-dark">{{ missions_en_attente }}</div>
+            <div style="font-size:.78rem;color:#64748b;">Missions à valider</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <a href="{% url 'hr:interim_list' %}?vue=toutes" class="text-decoration-none">
+        <div class="stat-card" style="background:#f0fdf4;">
+          <div class="stat-icon" style="background:#dcfce7;"><i class="bi bi-arrow-left-right" style="color:#16a34a;"></i></div>
+          <div>
+            <div class="fw-bold fs-4 lh-1 text-dark">{{ interims_actifs }}</div>
+            <div style="font-size:.78rem;color:#64748b;">Intérims actifs</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <a href="{% url 'hr:internship_list' %}" class="text-decoration-none">
+        <div class="stat-card" style="background:#fffbeb;">
+          <div class="stat-icon" style="background:#fef3c7;"><i class="bi bi-mortarboard-fill" style="color:#d97706;"></i></div>
+          <div>
+            <div class="fw-bold fs-4 lh-1 text-dark">{{ stages_en_cours }}</div>
+            <div style="font-size:.78rem;color:#64748b;">Stages en cours</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <a href="{% url 'hr:onboarding_list' %}" class="text-decoration-none">
+        <div class="stat-card" style="background:#f0f9ff;">
+          <div class="stat-icon" style="background:#e0f2fe;"><i class="bi bi-signpost-split-fill" style="color:#0369a1;"></i></div>
+          <div>
+            <div class="fw-bold fs-4 lh-1 text-dark">{{ onboarding_en_cours }}</div>
+            <div style="font-size:.78rem;color:#64748b;">Intégrations en cours</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <a href="{% url 'hr:recruitment_list' %}" class="text-decoration-none">
+        <div class="stat-card" style="background:#ecfeff;">
+          <div class="stat-icon" style="background:#cffafe;"><i class="bi bi-person-plus-fill" style="color:#0e7490;"></i></div>
+          <div>
+            <div class="fw-bold fs-4 lh-1 text-dark">{{ recrutements_ouverts }}</div>
+            <div style="font-size:.78rem;color:#64748b;">Besoins de recrutement ouverts</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <a href="{% url 'hr:recruitment_list' %}" class="text-decoration-none">
+        <div class="stat-card" style="background:#fdf4ff;">
+          <div class="stat-icon" style="background:#fae8ff;"><i class="bi bi-people-fill" style="color:#a21caf;"></i></div>
+          <div>
+            <div class="fw-bold fs-4 lh-1 text-dark">{{ candidats_actifs }}</div>
+            <div style="font-size:.78rem;color:#64748b;">Candidats en cours</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-3 col-xl-2">
+      <a href="{% url 'hr:document_request_list' %}" class="text-decoration-none">
+        <div class="stat-card" style="background:#fef2f2;">
+          <div class="stat-icon" style="background:#fee2e2;"><i class="bi bi-folder-fill" style="color:#dc2626;"></i></div>
+          <div>
+            <div class="fw-bold fs-4 lh-1 text-dark">{{ documents_en_attente }}</div>
+            <div style="font-size:.78rem;color:#64748b;">Documents à traiter</div>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- Pointage du jour -->
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between py-3">
+          <div class="fw-bold d-flex align-items-center gap-2">
+            <i class="bi bi-calendar-check-fill text-primary"></i>
+            Pointage — {{ today|date:"d/m/Y" }}
+          </div>
+          <a href="{% url 'hr:pointage_jour' %}?date={{ today|date:'Y-m-d' }}" class="btn btn-sm btn-primary">
+            <i class="bi bi-pencil-square me-1"></i>Modifier
+          </a>
+        </div>
+        <div class="card-body p-3" style="max-height:420px;overflow-y:auto;">
+
+          {% if presences_jour %}
+          {% for p in presences_jour %}
+          <div class="presence-row">
+            <div class="avatar-circle">
+              {{ p.user.first_name|first|upper }}{{ p.user.last_name|first|upper }}
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div class="fw-semibold" style="font-size:.9rem;">{{ p.user.get_full_name }}</div>
+              <div style="font-size:.75rem;color:#64748b;">{{ p.user.role.get_name_display|default:'' }}</div>
+            </div>
+            <div>
+              <span class="badge-statut bs-{{ p.statut }}">
+                <i class="bi bi-circle-fill" style="font-size:.4rem;"></i>
+                {{ p.get_statut_display }}
+              </span>
+            </div>
+            {% if p.heure_arrivee %}
+            <div style="font-size:.78rem;color:#64748b;white-space:nowrap;">
+              {{ p.heure_arrivee|time:"H:i" }}{% if p.heure_depart %} → {{ p.heure_depart|time:"H:i" }}{% endif %}
+            </div>
+            {% endif %}
+            <a href="{% url 'hr:employe_fiche' pk=p.user.pk %}" class="btn btn-xs btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;">
+              <i class="bi bi-person"></i>
+            </a>
+          </div>
+          {% endfor %}
+          {% endif %}
+
+          {% if non_pointes %}
+          <div class="mt-3 mb-1" style="font-size:.78rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;">
+            Non encore pointés ({{ non_pointes|length }})
+          </div>
+          {% for emp in non_pointes %}
+          <div class="presence-row" style="opacity:.65;">
+            <div class="avatar-circle" style="background:linear-gradient(135deg,#94a3b8,#64748b);">
+              {{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div class="fw-semibold" style="font-size:.9rem;">{{ emp.get_full_name }}</div>
+              <div style="font-size:.75rem;color:#94a3b8;">{{ emp.role.get_name_display|default:'' }}</div>
+            </div>
+            <span class="badge-statut" style="background:#f1f5f9;color:#94a3b8;">Non pointé</span>
+            <a href="{% url 'hr:employe_fiche' pk=emp.pk %}" class="btn btn-xs btn-outline-secondary" style="padding:2px 8px;font-size:.72rem;">
+              <i class="bi bi-person"></i>
+            </a>
+          </div>
+          {% endfor %}
+          {% endif %}
+
+          {% if not presences_jour and not non_pointes %}
+          <div class="text-center py-5 text-muted">
+            <i class="bi bi-clipboard-x" style="font-size:2rem;opacity:.3;"></i>
+            <p class="mt-2">Aucun employé à afficher</p>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Congés en attente + accès rapides -->
+    <div class="col-lg-5">
+
+      <!-- Congés en attente -->
+      <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between py-3">
+          <div class="fw-bold d-flex align-items-center gap-2">
+            <i class="bi bi-hourglass-split text-warning"></i>
+            Demandes de congé en attente
+          </div>
+          <a href="{% url 'hr:conge_list' %}?statut=EN_ATTENTE" class="btn btn-sm btn-outline-warning">Tout voir</a>
+        </div>
+        <div class="card-body p-0">
+          {% if conges_en_attente %}
+          <ul class="list-group list-group-flush">
+            {% for conge in conges_en_attente %}
+            <li class="list-group-item d-flex align-items-center gap-3 py-2 px-3">
+              <div class="avatar-circle" style="width:32px;height:32px;font-size:.7rem;">
+                {{ conge.user.first_name|first|upper }}{{ conge.user.last_name|first|upper }}
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div class="fw-semibold" style="font-size:.85rem;">{{ conge.user.get_full_name }}</div>
+                <div style="font-size:.73rem;color:#64748b;">
+                  {{ conge.get_type_conge_display }} — {{ conge.nombre_jours }}j
+                  ({{ conge.date_debut|date:"d/m" }} → {{ conge.date_fin|date:"d/m/Y" }})
+                </div>
+              </div>
+              <a href="{% url 'hr:conge_review' pk=conge.pk %}" class="btn btn-xs btn-warning" style="padding:3px 10px;font-size:.72rem;white-space:nowrap;">
+                Traiter
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="bi bi-check-all" style="font-size:1.6rem;opacity:.3;"></i>
+            <p class="mt-1" style="font-size:.85rem;">Aucune demande en attente</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Accès rapides -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-3 fw-bold">
+          <i class="bi bi-lightning-fill text-primary me-2"></i>Accès rapides
+        </div>
+        <div class="card-body p-3">
+          <div class="d-grid gap-2">
+            <a href="{% url 'hr:presence_list' %}?year={{ year }}&month={{ month }}" class="btn btn-outline-primary btn-sm text-start fw-semibold">
+              <i class="bi bi-table me-2"></i>Liste des présences du mois
+            </a>
+            <a href="{% url 'hr:conge_list' %}" class="btn btn-outline-secondary btn-sm text-start fw-semibold">
+              <i class="bi bi-calendar-range me-2"></i>Toutes les demandes de congé
+            </a>
+            <a href="{% url 'hr:export_excel' %}?year={{ year }}&month={{ month }}" class="btn btn-outline-success btn-sm text-start fw-semibold">
+              <i class="bi bi-file-earmark-excel me-2"></i>Exporter le registre (Excel)
+            </a>
+          </div>
+          <hr class="my-3">
+          <div class="fw-semibold mb-2" style="font-size:.8rem;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Fiches employés</div>
+          <div style="max-height:200px;overflow-y:auto;">
+            {% for emp in non_pointes|slice:":5" %}
+            <a href="{% url 'hr:employe_fiche' pk=emp.pk %}" class="d-flex align-items-center gap-2 p-2 rounded text-decoration-none text-dark" style="font-size:.83rem;" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
+              <div class="avatar-circle" style="width:26px;height:26px;font-size:.6rem;">{{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}</div>
+              <span>{{ emp.get_full_name }}</span>
+            </a>
+            {% empty %}
+            {% for p in presences_jour|slice:":5" %}
+            <a href="{% url 'hr:employe_fiche' pk=p.user.pk %}" class="d-flex align-items-center gap-2 p-2 rounded text-decoration-none text-dark" style="font-size:.83rem;" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
+              <div class="avatar-circle" style="width:26px;height:26px;font-size:.6rem;">{{ p.user.first_name|first|upper }}{{ p.user.last_name|first|upper }}</div>
+              <span>{{ p.user.get_full_name }}</span>
+            </a>
+            {% endfor %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if form.instance.pk %}Modifier{% else %}Nouveau{% endif %} stage{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:internship_list' %}">Stages</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Modifier{% else %}Nouveau{% endif %}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-person-workspace"></i></span>
+    {% if form.instance.pk %}Modifier le stage{% else %}Nouveau stage{% endif %}
+  </h1>
+</div>
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card-section">
+      <div class="p-4">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Étudiant <span class="text-danger">*</span></label>
+              {{ form.student }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Offre liée</label>
+              {{ form.offer }}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Intitulé du stage <span class="text-danger">*</span></label>
+              {{ form.titre }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Statut</label>
+              {{ form.status }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Partenaire <span class="text-danger">*</span></label>
+              {{ form.partner }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Encadreur académique (ISI)</label>
+              {{ form.encadreur_isi }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Encadreur en entreprise</label>
+              {{ form.encadreur_entreprise }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Date de début <span class="text-danger">*</span></label>
+              {{ form.date_debut }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Date de fin</label>
+              {{ form.date_fin }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Rapport de stage</label>
+              {{ form.rapport }}
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Note</label>
+              {{ form.note }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Appréciation</label>
+              {{ form.appreciation }}
+            </div>
+          </div>
+          <div class="d-flex gap-2 justify-content-end border-top pt-3 mt-3">
+            <a href="{% url 'coip:internship_list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

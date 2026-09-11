@@ -1,0 +1,72 @@
+{% extends 'base/base.html' %}
+{% block title %}Taux horaires{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Direction Administrative Financière</a></li>
+<li class="breadcrumb-item active">Taux horaires</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#166534;"><i class="bi bi-gear-fill"></i></span>
+    Taux horaires — {{ dept.name }}
+  </h1>
+  <a href="{% url 'accounting:rate_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Nouveau taux
+  </a>
+</div>
+
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-check"></i></span>
+      Configuration des taux par niveau
+    </h6>
+  </div>
+
+  {% if rates %}
+  <div class="table-responsive">
+    <table class="table" style="margin:0;">
+      <thead>
+        <tr>
+          <th>Année académique</th>
+          <th>Niveau</th>
+          <th style="text-align:right;">Taux horaire (FCFA/h)</th>
+          <th style="text-align:right;">Montant / séance</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rate in rates %}
+        <tr style="font-size:.85rem;">
+          <td style="font-weight:600;">{{ rate.academic_year }}</td>
+          <td>
+            <span style="padding:3px 10px;background:#eff6ff;color:var(--navy);border-radius:20px;font-size:.78rem;font-weight:600;">
+              {{ rate.level }}
+            </span>
+          </td>
+          <td style="text-align:right;font-weight:700;color:#1e293b;">{{ rate.rate_per_hour|floatformat:0 }}</td>
+          <td style="text-align:right;font-weight:800;color:#166534;">{{ rate.amount_per_session|floatformat:0 }} FCFA</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'accounting:rate_edit' rate.pk %}" class="btn-action edit" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'accounting:rate_delete' rate.pk %}" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:50px 20px;color:#94a3b8;">
+    <i class="bi bi-gear d-block mb-3" style="font-size:2.5rem;color:#cbd5e1;"></i>
+    <div style="font-size:.95rem;font-weight:600;margin-bottom:8px;">Aucun taux configuré</div>
+    <div style="font-size:.83rem;margin-bottom:20px;">Définissez un taux horaire par niveau pour calculer les honoraires des enseignants.</div>
+    <a href="{% url 'accounting:rate_create' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Créer le premier taux
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

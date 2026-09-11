@@ -1,0 +1,29 @@
+{% extends 'base/base.html' %}
+{% block title %}Supprimer la séance{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:orientation_session_list' %}">Orientation</a></li>
+<li class="breadcrumb-item active">Supprimer</li>
+{% endblock %}
+{% block content %}
+<div class="row justify-content-center mt-4">
+  <div class="col-lg-5">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#ef4444;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-trash"></i></span>
+          Confirmer la suppression
+        </h6>
+      </div>
+      <div class="p-4">
+        <p style="font-size:.9rem;color:#475569;">Supprimer la séance d'orientation du <strong>{{ object.date_session|date:"d/m/Y H:i" }}</strong> avec <strong>{{ object.student }}</strong> ?</p>
+        <form method="post" class="d-flex gap-2">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash me-1"></i>Supprimer</button>
+          <a href="{% url 'coip:orientation_session_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x me-1"></i>Annuler</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

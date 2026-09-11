@@ -1,0 +1,645 @@
+{% extends 'base/base.html' %}
+{% block title %}État journalier{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Direction Administrative Financière</a></li>
+<li class="breadcrumb-item active">État journalier</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-bar-chart-line-fill"></i></span>
+    État journalier — {{ selected_date|date:"d/m/Y" }}{% if not is_today %} <span style="font-size:.7em;color:#f59e0b;">(historique)</span>{% endif %}
+  </h1>
+  <div class="d-flex gap-2 align-items-center">
+    <!-- Sélecteur d'année académique + date -->
+    <form method="get" class="d-flex align-items-center gap-1">
+      <select name="annee" class="form-select form-select-sm" style="width:140px;" onchange="this.form.submit()">
+        {% for y in academic_years %}
+        <option value="{{ y.pk }}" {% if selected_year.pk == y.pk %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+        {% endfor %}
+      </select>
+      <input type="date" name="date" value="{{ selected_date|date:'Y-m-d' }}"
+             max="{{ today|date:'Y-m-d' }}"
+             class="form-control form-control-sm" style="width:160px;"
+             onchange="this.form.submit()">
+      {% if not is_today %}
+      <a href="{% url 'accounting:etat_journalier' %}{% if selected_year %}?annee={{ selected_year.pk }}{% endif %}" class="btn btn-sm" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;white-space:nowrap;">
+        <i class="bi bi-calendar-check me-1"></i>Aujourd'hui
+      </a>
+      {% endif %}
+    </form>
+    <div class="dropdown">
+      <button class="btn btn-sm dropdown-toggle" style="background:#dc2626;color:#fff;border:none;" data-bs-toggle="dropdown">
+        <i class="bi bi-download me-1"></i>Exporter
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" href="{% url 'accounting:etat_journalier_pdf' %}{% if not is_today %}?date={{ selected_date|date:'Y-m-d' }}{% endif %}" target="_blank"><i class="bi bi-file-earmark-pdf me-2 text-danger"></i>PDF</a></li>
+        <li><a class="dropdown-item" href="{% url 'accounting:etat_journalier_excel' %}{% if not is_today %}?date={{ selected_date|date:'Y-m-d' }}{% endif %}"><i class="bi bi-file-earmark-excel me-2 text-success"></i>Excel</a></li>
+        <li><a class="dropdown-item" href="{% url 'accounting:etat_journalier_word' %}{% if not is_today %}?date={{ selected_date|date:'Y-m-d' }}{% endif %}"><i class="bi bi-file-earmark-word me-2 text-primary"></i>Word</a></li>
+      </ul>
+    </div>
+    {% if is_today %}
+      {% if not already_closed %}
+      <button type="button" class="btn btn-sm btn-success" data-bs-toggle="modal" data-bs-target="#modalCloturer">
+        <i class="bi bi-lock-fill me-1"></i>Clôturer la journée
+      </button>
+      {% else %}
+      <span class="btn btn-sm" style="background:#dcfce7;color:#166534;border:none;cursor:default;">
+        <i class="bi bi-check-circle-fill me-1"></i>Journée clôturée
+      </span>
+      {% endif %}
+    {% else %}
+      {% if already_closed %}
+      <span class="btn btn-sm" style="background:#dcfce7;color:#166534;border:none;cursor:default;">
+        <i class="bi bi-check-circle-fill me-1"></i>Journée clôturée
+      </span>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+
+<!-- Résumé du jour -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card-section" style="border-left:4px solid var(--navy);">
+      <div style="padding:16px 20px;">
+        <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Encaissements du jour</div>
+        <div style="font-size:1.5rem;font-weight:800;color:var(--navy);">{{ total_du_jour|floatformat:0 }} <span style="font-size:.9rem;font-weight:600;">FCFA</span></div>
+        <div style="font-size:.78rem;color:#64748b;margin-top:4px;">
+          Inscriptions: {{ total_inscription|floatformat:0 }} FCFA &bull; Mensualités: {{ total_mensualites|floatformat:0 }} FCFA
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card-section" style="border-left:4px solid #16a34a;">
+      <div style="padding:16px 20px;">
+        <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Validées</div>
+        <div style="font-size:1.5rem;font-weight:800;color:#16a34a;">{{ nb_validated }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card-section" style="border-left:4px solid #f59e0b;">
+      <div style="padding:16px 20px;">
+        <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">En attente</div>
+        <div style="font-size:1.5rem;font-weight:800;color:#f59e0b;">{{ nb_pending }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card-section" style="border-left:4px solid #dc2626;">
+      <div style="padding:16px 20px;">
+        <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Suspendus</div>
+        <div style="font-size:1.5rem;font-weight:800;color:#dc2626;">{{ nb_suspended }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-2">
+    <div class="card-section" style="border-left:4px solid #6366f1;">
+      <div style="padding:16px 20px;">
+        <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Restant dû (global)</div>
+        <div style="font-size:1.1rem;font-weight:800;color:#6366f1;">{{ total_remaining_global|floatformat:0 }}<span style="font-size:.7rem;"> FCFA</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Solde de caisse du jour (encaissements étudiants + mouvements de caisse) -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card-section" style="border-left:4px solid #6d28d9;">
+      <div style="padding:16px 20px;">
+        <div style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Solde de caisse du jour</div>
+        <div style="font-size:1.5rem;font-weight:800;color:#6d28d9;">{{ solde_caisse_jour|floatformat:0 }} <span style="font-size:.9rem;font-weight:600;">FCFA</span></div>
+        <div style="font-size:.78rem;color:#64748b;margin-top:4px;">
+          Entrées : {{ total_entrees_jour|floatformat:0 }} FCFA &bull; Sorties : {{ total_sorties_jour|floatformat:0 }} FCFA
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Frais d'inscription du jour -->
+<div class="card-section mb-4">
+  <div class="card-section-header etat-toggle-header collapsed" data-bs-toggle="collapse" data-bs-target="#etat-body-inscription" aria-expanded="false" style="cursor:pointer;">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;">
+        <i class="bi bi-person-check"></i>
+      </span>Frais d'inscription reçus aujourd'hui
+    </h6>
+    <div class="d-flex align-items-center gap-2">
+      <span style="font-size:.82rem;font-weight:700;color:var(--navy);">{{ total_inscription|floatformat:0 }} FCFA</span>
+      <i class="bi bi-chevron-down etat-chevron"></i>
+    </div>
+  </div>
+  <div class="collapse" id="etat-body-inscription">
+  {% if payments_today or caisse_inscription_today %}
+  <div class="px-3 pt-3">
+    <div style="position:relative;max-width:320px;">
+      <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:.8rem;"></i>
+      <input type="text" class="form-control form-control-sm etat-search" data-target="etat-table-inscription"
+             placeholder="Rechercher un étudiant, une classe…" style="padding-left:30px;font-size:.82rem;">
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table" id="etat-table-inscription">
+      <thead>
+        <tr>
+          <th>Étudiant</th><th>Matricule</th><th>Classe</th><th>Année</th>
+          <th class="text-end">Montant (FCFA)</th><th>Référence</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in payments_today %}
+        <tr id="insc-enr-{{ e.pk }}">
+          <td style="font-weight:600;">{{ e.student.full_name }}</td>
+          <td style="color:#64748b;font-size:.83rem;">{{ e.student.matricule|default:"—" }}</td>
+          <td style="font-size:.83rem;">{{ e.class_group|default:"—" }}</td>
+          <td style="font-size:.83rem;">{{ e.academic_year|default:"—" }}</td>
+          <td class="text-end" style="font-weight:700;color:#16a34a;">{{ e.payment_amount|floatformat:0 }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ e.payment_reference|default:"—" }}</td>
+          <td class="text-end" style="white-space:nowrap;">
+            <a href="{% url 'accounting:validation_inscription_detail' e.pk %}"
+               class="btn btn-xs btn-outline-primary" style="font-size:.72rem;padding:2px 8px;"
+               title="Modifier via la fiche inscription">
+              <i class="bi bi-pencil-fill"></i>
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+        {% for c in caisse_inscription_today %}
+        <tr id="insc-caisse-{{ c.pk }}">
+          <td style="font-weight:600;">{{ c.student.full_name }}</td>
+          <td style="color:#64748b;font-size:.83rem;">{{ c.student.matricule|default:"—" }}</td>
+          <td style="font-size:.83rem;">{{ c.student.current_class|default:"—" }}</td>
+          <td style="font-size:.83rem;">{{ c.academic_year|default:"—" }}</td>
+          <td class="text-end row-amount" style="font-weight:700;color:#16a34a;">{{ c.amount|floatformat:0 }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ c.reference|default:"—" }}</td>
+          <td class="text-end" style="white-space:nowrap;">
+            <button class="btn btn-xs btn-outline-primary btn-etat-edit" style="font-size:.72rem;padding:2px 8px;"
+                    data-type="caisse"
+                    data-pk="{{ c.pk }}"
+                    data-amount="{{ c.amount }}"
+                    data-date="{{ c.payment_date|date:'Y-m-d' }}"
+                    data-notes="{{ c.notes }}"
+                    title="Modifier">
+              <i class="bi bi-pencil-fill"></i>
+            </button>
+            <button class="btn btn-xs btn-outline-danger btn-etat-delete" style="font-size:.72rem;padding:2px 8px;margin-left:3px;"
+                    data-type="caisse"
+                    data-pk="{{ c.pk }}"
+                    data-row="insc-caisse-{{ c.pk }}"
+                    data-label="{{ c.student.full_name }}"
+                    title="Supprimer">
+              <i class="bi bi-trash-fill"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-4" style="color:#94a3b8;">Aucun frais d'inscription aujourd'hui.</div>
+  {% endif %}
+  </div>
+</div>
+
+<!-- Mensualités du jour -->
+<div class="card-section mb-4">
+  <div class="card-section-header etat-toggle-header collapsed" data-bs-toggle="collapse" data-bs-target="#etat-body-mensualites" aria-expanded="false" style="cursor:pointer;">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#0f766e;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;">
+        <i class="bi bi-calendar-check"></i>
+      </span>Mensualités reçues aujourd'hui
+    </h6>
+    <div class="d-flex align-items-center gap-2">
+      <span style="font-size:.82rem;font-weight:700;color:#0f766e;">{{ total_mensualites|floatformat:0 }} FCFA</span>
+      <i class="bi bi-chevron-down etat-chevron"></i>
+    </div>
+  </div>
+  <div class="collapse" id="etat-body-mensualites">
+  {% if installments_today or caisse_scolarite_today %}
+  <div class="px-3 pt-3">
+    <div style="position:relative;max-width:320px;">
+      <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:.8rem;"></i>
+      <input type="text" class="form-control form-control-sm etat-search" data-target="etat-table-mensualites"
+             placeholder="Rechercher un étudiant, une classe…" style="padding-left:30px;font-size:.82rem;">
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table" id="etat-table-mensualites">
+      <thead>
+        <tr>
+          <th>Étudiant</th><th>Matricule</th><th>Classe</th>
+          <th>Type</th><th>Réf.</th><th class="text-end">Montant (FCFA)</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for i in installments_today %}
+        <tr id="mens-inst-{{ i.pk }}">
+          <td style="font-weight:600;">{{ i.enrollment.student.full_name }}</td>
+          <td style="color:#64748b;font-size:.83rem;">{{ i.enrollment.student.matricule|default:"—" }}</td>
+          <td style="font-size:.83rem;">{{ i.enrollment.class_group|default:"—" }}</td>
+          <td style="font-size:.83rem;">Mensualité N°{{ i.installment_number }}</td>
+          <td style="font-size:.83rem;color:#64748b;">—</td>
+          <td class="text-end row-amount" style="font-weight:700;color:#0f766e;">{{ i.amount_paid|floatformat:0 }}</td>
+          <td class="text-end" style="white-space:nowrap;">
+            <button class="btn btn-xs btn-outline-primary btn-etat-edit" style="font-size:.72rem;padding:2px 8px;"
+                    data-type="installment"
+                    data-pk="{{ i.pk }}"
+                    data-amount="{{ i.amount_paid }}"
+                    data-date="{{ i.paid_date|date:'Y-m-d' }}"
+                    data-notes="{{ i.notes|escapejs }}"
+                    title="Modifier">
+              <i class="bi bi-pencil-fill"></i>
+            </button>
+            <button class="btn btn-xs btn-outline-danger btn-etat-delete" style="font-size:.72rem;padding:2px 8px;margin-left:3px;"
+                    data-type="installment"
+                    data-pk="{{ i.pk }}"
+                    data-row="mens-inst-{{ i.pk }}"
+                    data-label="{{ i.enrollment.student.full_name }}"
+                    title="Annuler le paiement">
+              <i class="bi bi-trash-fill"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+        {% for c in caisse_scolarite_today %}
+        <tr id="mens-caisse-{{ c.pk }}">
+          <td style="font-weight:600;">{{ c.student.full_name }}</td>
+          <td style="color:#64748b;font-size:.83rem;">{{ c.student.matricule|default:"—" }}</td>
+          <td style="font-size:.83rem;">{{ c.student.current_class|default:"—" }}</td>
+          <td style="font-size:.83rem;">{{ c.get_payment_type_display }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ c.reference|default:"—" }}</td>
+          <td class="text-end row-amount" style="font-weight:700;color:#0f766e;">{{ c.amount|floatformat:0 }}</td>
+          <td class="text-end" style="white-space:nowrap;">
+            <button class="btn btn-xs btn-outline-primary btn-etat-edit" style="font-size:.72rem;padding:2px 8px;"
+                    data-type="caisse"
+                    data-pk="{{ c.pk }}"
+                    data-amount="{{ c.amount }}"
+                    data-date="{{ c.payment_date|date:'Y-m-d' }}"
+                    data-notes="{{ c.notes }}"
+                    title="Modifier">
+              <i class="bi bi-pencil-fill"></i>
+            </button>
+            <button class="btn btn-xs btn-outline-danger btn-etat-delete" style="font-size:.72rem;padding:2px 8px;margin-left:3px;"
+                    data-type="caisse"
+                    data-pk="{{ c.pk }}"
+                    data-row="mens-caisse-{{ c.pk }}"
+                    data-label="{{ c.student.full_name }}"
+                    title="Supprimer">
+              <i class="bi bi-trash-fill"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-4" style="color:#94a3b8;">Aucune mensualité aujourd'hui.</div>
+  {% endif %}
+  </div>
+</div>
+
+<!-- Mouvements de caisse du jour (Brouillard) -->
+<div class="card-section mb-4">
+  <div class="card-section-header etat-toggle-header collapsed" data-bs-toggle="collapse" data-bs-target="#etat-body-mouvements" aria-expanded="false" style="cursor:pointer;">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#6d28d9;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;">
+        <i class="bi bi-arrow-left-right"></i>
+      </span>Mouvements de caisse (Brouillard)
+    </h6>
+    <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'accounting:caisse_movement_list' %}" class="btn btn-sm" style="background:#f5f3ff;color:#6d28d9;font-size:.78rem;"
+         onclick="event.stopPropagation();">
+        <i class="bi bi-plus-lg me-1"></i>Gérer les mouvements
+      </a>
+      <i class="bi bi-chevron-down etat-chevron"></i>
+    </div>
+  </div>
+  <div class="collapse" id="etat-body-mouvements">
+  {% if movements_day %}
+  <div class="px-3 pt-3">
+    <div style="position:relative;max-width:320px;">
+      <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:.8rem;"></i>
+      <input type="text" class="form-control form-control-sm etat-search" data-target="etat-table-mouvements"
+             placeholder="Rechercher un motif, une personne…" style="padding-left:30px;font-size:.82rem;">
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table" id="etat-table-mouvements">
+      <thead>
+        <tr>
+          <th>Type</th><th>Motif</th><th>Saisi par</th><th>Statut</th><th class="text-end">Montant (FCFA)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in movements_day %}
+        <tr>
+          <td>
+            {% if m.movement_type == TYPE_ENTREE %}
+            <span class="badge" style="background:#dcfce7;color:#166534;font-size:.72rem;"><i class="bi bi-arrow-down-circle-fill me-1"></i>Entrée</span>
+            {% else %}
+            <span class="badge" style="background:#fee2e2;color:#991b1b;font-size:.72rem;"><i class="bi bi-arrow-up-circle-fill me-1"></i>Sortie</span>
+            {% endif %}
+          </td>
+          <td style="font-size:.83rem;">{{ m.motif }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ m.created_by.get_full_name|default:"—" }}</td>
+          <td>
+            {% if m.is_executed %}
+            <span class="badge" style="background:#dcfce7;color:#166534;font-size:.72rem;">Exécuté</span>
+            {% else %}
+            <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.72rem;">En attente</span>
+            {% endif %}
+          </td>
+          <td class="text-end" style="font-weight:700;">{{ m.amount|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-4" style="color:#94a3b8;">Aucun mouvement de caisse aujourd'hui.</div>
+  {% endif %}
+  </div>
+</div>
+
+<div class="d-flex justify-content-end mb-3">
+  <a href="{% url 'accounting:clotures_list' %}" class="btn btn-sm" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;">
+    <i class="bi bi-clock-history me-1"></i>Historique des clôtures
+  </a>
+</div>
+
+<!-- Modal clôture -->
+{% if not already_closed %}
+<div class="modal fade" id="modalCloturer" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--navy);">
+        <h5 class="modal-title text-white"><i class="bi bi-lock-fill me-2"></i>Clôturer la journée</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'accounting:cloturer_journee' %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p class="mb-3">Vous êtes sur le point de clôturer la journée comptable du <strong>{{ today|date:"d/m/Y" }}</strong>.</p>
+          <div class="mb-3 p-3" style="background:#f0fdf4;border-radius:8px;border:1px solid #86efac;">
+            <div style="font-size:.83rem;color:#166534;">
+              <strong>Récapitulatif :</strong><br>
+              Encaissements étudiants : <strong>{{ total_du_jour|floatformat:0 }} FCFA</strong>
+              (Inscriptions : {{ total_inscription|floatformat:0 }} FCFA &bull; Mensualités : {{ total_mensualites|floatformat:0 }} FCFA)<br>
+              Mouvements de caisse : Entrées {{ total_entrees_jour|floatformat:0 }} FCFA &bull; Sorties {{ total_sorties_jour|floatformat:0 }} FCFA<br>
+              <strong>Solde de caisse du jour : {{ solde_caisse_jour|floatformat:0 }} FCFA</strong>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" style="font-size:.83rem;font-weight:600;">Observations (optionnel)</label>
+            <textarea name="notes" rows="3" class="form-control" style="font-size:.83rem;"
+                      placeholder="Remarques éventuelles pour cette clôture…"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm" style="background:#f1f5f9;color:#475569;" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-sm btn-success">
+            <i class="bi bi-lock-fill me-1"></i>Confirmer la clôture
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ══ Modal Modifier ══ -->
+<div id="edit-modal-overlay"
+     style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1060;
+            align-items:center;justify-content:center;"
+     onclick="if(event.target===this)closeEditModal()">
+  <div style="background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);
+              width:94%;max-width:460px;animation:slideUp .2s ease;"
+       onclick="event.stopPropagation()">
+    <div style="padding:18px 22px 14px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;border-radius:9px;background:#1e3a5f;
+                    display:flex;align-items:center;justify-content:center;color:#fff;font-size:.9rem;">
+          <i class="bi bi-pencil-fill"></i>
+        </div>
+        <div>
+          <div style="font-weight:800;color:#1e3a5f;font-size:.95rem;">Modifier la ligne</div>
+          <div id="edit-modal-subtitle" style="font-size:.75rem;color:#64748b;"></div>
+        </div>
+      </div>
+      <button onclick="closeEditModal()" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1.2rem;">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <div style="padding:20px 22px;">
+      <div class="mb-3">
+        <label style="font-size:.8rem;font-weight:700;color:#374151;display:block;margin-bottom:4px;">
+          Montant (FCFA) <span class="text-danger">*</span>
+        </label>
+        <input type="number" id="edit-amount" min="1" step="1"
+               class="form-control" style="font-size:.88rem;">
+      </div>
+      <div class="mb-3">
+        <label style="font-size:.8rem;font-weight:700;color:#374151;display:block;margin-bottom:4px;">
+          Date de paiement <span class="text-danger">*</span>
+        </label>
+        <input type="date" id="edit-date" class="form-control" style="font-size:.88rem;">
+      </div>
+      <div class="mb-1">
+        <label style="font-size:.8rem;font-weight:700;color:#374151;display:block;margin-bottom:4px;">
+          Observations
+        </label>
+        <textarea id="edit-notes" rows="2" class="form-control" style="font-size:.83rem;resize:none;"></textarea>
+      </div>
+    </div>
+    <div style="padding:12px 22px 18px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #f1f5f9;">
+      <button onclick="closeEditModal()" class="btn btn-sm btn-outline-secondary">Annuler</button>
+      <button onclick="submitEdit()" id="edit-save-btn" class="btn btn-sm btn-primary" style="padding:6px 20px;">
+        <i class="bi bi-check-lg me-1"></i>Enregistrer
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal Supprimer ══ -->
+<div id="delete-modal-overlay"
+     style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1060;
+            align-items:center;justify-content:center;"
+     onclick="if(event.target===this)closeDeleteModal()">
+  <div style="background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.25);
+              width:94%;max-width:420px;animation:slideUp .2s ease;"
+       onclick="event.stopPropagation()">
+    <div style="padding:18px 22px 14px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:10px;">
+      <div style="width:36px;height:36px;border-radius:9px;background:#dc2626;
+                  display:flex;align-items:center;justify-content:center;color:#fff;font-size:.9rem;flex-shrink:0;">
+        <i class="bi bi-trash-fill"></i>
+      </div>
+      <div style="font-weight:800;color:#1e3a5f;font-size:.95rem;">Confirmer la suppression</div>
+    </div>
+    <div style="padding:20px 22px;">
+      <p style="font-size:.85rem;color:#374151;margin:0;">
+        Êtes-vous sûr de vouloir supprimer le paiement de
+        <strong id="delete-modal-name" style="color:#dc2626;"></strong> ?
+        <br><span style="font-size:.77rem;color:#94a3b8;">Cette action est irréversible.</span>
+      </p>
+    </div>
+    <div style="padding:12px 22px 18px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #f1f5f9;">
+      <button onclick="closeDeleteModal()" class="btn btn-sm btn-outline-secondary">Annuler</button>
+      <button onclick="submitDelete()" id="delete-confirm-btn"
+              class="btn btn-sm btn-danger" style="padding:6px 20px;">
+        <i class="bi bi-trash-fill me-1"></i>Supprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes slideUp {
+  from { opacity:0; transform:translateY(14px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.etat-chevron { transition: transform .2s; color:#94a3b8; }
+.etat-toggle-header[aria-expanded="false"] .etat-chevron,
+.etat-toggle-header.collapsed .etat-chevron { transform: rotate(-90deg); }
+</style>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+let _editType, _editPk, _editRowId;
+let _delType,  _delPk,  _delRowId;
+
+/* ── Délégation d'événements (data-* évite les erreurs de syntaxe Django) ── */
+document.addEventListener('click', function(e) {
+  const btnEdit = e.target.closest('.btn-etat-edit');
+  if (btnEdit) { openEditModal(btnEdit.dataset.type, btnEdit.dataset.pk, btnEdit.dataset.amount, btnEdit.dataset.date, btnEdit.dataset.notes); }
+  const btnDel = e.target.closest('.btn-etat-delete');
+  if (btnDel)  { openDeleteModal(btnDel.dataset.type, btnDel.dataset.pk, btnDel.dataset.row, btnDel.dataset.label); }
+});
+
+/* ── Edit ── */
+function openEditModal(type, pk, amount, date, notes) {
+  _editType = type; _editPk = pk;
+  document.getElementById('edit-amount').value = parseFloat(amount) || '';
+  document.getElementById('edit-date').value   = date || '';
+  document.getElementById('edit-notes').value  = notes || '';
+  const sub = type === 'caisse' ? 'Paiement caisse' : 'Mensualité installment';
+  document.getElementById('edit-modal-subtitle').textContent = sub + ' #' + pk;
+  const overlay = document.getElementById('edit-modal-overlay');
+  overlay.style.display = 'flex';
+}
+function closeEditModal() {
+  document.getElementById('edit-modal-overlay').style.display = 'none';
+}
+function submitEdit() {
+  const amount = document.getElementById('edit-amount').value;
+  const date   = document.getElementById('edit-date').value;
+  if (!amount || !date) {
+    alert('Montant et date obligatoires.');
+    return;
+  }
+  const btn = document.getElementById('edit-save-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>…';
+
+  const url = _editType === 'caisse'
+    ? `/accounting/etat/caisse/${_editPk}/modifier/`
+    : `/accounting/etat/installment/${_editPk}/modifier/`;
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      csrfmiddlewaretoken: CSRF,
+      amount: amount,
+      payment_date: date,
+      notes: document.getElementById('edit-notes').value,
+    }).toString(),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { alert(data.error); return; }
+    closeEditModal();
+    // Mettre à jour les cellules montant dans le tableau
+    showEtatToast('Paiement modifié avec succès.', 'success');
+    setTimeout(() => location.reload(), 900);
+  })
+  .catch(() => alert('Erreur réseau'))
+  .finally(() => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Enregistrer'; });
+}
+
+/* ── Delete ── */
+function openDeleteModal(type, pk, rowId, name) {
+  _delType = type; _delPk = pk; _delRowId = rowId;
+  document.getElementById('delete-modal-name').textContent = name;
+  document.getElementById('delete-modal-overlay').style.display = 'flex';
+}
+function closeDeleteModal() {
+  document.getElementById('delete-modal-overlay').style.display = 'none';
+}
+function submitDelete() {
+  const btn = document.getElementById('delete-confirm-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>…';
+
+  const url = _delType === 'caisse'
+    ? `/accounting/etat/caisse/${_delPk}/supprimer/`
+    : `/accounting/etat/installment/${_delPk}/supprimer/`;
+
+  fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ csrfmiddlewaretoken: CSRF }).toString(),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { alert(data.error); return; }
+    closeDeleteModal();
+    // Supprimer la ligne du tableau sans rechargement
+    const row = document.getElementById(_delRowId);
+    if (row) {
+      row.style.transition = 'opacity .3s';
+      row.style.opacity = '0';
+      setTimeout(() => { row.remove(); }, 300);
+    }
+    showEtatToast('Paiement supprimé.', 'warning');
+  })
+  .catch(() => alert('Erreur réseau'))
+  .finally(() => { btn.disabled = false; btn.innerHTML = '<i class="bi bi-trash-fill me-1"></i>Supprimer'; });
+}
+
+function showEtatToast(msg, type) {
+  const colorMap = { success:'#1a8c3e', warning:'#b45309', error:'#c0392b' };
+  const iconMap  = { success:'check-circle-fill', warning:'exclamation-triangle-fill', error:'x-circle-fill' };
+  const d = document.createElement('div');
+  d.innerHTML = `<div style="position:fixed;top:20px;right:20px;z-index:99999;min-width:280px;
+    border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.2);">
+    <div style="background:${colorMap[type]};padding:11px 16px;display:flex;align-items:center;gap:10px;color:#fff;">
+      <i class="bi bi-${iconMap[type]}"></i>
+      <span style="font-size:.85rem;">${msg}</span>
+    </div>
+  </div>`;
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), 3000);
+}
+
+/* ── Recherche par tableau (Frais d'inscription / Mensualités / Mouvements) ── */
+document.querySelectorAll('.etat-search').forEach(function (input) {
+  input.addEventListener('click', function (e) { e.stopPropagation(); });
+  input.addEventListener('input', function (e) {
+    const term = e.target.value.trim().toLowerCase();
+    const table = document.getElementById(input.dataset.target);
+    if (!table) return;
+    table.querySelectorAll('tbody tr').forEach(function (row) {
+      const match = !term || row.textContent.toLowerCase().indexOf(term) !== -1;
+      row.style.display = match ? '' : 'none';
+    });
+  });
+});
+</script>
+{% endblock %}

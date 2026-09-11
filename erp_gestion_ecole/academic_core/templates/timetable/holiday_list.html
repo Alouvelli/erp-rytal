@@ -1,0 +1,202 @@
+{% extends 'base/base.html' %}
+{% block title %}Suspensions de planning{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+  <!-- En-tête -->
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <h4 class="mb-0 fw-bold" style="color:var(--navy);">
+        <i class="bi bi-pause-circle-fill me-2"></i>Suspensions de planning
+      </h4>
+      {% if active %}
+      <span class="badge rounded-pill" style="background:#fee2e2;color:#dc2626;font-size:.75rem;padding:4px 10px;">
+        <i class="bi bi-record-circle-fill me-1"></i>{{ active|length }} active{{ active|length|pluralize }}
+      </span>
+      {% endif %}
+    </div>
+    <a href="{% url 'timetable:holiday_create' %}" class="btn btn-sm btn-primary">
+      <i class="bi bi-plus-lg me-1"></i>Nouvelle suspension
+    </a>
+  </div>
+
+  {% if messages %}
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <!-- ── Suspensions actives ── -->
+  <div class="card shadow-sm mb-4 border-0">
+    <div class="card-header py-2 d-flex align-items-center gap-2"
+         style="background:#fee2e2;color:#991b1b;border-bottom:2px solid #fca5a5;">
+      <i class="bi bi-pause-fill"></i>
+      <strong>En cours ({{ active|length }})</strong>
+    </div>
+    <div class="card-body p-0">
+      {% if active %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle" style="font-size:.85rem;">
+          <thead style="background:#fff7f7;font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;">
+            <tr>
+              <th class="ps-3">Classe</th>
+              <th>Début</th>
+              <th>Fin</th>
+              <th>Motif</th>
+              <th>Créé par</th>
+              <th class="text-end pe-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for h in active %}
+            <tr>
+              <td class="ps-3">
+                <span style="background:#fee2e2;color:#dc2626;border-radius:8px;padding:2px 9px;font-weight:700;">
+                  {{ h.class_group.name }}
+                </span>
+              </td>
+              <td>{{ h.start_date|date:"d/m/Y" }}</td>
+              <td>{{ h.end_date|date:"d/m/Y" }}</td>
+              <td style="max-width:240px;">{{ h.reason|default:"—" }}</td>
+              <td style="font-size:.8rem;color:#64748b;">
+                {{ h.created_by.get_full_name|default:"—" }}
+              </td>
+              <td class="text-end pe-3">
+                <a href="{% url 'timetable:holiday_edit' h.pk %}"
+                   class="btn btn-xs btn-outline-secondary me-1" style="font-size:.76rem;padding:2px 8px;">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <form method="post" action="{% url 'timetable:holiday_delete' h.pk %}"
+                      class="d-inline"
+                      onsubmit="return confirm('Supprimer cette suspension ?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-xs btn-outline-danger" style="font-size:.76rem;padding:2px 8px;">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-3 text-muted" style="font-size:.85rem;">Aucune suspension active.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Suspensions programmées ── -->
+  <div class="card shadow-sm mb-4 border-0">
+    <div class="card-header py-2 d-flex align-items-center gap-2"
+         style="background:#fef3c7;color:#92400e;border-bottom:2px solid #fcd34d;">
+      <i class="bi bi-clock-fill"></i>
+      <strong>Programmées ({{ upcoming|length }})</strong>
+    </div>
+    <div class="card-body p-0">
+      {% if upcoming %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0 align-middle" style="font-size:.85rem;">
+          <thead style="background:#fffbeb;font-size:.74rem;text-transform:uppercase;letter-spacing:.04em;">
+            <tr>
+              <th class="ps-3">Classe</th>
+              <th>Début</th>
+              <th>Fin</th>
+              <th>Motif</th>
+              <th>Créé par</th>
+              <th class="text-end pe-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for h in upcoming %}
+            <tr>
+              <td class="ps-3">
+                <span style="background:#fef3c7;color:#92400e;border-radius:8px;padding:2px 9px;font-weight:700;">
+                  {{ h.class_group.name }}
+                </span>
+              </td>
+              <td>{{ h.start_date|date:"d/m/Y" }}</td>
+              <td>{{ h.end_date|date:"d/m/Y" }}</td>
+              <td style="max-width:240px;">{{ h.reason|default:"—" }}</td>
+              <td style="font-size:.8rem;color:#64748b;">
+                {{ h.created_by.get_full_name|default:"—" }}
+              </td>
+              <td class="text-end pe-3">
+                <a href="{% url 'timetable:holiday_edit' h.pk %}"
+                   class="btn btn-xs btn-outline-secondary me-1" style="font-size:.76rem;padding:2px 8px;">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <form method="post" action="{% url 'timetable:holiday_delete' h.pk %}"
+                      class="d-inline"
+                      onsubmit="return confirm('Supprimer cette suspension ?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-xs btn-outline-danger" style="font-size:.76rem;padding:2px 8px;">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-3 text-muted" style="font-size:.85rem;">Aucune suspension à venir.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Suspensions expirées ── -->
+  <div class="card shadow-sm border-0">
+    <div class="card-header py-2 d-flex align-items-center gap-2"
+         style="background:#f1f5f9;color:#64748b;border-bottom:1px solid #e2e8f0;">
+      <i class="bi bi-check-circle"></i>
+      <strong>Expirées ({{ expired|length }})</strong>
+      <small style="font-size:.72rem;">(réactivation automatique)</small>
+    </div>
+    <div class="card-body p-0">
+      {% if expired %}
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle" style="font-size:.82rem;color:#94a3b8;">
+          <thead style="background:#f8fafc;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;">
+            <tr>
+              <th class="ps-3">Classe</th>
+              <th>Début</th>
+              <th>Fin</th>
+              <th>Motif</th>
+              <th class="text-end pe-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for h in expired %}
+            <tr>
+              <td class="ps-3"><span style="border-radius:8px;padding:2px 9px;background:#f1f5f9;">{{ h.class_group.name }}</span></td>
+              <td>{{ h.start_date|date:"d/m/Y" }}</td>
+              <td>{{ h.end_date|date:"d/m/Y" }}</td>
+              <td>{{ h.reason|default:"—" }}</td>
+              <td class="text-end pe-3">
+                <form method="post" action="{% url 'timetable:holiday_delete' h.pk %}"
+                      class="d-inline"
+                      onsubmit="return confirm('Supprimer cette entrée ?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-xs btn-outline-secondary" style="font-size:.72rem;padding:1px 7px;">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="p-3 text-muted" style="font-size:.85rem;">Aucune suspension expirée.</div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

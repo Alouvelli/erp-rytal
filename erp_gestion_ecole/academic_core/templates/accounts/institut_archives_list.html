@@ -1,0 +1,148 @@
+{% extends 'base/base.html' %}
+{% block title %}Archives d'instituts{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#64748b;"><i class="bi bi-archive-fill"></i></span>
+    Archives des bases d'instituts supprimés
+  </h1>
+  <a href="{% url 'accounts:inst_admin_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<div class="card-section">
+  {% if locked %}
+  <div class="alert alert-danger m-3" style="font-size:.85rem;">
+    <i class="bi bi-lock-fill me-1"></i>Trop de tentatives échouées avec le code d'activation. Réessayez plus tard.
+  </div>
+  {% endif %}
+
+  {% if archives %}
+  <div class="table-responsive">
+    <table class="table" style="margin:0;font-size:.85rem;">
+      <thead>
+        <tr>
+          <th>Institut</th>
+          <th>Code</th>
+          <th>Alias base</th>
+          <th>Archivée le</th>
+          <th>Par</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in archives %}
+        <tr>
+          <td style="font-weight:600;">
+            {{ a.nom }}
+            {% if a.sigle %}<div style="font-size:.72rem;color:#64748b;font-weight:400;">{{ a.sigle }}</div>{% endif %}
+          </td>
+          <td><code>{{ a.code|default:"—" }}</code></td>
+          <td style="font-size:.78rem;color:#64748b;">{{ a.alias }}</td>
+          <td style="white-space:nowrap;">{{ a.archived_at|date:"d/m/Y H:i" }}</td>
+          <td style="font-size:.8rem;">{{ a.archived_by.get_full_name|default:"—" }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <button type="button" class="btn btn-sm btn-outline-primary" title="Restaurer"
+                      onclick="openRestoreModal({{ a.pk }}, '{{ a.nom|escapejs }}')">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Restaurer
+              </button>
+              {% if not locked %}
+              <button type="button" class="btn btn-sm btn-outline-danger" title="Supprimer définitivement"
+                      onclick="openDeletePermanentModal({{ a.pk }}, '{{ a.nom|escapejs }}')">
+                <i class="bi bi-trash3-fill me-1"></i>Supprimer définitivement
+              </button>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:40px 20px;color:#94a3b8;">
+    <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;color:#cbd5e1;"></i>
+    <div style="font-size:.85rem;">Aucune base archivée pour le moment.</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Modal restauration -->
+<div class="modal fade" id="restoreModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:14px;border:0;box-shadow:0 16px 48px rgba(0,0,0,.15);">
+      <div class="modal-header border-0 pb-0" style="background:#EFF6FF;border-radius:14px 14px 0 0;">
+        <h6 class="modal-title fw-bold" style="color:#1d4ed8;">
+          <i class="bi bi-arrow-counterclockwise me-2"></i>Restaurer <span id="restore-nom"></span>
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="restore-form" action="">
+        {% csrf_token %}
+        <div class="modal-body pt-3" style="font-size:.85rem;">
+          Le fichier de base sera remis à sa place d'origine. Il ne sera réutilisé
+          que si vous recréez ensuite un institut avec <strong>exactement le même code</strong>
+          — sinon une nouvelle base vide sera créée à côté.
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal" style="border-radius:8px;">Annuler</button>
+          <button type="submit" class="btn btn-sm px-4" style="background:#1d4ed8;color:#fff;border-radius:8px;font-weight:600;">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>Confirmer la restauration
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal suppression définitive (exige le code d'activation) -->
+<div class="modal fade" id="deletePermanentModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:14px;border:0;box-shadow:0 16px 48px rgba(0,0,0,.15);">
+      <div class="modal-header border-0 pb-0" style="background:#FEE2E2;border-radius:14px 14px 0 0;">
+        <h6 class="modal-title fw-bold" style="color:#991b1b;">
+          <i class="bi bi-trash3-fill me-2"></i>Supprimer définitivement <span id="delete-nom"></span>
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="delete-permanent-form" action="">
+        {% csrf_token %}
+        <div class="modal-body pt-3">
+          <div class="mb-3 p-3" style="background:#FEE2E2;border-radius:8px;font-size:.82rem;color:#991b1b;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            Action <strong>irréversible</strong> — le fichier sera définitivement effacé du disque,
+            sans possibilité de récupération. Le code d'activation actuel de la plateforme est requis.
+          </div>
+          <label class="form-label fw-semibold" style="font-size:.84rem;">Code d'activation <span class="text-danger">*</span></label>
+          <input type="password" name="activation_code" class="form-control" required autocomplete="off"
+                 style="border-radius:8px;font-size:.83rem;">
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal" style="border-radius:8px;">Annuler</button>
+          <button type="submit" class="btn btn-sm px-4" style="background:#dc2626;color:#fff;border-radius:8px;font-weight:600;">
+            <i class="bi bi-trash3-fill me-1"></i>Confirmer la suppression définitive
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openRestoreModal(pk, nom) {
+  document.getElementById('restore-form').action = '/accounts/instituts/archives/' + pk + '/restaurer/';
+  document.getElementById('restore-nom').textContent = nom;
+  new bootstrap.Modal(document.getElementById('restoreModal')).show();
+}
+
+function openDeletePermanentModal(pk, nom) {
+  document.getElementById('delete-permanent-form').action = '/accounts/instituts/archives/' + pk + '/supprimer-definitivement/';
+  document.getElementById('delete-nom').textContent = nom;
+  new bootstrap.Modal(document.getElementById('deletePermanentModal')).show();
+}
+</script>
+{% endblock %}

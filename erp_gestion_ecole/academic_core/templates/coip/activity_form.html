@@ -1,0 +1,84 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if form.instance.pk %}Modifier{% else %}Nouvelle{% endif %} activité{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:activity_list' %}">Activités</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Modifier{% else %}Nouvelle{% endif %}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-calendar-event-fill"></i></span>
+    {% if form.instance.pk %}Modifier l'activité{% else %}Nouvelle activité{% endif %}
+  </h1>
+</div>
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card-section">
+      <div class="p-4">
+        <form method="post">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Titre <span class="text-danger">*</span></label>
+              {{ form.titre }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Type</label>
+              {{ form.type_activite }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Description</label>
+              {{ form.description }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Objectifs</label>
+              {{ form.objectifs }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Date de début <span class="text-danger">*</span></label>
+              {{ form.date_debut }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Date de fin</label>
+              {{ form.date_fin }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Lieu</label>
+              {{ form.lieu }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Budget</label>
+              {{ form.budget }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Responsable</label>
+              {{ form.responsable }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Statut</label>
+              {{ form.status }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Partenaires associés</label>
+              {{ form.partenaires }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Programme détaillé</label>
+              {{ form.programme }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Compte-rendu</label>
+              {{ form.compte_rendu }}
+            </div>
+          </div>
+          <div class="d-flex gap-2 justify-content-end border-top pt-3 mt-3">
+            <a href="{% url 'coip:activity_list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

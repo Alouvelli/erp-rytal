@@ -1,0 +1,161 @@
+{% extends "base/base.html" %}
+
+{% block title %}Engagements budgétaires{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-journal-check me-2"></i>Engagements budgétaires
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Pilotage et Suivi Budgétaire</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounting:budget_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    {% if lignes %}
+    <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('engModal')).show()">
+      <i class="bi bi-plus-lg me-1"></i>Nouvel engagement
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card-section mb-3" style="padding:16px 20px;">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Exercice</label>
+      <select name="annee" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for y in academic_years %}
+        <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Statut</label>
+      <select name="statut" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">Tous</option>
+        {% for val, label in STATUT_CHOICES %}
+        <option value="{{ val }}" {% if statut_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+</div>
+
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Référence</th>
+          <th>Ligne budgétaire</th>
+          <th>Objet</th>
+          <th class="text-end">Montant</th>
+          <th>Demandeur</th>
+          <th class="text-center">Statut</th>
+          <th class="text-center" style="width:220px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for e in engagements %}
+        <tr>
+          <td style="padding:8px 16px;font-weight:700;color:var(--navy);">{{ e.reference }}</td>
+          <td>
+            <a href="{% url 'accounting:ligne_budgetaire_detail' e.ligne_budgetaire.pk %}" style="text-decoration:none;font-size:.78rem;">
+              {{ e.ligne_budgetaire.direction.name }} — {{ e.ligne_budgetaire.compte_comptable }}
+            </a>
+          </td>
+          <td style="font-size:.8rem;">{{ e.objet }}</td>
+          <td class="text-end" style="font-weight:700;">{{ e.montant|floatformat:0 }}</td>
+          <td style="font-size:.78rem;">{{ e.demandeur.get_full_name }}</td>
+          <td class="text-center">
+            <span style="border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;
+              {% if e.statut == 'BROUILLON' %}background:#f1f5f9;color:#64748b;
+              {% elif e.statut == 'SOUMIS' %}background:#fef3c7;color:#92400e;
+              {% elif e.statut == 'VALIDE' %}background:#dcfce7;color:#166534;
+              {% elif e.statut == 'REJETE' %}background:#fee2e2;color:#991b1b;
+              {% else %}background:#f1f5f9;color:#94a3b8;{% endif %}">
+              {{ e.get_statut_display }}
+            </span>
+          </td>
+          <td class="text-center">
+            <div class="d-flex gap-1 justify-content-center flex-wrap">
+              {% if e.statut == 'BROUILLON' %}
+              <form method="post" action="{% url 'accounting:engagement_soumettre' e.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 10px;font-size:.72rem;">Soumettre</button>
+              </form>
+              <form method="post" action="{% url 'accounting:engagement_annuler' e.pk %}" onsubmit="return confirm('Annuler cet engagement ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#f1f5f9;color:#64748b;border-radius:7px;padding:3px 10px;font-size:.72rem;">Annuler</button>
+              </form>
+              {% elif e.statut == 'SOUMIS' %}
+              <form method="post" action="{% url 'accounting:engagement_valider' e.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#dcfce7;color:#166534;border-radius:7px;padding:3px 10px;font-size:.72rem;">Valider</button>
+              </form>
+              <form method="post" action="{% url 'accounting:engagement_rejeter' e.pk %}" onsubmit="return confirm('Rejeter cet engagement ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:3px 10px;font-size:.72rem;">Rejeter</button>
+              </form>
+              {% elif e.statut == 'VALIDE' %}
+              <form method="post" action="{% url 'accounting:engagement_annuler' e.pk %}" onsubmit="return confirm('Annuler cet engagement validé ? Le montant sera libéré sur la ligne.');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#f1f5f9;color:#64748b;border-radius:7px;padding:3px 10px;font-size:.72rem;">Annuler</button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:40px;">Aucun engagement pour cet exercice.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal création -->
+<div class="modal fade" id="engModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nouvel engagement budgétaire</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'accounting:engagement_create' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Ligne budgétaire <span class="text-danger">*</span></label>
+            <select name="ligne_budgetaire" class="form-select" required>
+              <option value="">— Sélectionner —</option>
+              {% for l in lignes %}
+              <option value="{{ l.pk }}">{{ l.direction.name }} — {{ l.compte_comptable }} (disponible : {{ l.montant_disponible|floatformat:0 }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Objet <span class="text-danger">*</span></label>
+            <input type="text" name="objet" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Montant (FCFA) <span class="text-danger">*</span></label>
+            <input type="number" name="montant" class="form-control" min="1" step="500" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Pièce justificative</label>
+            <input type="file" name="piece_justificative" class="form-control">
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Créer en brouillon</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

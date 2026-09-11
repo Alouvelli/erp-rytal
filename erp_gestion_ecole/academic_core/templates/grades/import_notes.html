@@ -1,0 +1,417 @@
+{% extends 'base/base.html' %}
+{% block title %}Import des notes Excel{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'grades:evaluation_list' %}">Notes & Évaluations</a></li>
+<li class="breadcrumb-item active">Import Excel</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <h1 class="page-title">
+    <span class="icon" style="background:#16a34a;"><i class="bi bi-file-earmark-excel"></i></span>
+    Import des notes — fichier Excel
+  </h1>
+  <a href="{% url 'grades:bulletin_class_list' %}"
+     style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;
+            background:#003D82;color:#fff;border-radius:8px;font-weight:700;
+            font-size:.88rem;text-decoration:none;">
+    <i class="bi bi-arrow-left"></i>Bulletins de notes LMD
+  </a>
+</div>
+
+{% if created is not None %}
+<div class="card-section mb-4">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-check-lg"></i></span>
+      Résultats de l'import
+    </h6>
+  </div>
+  <div class="p-4">
+    <div class="row g-3 mb-3">
+      <div class="col-md-3">
+        <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:16px;text-align:center;">
+          <div style="font-size:1.8rem;font-weight:800;color:#16a34a;">{{ created }}</div>
+          <div style="font-size:.8rem;color:#64748b;">Note(s) créée(s)</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div style="background:#eff6ff;border:1.5px solid #93c5fd;border-radius:10px;padding:16px;text-align:center;">
+          <div style="font-size:1.8rem;font-weight:800;color:#003D82;">{{ updated }}</div>
+          <div style="font-size:.8rem;color:#64748b;">Note(s) mise(s) à jour</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:16px;text-align:center;">
+          <div style="font-size:1.8rem;font-weight:800;color:#64748b;">{{ skipped }}</div>
+          <div style="font-size:.8rem;color:#64748b;">Ligne(s) ignorée(s)</div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div style="background:{% if errors %}#fef2f2{% else %}#f0fdf4{% endif %};border:1.5px solid {% if errors %}#fca5a5{% else %}#86efac{% endif %};border-radius:10px;padding:16px;text-align:center;">
+          <div style="font-size:1.8rem;font-weight:800;color:{% if errors %}#dc2626{% else %}#16a34a{% endif %};">{{ errors|length }}</div>
+          <div style="font-size:.8rem;color:#64748b;">Erreur(s)</div>
+        </div>
+      </div>
+    </div>
+    {% if errors %}
+    <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;max-height:200px;overflow-y:auto;margin-bottom:12px;">
+      <div style="font-weight:700;font-size:.85rem;color:#dc2626;margin-bottom:8px;"><i class="bi bi-exclamation-triangle me-1"></i>Erreurs détectées</div>
+      {% for err in errors %}<div style="font-size:.8rem;color:#7f1d1d;padding:2px 0;">{{ err }}</div>{% endfor %}
+    </div>
+    {% endif %}
+    <!-- Bouton retour Bulletins -->
+    <div class="d-flex gap-2 mt-2">
+      <a href="{% url 'grades:bulletin_class_list' %}"
+         style="display:inline-flex;align-items:center;gap:8px;padding:10px 22px;
+                background:#003D82;color:#fff;border-radius:8px;font-weight:700;
+                font-size:.88rem;text-decoration:none;border:none;">
+        <i class="bi bi-journal-text"></i>
+        Aller aux Bulletins de notes LMD
+      </a>
+      {% if class_group and semester %}
+      <a href="{% url 'grades:bulletin_list' class_group.pk semester.pk %}"
+         style="display:inline-flex;align-items:center;gap:8px;padding:10px 22px;
+                background:#1d4ed8;color:#fff;border-radius:8px;font-weight:700;
+                font-size:.88rem;text-decoration:none;border:none;">
+        <i class="bi bi-people"></i>
+        Bulletins — {{ class_group.name }} S{{ semester.number }}
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card-section mb-4">
+  <div class="p-3">
+    <form method="get" class="d-flex align-items-end gap-2">
+      <div style="min-width:220px;">
+        <label class="form-label fw-semibold" style="font-size:.8rem;">Année académique</label>
+        <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for y in academic_years %}
+          <option value="{{ y.pk }}" {% if selected_year_param == y.pk|stringformat:"s" or not selected_year_param and y.is_current %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+          {% endfor %}
+          <option value="all" {% if selected_year_param == 'all' %}selected{% endif %}>Toutes les années</option>
+        </select>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- ── Colonne gauche : téléchargement des modèles ── -->
+  <div class="col-lg-5">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#7c3aed;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-download"></i></span>
+          Télécharger un modèle par EC
+        </h6>
+      </div>
+      <div class="p-4">
+        <div class="row g-3 mb-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Classe</label>
+            <select id="tpl-class" class="form-select">
+              <option value="">— Choisir une classe —</option>
+              {% for cls in classes %}
+              <option value="{{ cls.pk }}">{{ cls.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Semestre</label>
+            <select id="tpl-sem" class="form-select">
+              <option value="">— Choisir un semestre —</option>
+              {% for s in semesters %}
+              <option value="{{ s.pk }}">{{ s.name }}{% if s.is_locked %} 🔒 verrouillé{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <button type="button" class="btn btn-sm w-100" style="background:#7c3aed;color:#fff;border:none;" id="btn-load-ecs">
+          <i class="bi bi-search me-1"></i>Charger la liste des ECs
+        </button>
+        <div style="margin-top:8px;font-size:.75rem;color:#64748b;text-align:center;">
+          <i class="bi bi-file-earmark-excel me-1" style="color:#16a34a;"></i>
+          Chaque modèle est généré au format <strong>Excel (.xlsx)</strong>
+        </div>
+
+        <!-- Liste des ECs -->
+        <div id="ec-list-container" style="margin-top:16px;display:none;">
+          <div style="font-size:.8rem;font-weight:700;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;">
+            Éléments constitutifs
+          </div>
+          <div id="ec-list"></div>
+        </div>
+
+        <div id="ec-empty" style="margin-top:16px;display:none;">
+          <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:.8rem;color:#92400e;">
+            <i class="bi bi-exclamation-circle me-1"></i>
+            Aucun EC trouvé pour cette classe et ce semestre. Vérifiez la maquette.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Structure du fichier Excel -->
+    <div class="card-section mt-4">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-info-circle"></i></span>
+          Structure du fichier Excel
+        </h6>
+      </div>
+      <div class="p-4">
+        <p style="font-size:.82rem;color:#64748b;margin-bottom:10px;">
+          Chaque fichier correspond à <strong>un seul EC</strong> — même format que le modèle
+          téléchargeable depuis la page <strong>Examens &amp; Concours</strong>.
+        </p>
+        <div class="d-flex align-items-start gap-2 mb-3" style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:10px 12px;">
+          <i class="bi bi-incognito" style="color:#7c3aed;font-size:1rem;flex-shrink:0;"></i>
+          <div style="font-size:.78rem;color:#4c1d95;">
+            <strong>Modèle anonyme</strong> (bouton violet) : mêmes colonnes, mais les colonnes
+            Nom/Prénom sont remplacées par un pseudonyme (« ÉTUDIANT 001 », « ÉTUDIANT 002 »…)
+            pour que l'enseignant saisisse les notes sans savoir de quel étudiant il s'agit. La
+            colonne Matricule reste inchangée : à l'import, la correspondance avec le bon étudiant
+            se fait automatiquement via le matricule, exactement comme pour le modèle nominatif.
+          </div>
+        </div>
+
+        <!-- Aperçu visuel du fichier Excel -->
+        <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;font-size:.73rem;margin-bottom:12px;">
+          <!-- Bandeau d'information -->
+          <div style="background:#003D82;color:#fff;padding:6px 10px;font-weight:700;text-align:center;">
+            MODÈLE D'IMPORT DES NOTES
+          </div>
+          <div style="padding:3px 10px;color:#003D82;font-weight:700;background:#fff;">Module (EC) : <span style="font-weight:400;color:#374151;">1MIN1201 — Algorithmique 2</span></div>
+          <div style="padding:3px 10px;color:#003D82;font-weight:700;background:#f8fafc;">Classe : <span style="font-weight:400;color:#374151;">L1 Info A</span></div>
+          <div style="padding:3px 10px;color:#003D82;font-weight:700;background:#fff;">Semestre : <span style="font-weight:400;color:#374151;">Semestre 1</span></div>
+          <div style="padding:5px 10px;background:#fde68a;color:#92400e;font-weight:700;">⚠ Remplissez les colonnes Devoir 1 / Devoir 2 / TP / Examen (sur 20).</div>
+          <!-- Ligne de noms de colonnes -->
+          <div style="display:grid;grid-template-columns:1.4fr 1.1fr 1.1fr 1fr .8fr .8fr .8fr .8fr;background:#003D82;color:#fff;font-weight:700;text-align:center;margin-top:2px;">
+            <div style="padding:4px 6px;border-right:1px solid #cbd5e1;">Matricule</div>
+            <div style="padding:4px 6px;border-right:1px solid #cbd5e1;">Nom</div>
+            <div style="padding:4px 6px;border-right:1px solid #cbd5e1;">Prénom</div>
+            <div style="padding:4px 6px;border-right:1px solid #cbd5e1;">Code EC</div>
+            <div style="padding:4px 6px;border-right:1px solid #cbd5e1;">Devoir 1</div>
+            <div style="padding:4px 6px;border-right:1px solid #cbd5e1;">Devoir 2</div>
+            <div style="padding:4px 6px;border-right:1px solid #cbd5e1;">TP</div>
+            <div style="padding:4px 6px;">Examen</div>
+          </div>
+          <!-- Ligne exemple étudiant -->
+          <div style="display:grid;grid-template-columns:1.4fr 1.1fr 1.1fr 1fr .8fr .8fr .8fr .8fr;background:#f8fafc;color:#374151;text-align:center;">
+            <div style="padding:4px 6px;border-right:1px solid #e2e8f0;">411-26-2995/ISI</div>
+            <div style="padding:4px 6px;border-right:1px solid #e2e8f0;">OKOUO</div>
+            <div style="padding:4px 6px;border-right:1px solid #e2e8f0;">Gervais</div>
+            <div style="padding:4px 6px;border-right:1px solid #e2e8f0;color:#64748b;">1MIN1201</div>
+            <div style="padding:4px 6px;border-right:1px solid #e2e8f0;background:#fffbeb;color:#92400e;font-weight:600;">14,50</div>
+            <div style="padding:4px 6px;border-right:1px solid #e2e8f0;background:#fffbeb;color:#92400e;font-weight:600;">15,00</div>
+            <div style="padding:4px 6px;border-right:1px solid #e2e8f0;background:#fffbeb;color:#92400e;font-weight:600;">13,00</div>
+            <div style="padding:4px 6px;background:#fffbeb;color:#92400e;font-weight:600;">12,00</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1.4fr 1.1fr 1.1fr 1fr .8fr .8fr .8fr .8fr;background:#fff;color:#374151;text-align:center;border-top:1px solid #e2e8f0;">
+            <div style="padding:4px 6px;border-right:1px solid #e2e8f0;">411-26-3012/ISI</div>
+            <div style="padding:4px 6px;border-right:1px solid #e2e8f0;">DIALLO</div>
+            <div style="padding:4px 6px;border-right:1px solid #e2e8f0;">Fatou</div>
+            <div style="padding:4px 6px;border-right:1px solid #e2e8f0;color:#64748b;">1MIN1201</div>
+            <div style="padding:4px 6px;border-right:1px solid #e2e8f0;background:#fffbeb;"></div>
+            <div style="padding:4px 6px;border-right:1px solid #e2e8f0;background:#fffbeb;"></div>
+            <div style="padding:4px 6px;border-right:1px solid #e2e8f0;background:#fffbeb;"></div>
+            <div style="padding:4px 6px;background:#fffbeb;"></div>
+          </div>
+        </div>
+
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;font-size:.78rem;">
+          <i class="bi bi-lightbulb me-1 text-success"></i>
+          Colonnes attendues (ordre libre) : <strong>Matricule</strong>, <strong>Devoir 1</strong>, <strong>Devoir 2</strong>,
+          <strong>TP</strong>, <strong>Examen</strong> (notes sur 20). Seules les colonnes présentes seront importées.
+          Les lignes vides sont ignorées et la validation des données (0–20) est intégrée dans le fichier.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Colonne droite : formulaire d'import ── -->
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-upload"></i></span>
+          Importer un fichier Excel
+        </h6>
+      </div>
+      <div class="p-4">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Classe <span class="text-danger">*</span></label>
+              <select name="class_id" class="form-select" required id="imp-class">
+                <option value="">— Choisir une classe —</option>
+                {% for cls in classes %}
+                <option value="{{ cls.pk }}" {% if class_group and class_group.pk == cls.pk %}selected{% endif %}>{{ cls.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Semestre <span class="text-danger">*</span></label>
+              <select name="semester_id" class="form-select" required id="imp-sem">
+                <option value="">— Choisir un semestre —</option>
+                {% for s in semesters %}
+                <option value="{{ s.pk }}" {% if semester and semester.pk == s.pk %}selected{% endif %}>{{ s.name }}{% if s.is_locked %} 🔒 verrouillé{% endif %}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">
+                Fichier Excel <span class="text-danger">*</span>
+              </label>
+              <input type="file" name="csv_file" accept=".xlsx" class="form-control" required id="imp-file">
+              <div class="form-text" style="font-size:.75rem;">
+                <i class="bi bi-file-earmark-excel me-1" style="color:#16a34a;"></i>
+                Format accepté : <strong>.xlsx</strong> uniquement. Utilisez le modèle téléchargé depuis le panneau de gauche.
+              </div>
+            </div>
+
+            <!-- Aperçu du fichier sélectionné -->
+            <div class="col-12" id="file-preview-box" style="display:none;">
+              <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;font-size:.8rem;display:flex;align-items:center;gap:10px;">
+                <i class="bi bi-file-earmark-excel-fill" style="font-size:1.4rem;color:#16a34a;"></i>
+                <div>
+                  <div id="file-preview-name" style="font-weight:700;color:#374151;"></div>
+                  <div id="file-preview-size" style="font-size:.72rem;color:#64748b;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end border-top pt-3 mt-3">
+            <button type="submit" class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;">
+              <i class="bi bi-file-earmark-arrow-up me-1"></i>Importer les notes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Procédure -->
+    <div class="card-section mt-4">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#0369a1;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ol"></i></span>
+          Procédure d'import
+        </h6>
+      </div>
+      <div class="p-4">
+        <ol style="font-size:.83rem;color:#374151;line-height:2;padding-left:20px;margin:0;">
+          <li>Dans le panneau gauche, choisissez la <strong>classe</strong> et le <strong>semestre</strong>.</li>
+          <li>Cliquez sur <strong>Charger la liste des ECs</strong>.</li>
+          <li>Pour chaque EC, cliquez sur <i class="bi bi-file-earmark-excel" style="color:#16a34a;"></i> <strong>Excel</strong> pour télécharger son modèle pré-rempli.</li>
+          <li>Ouvrez le fichier <code>.xlsx</code> dans Excel et saisissez les notes <strong>Devoir 1</strong>, <strong>Devoir 2</strong>, <strong>TP</strong> et <strong>Examen</strong> dans les cellules en jaune.</li>
+          <li><strong>Enregistrez</strong> le fichier sans changer le format (.xlsx).</li>
+          <li>Dans le formulaire ci-dessus, sélectionnez la classe, le semestre, puis le fichier Excel complété.</li>
+          <li>Cliquez sur <strong>Importer les notes</strong>. L'EC est identifié automatiquement via la colonne <em>Code EC</em>.</li>
+          <li>Répétez les étapes 3 à 7 pour chaque EC.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const ECS_URL = "{% url 'grades:get_ecs_for_import' %}";
+const TPL_URL = "{% url 'grades:download_notes_template' %}";
+
+// ── Chargement des ECs ──────────────────────────────────────────────────────
+document.getElementById('btn-load-ecs').addEventListener('click', function () {
+  const classId = document.getElementById('tpl-class').value;
+  const semId   = document.getElementById('tpl-sem').value;
+  if (!classId || !semId) {
+    alert('Veuillez sélectionner la classe et le semestre.');
+    return;
+  }
+
+  this.disabled = true;
+  this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Chargement…';
+
+  fetch(`${ECS_URL}?class_id=${classId}&semester_id=${semId}`)
+    .then(r => r.json())
+    .then(data => {
+      this.disabled = false;
+      this.innerHTML = '<i class="bi bi-search me-1"></i>Charger la liste des ECs';
+
+      const container = document.getElementById('ec-list-container');
+      const emptyMsg  = document.getElementById('ec-empty');
+      const list      = document.getElementById('ec-list');
+      list.innerHTML  = '';
+
+      if (!data.ecs || data.ecs.length === 0) {
+        container.style.display = 'none';
+        emptyMsg.style.display  = 'block';
+        return;
+      }
+
+      emptyMsg.style.display  = 'none';
+      container.style.display = 'block';
+
+      // Regrouper par UE
+      const byUE = {};
+      data.ecs.forEach(ec => {
+        if (!byUE[ec.ue]) byUE[ec.ue] = [];
+        byUE[ec.ue].push(ec);
+      });
+
+      Object.entries(byUE).forEach(([ueLabel, ecs]) => {
+        const ueDiv = document.createElement('div');
+        ueDiv.style.cssText = 'font-size:.74rem;font-weight:700;color:#003D82;background:#eff6ff;padding:4px 10px;border-radius:6px;margin-bottom:4px;margin-top:10px;';
+        ueDiv.textContent = ueLabel;
+        list.appendChild(ueDiv);
+
+        ecs.forEach(ec => {
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:4px;';
+          row.innerHTML = `
+            <div style="overflow:hidden;">
+              <span style="font-size:.76rem;font-weight:700;color:#003D82;">${ec.code}</span>
+              <span style="font-size:.76rem;color:#374151;margin-left:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${ec.title}</span>
+            </div>
+            <div style="flex-shrink:0;margin-left:8px;display:flex;gap:6px;">
+              <a href="${TPL_URL}?class_id=${classId}&semester_id=${semId}&subject_id=${ec.id}"
+                 download title="Modèle nominatif (noms visibles)"
+                 style="display:inline-flex;align-items:center;gap:4px;background:#16a34a;color:#fff;border:none;border-radius:6px;font-size:.72rem;padding:4px 10px;text-decoration:none;white-space:nowrap;">
+                <i class="bi bi-file-earmark-excel-fill"></i> Excel
+              </a>
+              <a href="${TPL_URL}?class_id=${classId}&semester_id=${semId}&subject_id=${ec.id}&anon=1"
+                 download title="Modèle anonyme (noms masqués — saisie à l'aveugle)"
+                 style="display:inline-flex;align-items:center;gap:4px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:.72rem;padding:4px 10px;text-decoration:none;white-space:nowrap;">
+                <i class="bi bi-incognito"></i> Anonyme
+              </a>
+            </div>`;
+          list.appendChild(row);
+        });
+      });
+    })
+    .catch(() => {
+      this.disabled = false;
+      this.innerHTML = '<i class="bi bi-search me-1"></i>Charger la liste des ECs';
+      alert('Erreur lors du chargement des ECs.');
+    });
+});
+
+// ── Aperçu du fichier sélectionné ───────────────────────────────────────────
+document.getElementById('imp-file').addEventListener('change', function () {
+  const file = this.files[0];
+  const box  = document.getElementById('file-preview-box');
+  if (!file) { box.style.display = 'none'; return; }
+
+  document.getElementById('file-preview-name').textContent = file.name;
+  const kb = (file.size / 1024).toFixed(1);
+  document.getElementById('file-preview-size').textContent = `${kb} Ko`;
+  box.style.display = 'block';
+});
+</script>
+{% endblock %}

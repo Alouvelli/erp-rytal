@@ -1,0 +1,616 @@
+{% extends 'base/base.html' %}
+{% block title %}Notes & Évaluations{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Évaluations</li>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── Semestre ───────────────────────────────────── */
+.sem-card { border-radius:10px; overflow:hidden; border:1px solid #e2e8f0; margin-bottom:14px; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,.05); }
+.sem-header { display:flex; align-items:center; justify-content:space-between; gap:12px; background:#f0f6ff; border-left:5px solid var(--navy); padding:12px 18px; cursor:pointer; user-select:none; transition:background .15s; }
+.sem-header:hover { background:#dbeafe; }
+.sem-body { display:none; border-top:1px solid #e2e8f0; }
+.sem-arrow { transition:transform .25s; color:var(--navy); font-size:.9rem; }
+
+/* ── UE ─────────────────────────────────────────── */
+.ue-block { border-bottom:1px solid #e2e8f0; }
+.ue-block:last-child { border-bottom:none; }
+.ue-header {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 20px 10px 24px;
+  background:#f8f5ff; cursor:pointer; user-select:none;
+  border-left:4px solid #7c3aed;
+  transition:background .15s;
+}
+.ue-header:hover { background:#ede9fe; }
+.ue-body { display:none; }
+.ue-arrow { transition:transform .25s; color:#7c3aed; font-size:.82rem; }
+
+/* ── EC (matière) ───────────────────────────────── */
+.ec-block { border-bottom:1px solid #f1f5f9; }
+.ec-block:last-child { border-bottom:none; }
+.ec-header {
+  display:flex; align-items:center; gap:10px;
+  padding:8px 20px 8px 40px;
+  background:#fafafa; cursor:pointer; user-select:none;
+  border-left:3px solid #06b6d4;
+  transition:background .15s;
+}
+.ec-header:hover { background:#ecfeff; }
+.ec-body { display:none; }
+.ec-arrow { transition:transform .25s; color:#06b6d4; font-size:.78rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-clipboard-check"></i></span>
+    Notes &amp; Évaluations
+  </h1>
+  {% if can_create %}
+  <a href="{% url 'grades:evaluation_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Programmer une évaluation
+  </a>
+  {% endif %}
+  {% if is_student_view and available_years|length > 1 %}
+  <form method="get" class="d-flex align-items-center gap-2">
+    <label for="evals-year-select" class="text-muted" style="font-size:.78rem;font-weight:600;">Année académique</label>
+    <select id="evals-year-select" name="annee" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+      {% for y in available_years %}
+      <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y.label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  {% endif %}
+</div>
+
+<!-- Légende statuts -->
+<div class="d-flex gap-2 flex-wrap mb-3">
+  <span style="font-size:.75rem;background:#e0f2fe;color:#0369a1;padding:4px 10px;border-radius:20px;">
+    <i class="bi bi-calendar-check me-1"></i>Programmée
+  </span>
+  <span style="font-size:.75rem;background:#fef3c7;color:#92400e;padding:4px 10px;border-radius:20px;">
+    <i class="bi bi-pencil-square me-1"></i>En correction
+  </span>
+  <span style="font-size:.75rem;background:#dcfce7;color:#166534;padding:4px 10px;border-radius:20px;">
+    <i class="bi bi-check-circle me-1"></i>Notes saisies
+  </span>
+  <span style="font-size:.75rem;background:#f3f4f6;color:#374151;padding:4px 10px;border-radius:20px;">
+    <i class="bi bi-lock me-1"></i>Verrouillée
+  </span>
+</div>
+
+{% if filter_classes is not None %}
+<div class="card-section mb-3">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Année académique</label>
+        <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for y in academic_years %}
+          <option value="{{ y.pk }}" {% if selected_year_param == y.pk|stringformat:"s" or not selected_year_param and y.is_current %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+          {% endfor %}
+          <option value="all" {% if selected_year_param == 'all' %}selected{% endif %}>Toutes les années</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Classe</label>
+        <select name="class_id" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Toutes les classes</option>
+          {% for cls in filter_classes %}
+          <option value="{{ cls.pk }}" {% if selected_class_id == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Semestre</label>
+        <select name="semester_id" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Tous les semestres</option>
+          {% for sem in filter_semesters %}
+          <option value="{{ sem.pk }}" {% if selected_semester_id == sem.pk|stringformat:"s" %}selected{% endif %}>{{ sem.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">EC (module)</label>
+        <select name="subject_id" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Tous les modules</option>
+          {% for subj in filter_subjects %}
+          <option value="{{ subj.pk }}" {% if selected_subject_id == subj.pk|stringformat:"s" %}selected{% endif %}>{{ subj.code }} — {{ subj.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+{% if upcoming_evals %}
+{# ── Bannière rappel évaluations programmées ── #}
+<div id="rappel-banner" style="border-radius:14px;background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);padding:0;margin-bottom:20px;box-shadow:0 4px 18px rgba(37,99,235,.28);overflow:hidden;position:relative;">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px 10px 20px;border-bottom:1px solid rgba(255,255,255,.12);">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-bell-fill" style="color:#fbbf24;font-size:1.1rem;"></i>
+      </span>
+      <div>
+        <div style="font-weight:800;font-size:.95rem;color:#fff;letter-spacing:.01em;">
+          Rappel — Évaluations programmées à venir
+        </div>
+        <div style="font-size:.75rem;color:#93c5fd;margin-top:1px;">
+          {{ upcoming_evals|length }} évaluation{{ upcoming_evals|length|pluralize }} en attente de correction
+        </div>
+      </div>
+    </div>
+    <button onclick="document.getElementById('rappel-banner').style.display='none';"
+            style="background:rgba(255,255,255,.12);border:none;border-radius:8px;color:#fff;width:30px;height:30px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;"
+            title="Masquer">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+  <div style="padding:12px 20px 16px 20px;display:flex;flex-wrap:wrap;gap:10px;">
+    {% for ev in upcoming_evals %}
+    <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:10px 14px;min-width:220px;max-width:300px;flex:1 1 220px;backdrop-filter:blur(4px);">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+        <span style="background:#fbbf24;color:#1e3a5f;font-size:.65rem;font-weight:800;padding:2px 7px;border-radius:10px;white-space:nowrap;">
+          {{ ev.evaluation_type }}
+        </span>
+        <span style="font-size:.8rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          {{ ev.title }}
+        </span>
+      </div>
+      <div style="font-size:.73rem;color:#bfdbfe;">
+        <i class="bi bi-book me-1"></i>{{ ev.subject.title|truncatechars:30 }}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:8px;">
+        <div style="font-size:.72rem;color:#e0f2fe;">
+          <i class="bi bi-people-fill me-1"></i>{{ ev.class_group.name|default:"—" }}
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;">
+          {% with days_left=ev.date|timeuntil %}
+          <span style="background:rgba(251,191,36,.2);color:#fde68a;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:8px;white-space:nowrap;">
+            <i class="bi bi-calendar3 me-1"></i>{{ ev.date|date:"d/m/Y" }}
+          </span>
+          {% endwith %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if not semester_groups %}
+<div class="card-section">
+  <div class="text-center py-5" style="color:#94a3b8;">
+    <i class="bi bi-clipboard d-block mb-2" style="font-size:3rem;color:#cbd5e1;"></i>
+    <div style="font-weight:600;">Aucune évaluation trouvée</div>
+  </div>
+</div>
+{% endif %}
+
+{% for sem, ue_groups in semester_groups %}
+{% with sem_id=forloop.counter %}
+<div class="sem-card">
+
+  {# ── En-tête Semestre ── #}
+  <div class="sem-header" onclick="toggleSem({{ sem_id }})">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="width:36px;height:36px;border-radius:9px;background:var(--navy);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.85rem;flex-shrink:0;">
+        <i class="bi bi-calendar3-week-fill"></i>
+      </span>
+      <div>
+        <div style="font-weight:700;font-size:.95rem;color:var(--navy);">
+          {% if sem %}{{ sem.label }}{% if sem.is_locked %}<i class="bi bi-lock-fill ms-1" style="color:#dc2626;font-size:.8rem;" title="Semestre verrouillé"></i>{% endif %}{% else %}Sans semestre{% endif %}
+        </div>
+        {% if sem and sem.academic_year %}
+        <div style="font-size:.72rem;color:#64748b;">{{ sem.academic_year }}</div>
+        {% endif %}
+      </div>
+      <span style="font-size:.73rem;font-weight:700;background:#dbeafe;color:var(--navy);padding:2px 10px;border-radius:20px;border:1px solid #bfdbfe;">
+        {{ ue_groups|length }} UE{{ ue_groups|length|pluralize }}
+      </span>
+    </div>
+    <i class="bi bi-chevron-down sem-arrow" id="sem-arrow-{{ sem_id }}"></i>
+  </div>
+
+  {# ── Corps Semestre ── #}
+  <div class="sem-body" id="sem-{{ sem_id }}">
+
+    {% for ue, subj_groups in ue_groups %}
+    {# ue_idx = sem_id + "-" + forloop.counter  — ex: "1-2" #}
+    <div class="ue-block">
+
+      {# ── En-tête UE ── #}
+      <div class="ue-header" onclick="toggleUE('{{ sem_id }}-{{ forloop.counter }}')">
+        <span style="width:26px;height:26px;border-radius:7px;background:#7c3aed;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.72rem;flex-shrink:0;">
+          <i class="bi bi-collection-fill"></i>
+        </span>
+        {% if ue %}
+          <span style="font-weight:700;font-size:.82rem;color:#7c3aed;">{{ ue.code }}</span>
+          <span style="color:#c4b5fd;">—</span>
+          <span style="font-size:.82rem;color:#374151;font-weight:600;">{{ ue.title }}</span>
+          {% if ue.credits %}
+          <span style="font-size:.7rem;background:#ede9fe;color:#7c3aed;padding:1px 7px;border-radius:10px;margin-left:4px;">{{ ue.credits }} crédits</span>
+          {% endif %}
+        {% else %}
+          <span style="font-weight:600;font-size:.82rem;color:#64748b;font-style:italic;">Modules (EC) sans UE</span>
+        {% endif %}
+        <span style="margin-left:auto;font-size:.7rem;color:#94a3b8;margin-right:8px;">
+          {{ subj_groups|length }} EC{{ subj_groups|length|pluralize }}
+        </span>
+        <i class="bi bi-chevron-right ue-arrow" id="ue-arrow-{{ sem_id }}-{{ forloop.counter }}"></i>
+      </div>
+
+      {# ── Corps UE : liste des ECs ── #}
+      <div class="ue-body" id="ue-{{ sem_id }}-{{ forloop.counter }}">
+
+        {% for subj, evs in subj_groups %}
+        {# ec_idx = sem_id + "-" + ue_counter + "-" + forloop.counter  — ex: "1-2-3" #}
+        <div class="ec-block">
+
+          {# ── En-tête EC ── #}
+          <div class="ec-header" onclick="toggleEC('{{ sem_id }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}')">
+            <span style="width:22px;height:22px;border-radius:6px;background:#0891b2;display:flex;align-items:center;justify-content:center;color:#fff;font-size:.65rem;flex-shrink:0;">
+              <i class="bi bi-file-text-fill"></i>
+            </span>
+            <span style="font-weight:700;font-size:.79rem;color:#0e7490;">{{ subj.code }}</span>
+            <span style="color:#a5f3fc;">—</span>
+            <span style="font-size:.79rem;color:#1e293b;font-weight:600;">{{ subj.title }}</span>
+            {% if subj.credits %}
+            <span style="font-size:.68rem;background:#ecfeff;color:#0891b2;padding:1px 6px;border-radius:10px;margin-left:4px;">{{ subj.credits }} crédits</span>
+            {% endif %}
+            <span style="margin-left:auto;font-size:.7rem;color:#94a3b8;margin-right:8px;">
+              {{ evs|length }} évaluation{{ evs|length|pluralize }}
+            </span>
+            <i class="bi bi-chevron-right ec-arrow" id="ec-arrow-{{ sem_id }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"></i>
+          </div>
+
+          {# ── Corps EC : tableau des évaluations ── #}
+          <div class="ec-body" id="ec-{{ sem_id }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle" style="margin:0;font-size:.83rem;">
+                <thead style="background:#f8fafc;">
+                  <tr>
+                    <th style="padding:8px 16px 8px 48px;font-size:.72rem;color:#64748b;font-weight:700;">Évaluation</th>
+                    {% if not is_student_view %}<th style="font-size:.72rem;color:#64748b;font-weight:700;">Classe</th>{% endif %}
+                    <th style="font-size:.72rem;color:#64748b;font-weight:700;">Type</th>
+                    <th style="font-size:.72rem;color:#64748b;font-weight:700;">Date</th>
+                    <th style="font-size:.72rem;color:#64748b;font-weight:700;">Max</th>
+                    {% if is_student_view %}<th style="font-size:.72rem;color:#64748b;font-weight:700;">Ma note</th>{% endif %}
+                    <th style="font-size:.72rem;color:#64748b;font-weight:700;">Statut</th>
+                    {% if not is_student_view %}<th style="font-size:.72rem;color:#64748b;font-weight:700;">Actions</th>{% endif %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for ev in evs %}
+                  <tr>
+                    <td style="padding:8px 16px 8px 48px;">
+                      <div class="fw-semibold" style="font-size:.84rem;">{{ ev.title }}</div>
+                      {% if ev.teacher and not is_student_view %}
+                      <div style="font-size:.72rem;color:#64748b;"><i class="bi bi-person me-1"></i>{{ ev.teacher.full_name }}</div>
+                      {% endif %}
+                      {% if not is_student_view and ev.notification_sent %}
+                      <span style="font-size:.68rem;background:#dcfce7;color:#166534;padding:1px 6px;border-radius:10px;">
+                        <i class="bi bi-bell-fill me-1"></i>Notifiés
+                      </span>
+                      {% endif %}
+                    </td>
+
+                    {% if not is_student_view %}
+                    <td style="font-size:.82rem;">{{ ev.class_group.name|default:"—" }}</td>
+                    {% endif %}
+
+                    <td>
+                      <span style="font-size:.74rem;background:#f1f5f9;padding:2px 8px;border-radius:8px;">{{ ev.evaluation_type }}</span>
+                    </td>
+
+                    <td style="white-space:nowrap;font-size:.82rem;">
+                      {{ ev.date|date:"d/m/Y" }}
+                      {% if ev.duration_minutes %}
+                      <div style="font-size:.7rem;color:#94a3b8;">{{ ev.duration_minutes }} min</div>
+                      {% endif %}
+                    </td>
+
+                    <td style="font-weight:700;color:var(--navy);">{{ ev.max_score }}</td>
+
+                    {% if is_student_view %}
+                    <td>
+                      {% if ev.my_grade %}
+                        <span style="font-size:.98rem;font-weight:800;color:{% if ev.my_grade.score >= 10 %}#16a34a{% else %}#dc2626{% endif %};">
+                          {{ ev.my_grade.score }}
+                        </span>
+                        <span style="font-size:.71rem;color:#94a3b8;">/ {{ ev.max_score }}</span>
+                        {% if ev.my_grade.comment %}
+                        <div style="font-size:.7rem;color:#64748b;font-style:italic;">{{ ev.my_grade.comment }}</div>
+                        {% endif %}
+                      {% elif ev.status == 'GRADED' or ev.status == 'LOCKED' %}
+                        <span style="font-size:.74rem;color:#f59e0b;"><i class="bi bi-dash-circle me-1"></i>Absent</span>
+                      {% else %}
+                        <span style="font-size:.74rem;color:#94a3b8;">—</span>
+                      {% endif %}
+                    </td>
+                    {% endif %}
+
+                    {# Statut #}
+                    <td>
+                      {% if is_student_view %}
+                        {% if ev.my_grade %}
+                          <span style="font-size:.72rem;background:#f3f4f6;color:#374151;padding:3px 9px;border-radius:10px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;">
+                            <i class="bi bi-lock-fill"></i>Corrigée &amp; Saisie
+                          </span>
+                        {% else %}
+                          <span style="font-size:.72rem;background:#e0f2fe;color:#0369a1;padding:3px 9px;border-radius:10px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;">
+                            <i class="bi bi-calendar-check"></i>Programmée
+                          </span>
+                        {% endif %}
+                      {% else %}
+                        {% if ev.status == 'SCHEDULED' %}
+                          <span style="font-size:.72rem;background:#e0f2fe;color:#0369a1;padding:3px 9px;border-radius:10px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;">
+                            <i class="bi bi-calendar-check"></i>Programmée
+                          </span>
+                        {% elif ev.status == 'ONGOING' %}
+                          <span style="font-size:.72rem;background:#fef3c7;color:#92400e;padding:3px 9px;border-radius:10px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;">
+                            <i class="bi bi-pencil-square"></i>En correction
+                          </span>
+                        {% elif ev.status == 'GRADED' %}
+                          <span style="font-size:.72rem;background:#dcfce7;color:#166534;padding:3px 9px;border-radius:10px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;">
+                            <i class="bi bi-check-circle-fill"></i>Notes saisies
+                          </span>
+                        {% elif ev.status == 'LOCKED' %}
+                          <span style="font-size:.72rem;background:#f3f4f6;color:#374151;padding:3px 9px;border-radius:10px;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;">
+                            <i class="bi bi-lock-fill"></i>Verrouillée
+                          </span>
+                        {% endif %}
+                      {% endif %}
+                    </td>
+
+                    {% if not is_student_view %}
+                    <td>
+                      <div class="d-flex gap-1 flex-wrap align-items-center">
+
+                        {# Boutons enseignant propriétaire #}
+                        {% if ev.teacher and ev.teacher.user == request.user and not ev.is_locked %}
+                          {% if ev.status == 'ONGOING' %}
+                            <a href="{% url 'grades:grade_entry' ev.pk %}" class="btn btn-sm btn-primary" title="Saisir les notes en ligne" style="font-size:.73rem;">
+                              <i class="bi bi-pencil-fill"></i>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-success"
+                                    title="Télécharger le modèle Excel"
+                                    style="font-size:.73rem;"
+                                    onclick="openImportModal(
+                                      '{% url 'grades:import_grades' ev.pk %}',
+                                      '{% url 'grades:grade_template' ev.pk %}',
+                                      '{{ ev.title|escapejs }} — {{ ev.subject.title|escapejs }}'
+                                    )">
+                              <i class="bi bi-file-earmark-arrow-up-fill me-1"></i>Importer
+                            </button>
+                            {% if ev.grades_count > 0 %}
+                              <form method="post" action="{% url 'grades:mark_grades_entered' ev.pk %}" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-success fw-semibold" style="font-size:.73rem;"
+                                        title="Confirmer que toutes les notes sont saisies ({{ ev.grades_count }} note(s))"
+                                        onclick="return confirm('Confirmer que les notes de « {{ ev.title }} » sont toutes saisies ?')">
+                                  <i class="bi bi-check2-circle me-1"></i>Notes saisies
+                                </button>
+                              </form>
+                            {% else %}
+                              <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold"
+                                      style="font-size:.73rem;opacity:.45;cursor:not-allowed;" title="Importez d'abord les notes via Excel" disabled>
+                                <i class="bi bi-check2-circle me-1"></i>Notes saisies
+                              </button>
+                            {% endif %}
+                          {% elif ev.status == 'SCHEDULED' %}
+                            <a href="{% url 'grades:evaluation_create' %}?edit={{ ev.pk }}" class="btn btn-sm btn-primary" title="Modifier l'évaluation" style="font-size:.73rem;">
+                              <i class="bi bi-pencil-fill"></i>
+                            </a>
+                          {% elif ev.status == 'GRADED' %}
+                            <a href="{% url 'grades:grade_template' ev.pk %}" class="btn btn-sm btn-outline-success"
+                               title="Télécharger les notes Excel" style="font-size:.73rem;">
+                              <i class="bi bi-file-earmark-excel-fill me-1"></i>Excel
+                            </a>
+                          {% endif %}
+                        {% endif %}
+
+                        {# Bouton admin/responsable : Excel quand GRADED #}
+                        {% if request.user.can_manage_dept and ev.status == 'GRADED' %}
+                          {% if not ev.teacher or ev.teacher.user != request.user %}
+                            <a href="{% url 'grades:grade_template' ev.pk %}" class="btn btn-sm btn-success"
+                               title="Télécharger les notes — Notes_{{ ev.subject.title }}_{{ ev.class_group.name }}.xlsx" style="font-size:.73rem;">
+                              <i class="bi bi-file-earmark-excel-fill me-1"></i>
+                              <span style="font-size:.68rem;">Notes Excel</span>
+                            </a>
+                          {% endif %}
+                        {% endif %}
+
+                        <a href="{% url 'grades:evaluation_detail' ev.pk %}" class="btn btn-sm btn-outline-secondary" title="Voir le détail" style="font-size:.73rem;">
+                          <i class="bi bi-eye"></i>
+                        </a>
+                        {% if not ev.is_locked %}
+                          {% if request.user.can_manage_dept %}
+                          <form method="post" action="{% url 'grades:lock_evaluation' ev.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-warning" title="Verrouiller" style="font-size:.73rem;"
+                                    onclick="return confirm('Verrouiller définitivement cette évaluation ?')">
+                              <i class="bi bi-lock"></i>
+                            </button>
+                          </form>
+                          {% endif %}
+                          {% if ev.teacher and ev.teacher.user == request.user or request.user.can_manage_dept %}
+                          <form method="post" action="{% url 'grades:evaluation_delete' ev.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer" style="font-size:.73rem;"
+                                    onclick="return confirm('Supprimer définitivement l\'évaluation « {{ ev.title }} » ?')">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </form>
+                          {% endif %}
+                        {% endif %}
+
+                      </div>
+                    </td>
+                    {% endif %}
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>{# /ec-body #}
+
+        </div>{# /ec-block #}
+        {% endfor %}{# subj_groups #}
+
+      </div>{# /ue-body #}
+    </div>{# /ue-block #}
+    {% endfor %}{# ue_groups #}
+
+  </div>{# /sem-body #}
+</div>{# /sem-card #}
+{% endwith %}{# sem_id #}
+{% endfor %}{# semester_groups #}
+
+{# ── Modal import notes ─────────────────────────────────────────────────── #}
+<div class="modal fade" id="importNotesModal" tabindex="-1" aria-labelledby="importNotesModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+    <div class="modal-content" style="border-radius:14px;border:none;box-shadow:0 8px 40px rgba(30,58,95,.18);">
+
+      <div class="modal-header" style="background:linear-gradient(135deg,#1e3a5f,#2563eb);border-radius:14px 14px 0 0;padding:18px 24px;">
+        <div>
+          <h5 class="modal-title fw-bold text-white mb-1" id="importNotesModalLabel">
+            <i class="bi bi-file-earmark-arrow-up-fill me-2"></i>Importer les notes
+          </h5>
+          <div id="importModalSubtitle" style="font-size:.8rem;color:#bfdbfe;"></div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body p-4">
+
+        {# Étape 1 : télécharger le modèle #}
+        <div class="d-flex align-items-start gap-3 p-3 mb-3" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+          <div style="width:36px;height:36px;min-width:36px;background:#16a34a;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+            <i class="bi bi-download text-white" style="font-size:1rem;"></i>
+          </div>
+          <div>
+            <div class="fw-semibold" style="font-size:.88rem;color:#15803d;">Étape 1 — Télécharger le modèle</div>
+            <div style="font-size:.8rem;color:#4b5563;margin-top:2px;">Remplissez uniquement la colonne <strong>Note</strong>. Ne modifiez pas les autres colonnes.</div>
+            <a id="importTemplateLink" href="#" target="_blank" class="btn btn-sm mt-2"
+               style="background:#16a34a;color:#fff;border-radius:7px;font-size:.8rem;">
+              <i class="bi bi-file-earmark-excel-fill me-1"></i>Télécharger le modèle Excel
+            </a>
+          </div>
+        </div>
+
+        {# Étape 2 : importer #}
+        <div class="d-flex align-items-start gap-3 p-3" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;">
+          <div style="width:36px;height:36px;min-width:36px;background:#2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+            <i class="bi bi-upload text-white" style="font-size:1rem;"></i>
+          </div>
+          <div style="flex:1;">
+            <div class="fw-semibold" style="font-size:.88rem;color:#1d4ed8;">Étape 2 — Importer le fichier rempli</div>
+            <div style="font-size:.8rem;color:#4b5563;margin-top:2px;">Sélectionnez le fichier Excel complété (.xlsx).</div>
+            <form id="importNotesForm" method="post" enctype="multipart/form-data" class="mt-2">
+              {% csrf_token %}
+              <div class="d-flex gap-2 align-items-center flex-wrap">
+                <label class="btn btn-sm btn-outline-primary" style="border-radius:7px;font-size:.8rem;cursor:pointer;margin:0;">
+                  <i class="bi bi-folder2-open me-1"></i>Choisir le fichier
+                  <input type="file" name="excel_file" id="importFileInput" accept=".xlsx,.xls" class="d-none" onchange="updateImportFileName(this)">
+                </label>
+                <span id="importFileName" style="font-size:.78rem;color:#64748b;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Aucun fichier choisi</span>
+              </div>
+              <div id="importFilePreview" class="mt-2 d-none">
+                <div style="background:#dbeafe;border-radius:7px;padding:6px 10px;font-size:.78rem;color:#1e40af;">
+                  <i class="bi bi-file-earmark-check-fill me-1 text-success"></i>
+                  <span id="importFilePreviewName"></span>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="border-top:1px solid #e2e8f0;padding:14px 24px;">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal" style="border-radius:8px;">
+          Annuler
+        </button>
+        <button type="button" id="importSubmitBtn" class="btn btn-sm btn-primary fw-semibold" style="border-radius:8px;" onclick="submitImport()" disabled>
+          <i class="bi bi-cloud-upload-fill me-1"></i>Importer les notes
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleSem(id) {
+  const body  = document.getElementById('sem-' + id);
+  const arrow = document.getElementById('sem-arrow-' + id);
+  const open  = body.style.display === 'block';
+  body.style.display    = open ? 'none' : 'block';
+  arrow.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+function toggleUE(id) {
+  const body  = document.getElementById('ue-' + id);
+  const arrow = document.getElementById('ue-arrow-' + id);
+  const open  = body.style.display === 'block';
+  body.style.display    = open ? 'none' : 'block';
+  arrow.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
+}
+
+function toggleEC(id) {
+  const body  = document.getElementById('ec-' + id);
+  const arrow = document.getElementById('ec-arrow-' + id);
+  const open  = body.style.display === 'block';
+  body.style.display    = open ? 'none' : 'block';
+  arrow.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  // Ouvrir le premier semestre automatiquement
+  const firstSem = document.querySelector('.sem-header');
+  if (firstSem) firstSem.click();
+});
+
+function openImportModal(importUrl, templateUrl, subtitle) {
+  document.getElementById('importNotesForm').action = importUrl;
+  document.getElementById('importTemplateLink').href = templateUrl;
+  document.getElementById('importModalSubtitle').textContent = subtitle;
+  // Reset état fichier
+  document.getElementById('importFileInput').value = '';
+  document.getElementById('importFileName').textContent = 'Aucun fichier choisi';
+  document.getElementById('importFilePreview').classList.add('d-none');
+  document.getElementById('importSubmitBtn').disabled = true;
+  new bootstrap.Modal(document.getElementById('importNotesModal')).show();
+}
+
+function updateImportFileName(input) {
+  const name = input.files[0] ? input.files[0].name : 'Aucun fichier choisi';
+  document.getElementById('importFileName').textContent = name;
+  if (input.files[0]) {
+    document.getElementById('importFilePreviewName').textContent = name;
+    document.getElementById('importFilePreview').classList.remove('d-none');
+    document.getElementById('importSubmitBtn').disabled = false;
+  } else {
+    document.getElementById('importFilePreview').classList.add('d-none');
+    document.getElementById('importSubmitBtn').disabled = true;
+  }
+}
+
+function submitImport() {
+  const file = document.getElementById('importFileInput').files[0];
+  if (!file) return;
+  const btn = document.getElementById('importSubmitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Import en cours…';
+  document.getElementById('importNotesForm').submit();
+}
+</script>
+{% endblock %}

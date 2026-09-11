@@ -1,0 +1,44 @@
+{% extends 'base/base.html' %}
+{% block title %}Supprimer la clôture{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Direction Administrative Financière</a></li>
+<li class="breadcrumb-item"><a href="{% url 'accounting:clotures_list' %}">Clôtures</a></li>
+<li class="breadcrumb-item active">Supprimer</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'accounting:clotures_list' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+  <h4 class="mb-0 fw-bold" style="color:#dc2626;">
+    <i class="bi bi-trash3 me-2"></i>Supprimer la clôture
+  </h4>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius:12px;max-width:520px;border-left:4px solid #dc2626!important;">
+  <div class="card-body p-4">
+    <p style="font-size:.95rem;">Voulez-vous vraiment supprimer la clôture du <strong>{{ closure.closure_date|date:"d/m/Y" }}</strong> ?</p>
+    <div class="rounded p-3 mb-3" style="background:#fef2f2;font-size:.83rem;color:#991b1b;">
+      <div><strong>Date :</strong> {{ closure.closure_date|date:"d/m/Y" }}</div>
+      <div><strong>Année académique :</strong> {{ closure.academic_year|default:"—" }}</div>
+      <div><strong>Total encaissé :</strong> {{ closure.total_collected|floatformat:0 }} FCFA</div>
+      <div><strong>Restant dû :</strong> {{ closure.total_remaining|floatformat:0 }} FCFA</div>
+      {% if closure.notes %}<div><strong>Observations :</strong> {{ closure.notes }}</div>{% endif %}
+    </div>
+    <p class="text-danger fw-semibold" style="font-size:.82rem;">
+      <i class="bi bi-exclamation-triangle-fill me-1"></i>Cette action est irréversible.
+    </p>
+    <form method="post" class="d-flex gap-2">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm btn-danger" style="border-radius:8px;padding:6px 20px;">
+        <i class="bi bi-trash3 me-1"></i>Confirmer la suppression
+      </button>
+      <a href="{% url 'accounting:clotures_list' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+        Annuler
+      </a>
+    </form>
+  </div>
+</div>
+{% endblock %}

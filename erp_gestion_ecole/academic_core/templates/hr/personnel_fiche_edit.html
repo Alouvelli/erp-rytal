@@ -1,0 +1,71 @@
+{% extends "base/base.html" %}
+{% block title %}Fiche personnel — {{ employe.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{% url 'hr:personnel_list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <div>
+      <h5 class="mb-0 fw-bold">Fiche personnel — {{ employe.get_full_name }}</h5>
+      <small class="text-muted">{{ employe.role.get_name_display|default:'' }} · {{ employe.matricule_employe|default:"Matricule non défini" }}</small>
+    </div>
+  </div>
+
+  <form method="post" class="card border-0 shadow-sm">
+    {% csrf_token %}
+    <div class="card-body p-4">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Poste / Fonction</label>
+          <input type="text" name="poste" value="{{ fiche.poste }}" class="form-control" placeholder="Ex : Secrétaire de direction">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Type de contrat</label>
+          <select name="type_contrat" class="form-select">
+            {% for code, label in CONTRAT_CHOICES %}
+            <option value="{{ code }}" {% if fiche.type_contrat == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Date d'embauche</label>
+          <input type="date" name="date_embauche" value="{{ fiche.date_embauche|date:'Y-m-d' }}" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Date de fin de contrat</label>
+          <input type="date" name="date_fin_contrat" value="{{ fiche.date_fin_contrat|date:'Y-m-d' }}" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">N° CNSS</label>
+          <input type="text" name="numero_cnss" value="{{ fiche.numero_cnss }}" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">N° IPRES</label>
+          <input type="text" name="numero_ipres" value="{{ fiche.numero_ipres }}" class="form-control">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Adresse</label>
+          <textarea name="adresse" rows="2" class="form-control">{{ fiche.adresse }}</textarea>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Contact d'urgence — Nom</label>
+          <input type="text" name="contact_urgence_nom" value="{{ fiche.contact_urgence_nom }}" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Contact d'urgence — Téléphone</label>
+          <input type="text" name="contact_urgence_telephone" value="{{ fiche.contact_urgence_telephone }}" class="form-control">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Notes RH</label>
+          <textarea name="notes" rows="3" class="form-control">{{ fiche.notes }}</textarea>
+        </div>
+      </div>
+    </div>
+    <div class="card-footer bg-white border-top d-flex justify-content-end gap-2 py-3">
+      <a href="{% url 'hr:personnel_list' %}" class="btn btn-outline-secondary">Annuler</a>
+      <button type="submit" class="btn btn-primary fw-semibold"><i class="bi bi-check2-circle me-1"></i>Enregistrer</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

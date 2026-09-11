@@ -1,0 +1,49 @@
+# Core Django
+Django==5.1.4
+djangorestframework==3.15.2
+django-cors-headers==4.6.0
+django-filter==24.3
+
+# Database (PostgreSQL — une base par institut, voir academic_core/tenant_databases.py)
+psycopg2-binary==2.9.10
+
+# Auth & Security
+djangorestframework-simplejwt==5.3.1
+django-ratelimit==4.1.0
+
+# Async tasks
+celery==5.4.0
+django-celery-beat==2.7.0
+redis==5.2.1
+
+# API Documentation
+drf-spectacular==0.27.2
+
+# Reports / PDF / Excel
+reportlab==4.2.5
+python-docx==1.2.0
+openpyxl==3.1.5
+xlsxwriter==3.2.0
+
+# Forms & Templates
+django-crispy-forms==2.3
+crispy-bootstrap5==2024.10
+
+# Static files
+whitenoise==6.8.2
+
+# WSGI server
+gunicorn==23.0.0
+
+# QR Code generation
+qrcode[pil]==8.0
+
+# Utilities
+Pillow==11.0.0
+python-decouple==3.8
+django-extensions==3.2.3
+requests==2.32.3
+bleach==6.4.0
+
+# AI Chatbot (RYTAL)
+anthropic==0.40.0

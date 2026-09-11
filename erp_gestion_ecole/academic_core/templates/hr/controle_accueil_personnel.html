@@ -1,0 +1,520 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Contrôle Accueil — Pointage Personnel{% endblock %}
+
+{% block extra_head %}
+<style>
+  #scanner-wrap {
+    position: relative; width: 100%; max-width: 440px; aspect-ratio: 1/1;
+    background: #0d1117; border-radius: 16px; overflow: hidden; margin: 0 auto;
+    border: 3px solid #1565c0;
+    box-shadow: 0 0 0 4px rgba(21,101,192,.2);
+  }
+  #scanner-wrap video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #scanner-canvas { display: none; }
+
+  #cam-placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: rgba(255,255,255,.5); gap: 10px; text-align: center; padding: 20px;
+  }
+
+  #viewfinder {
+    position: absolute; inset: 0;
+    display: none; align-items: center; justify-content: center; pointer-events: none;
+  }
+  #viewfinder.active { display: flex; }
+  #viewfinder::before {
+    content: '';
+    width: 56%; height: 56%;
+    border: 2.5px solid #1565c0; border-radius: 10px;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,.5);
+    animation: pulse-border 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-border {
+    0%,100% { border-color:#1565c0; box-shadow:0 0 0 9999px rgba(0,0,0,.5),0 0 12px 2px rgba(21,101,192,.6); }
+    50%      { border-color:#42a5f5; box-shadow:0 0 0 9999px rgba(0,0,0,.6),0 0 22px 4px rgba(21,101,192,.9); }
+  }
+  #scan-line {
+    position: absolute; left: 22%; right: 22%; height: 2px;
+    background: linear-gradient(90deg,transparent,#1565c0,transparent);
+    animation: scan-anim 2s ease-in-out infinite; border-radius: 999px;
+    box-shadow: 0 0 8px 2px #1565c0;
+  }
+  @keyframes scan-anim {
+    0%   { top: 22%; opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { top: 78%; opacity: 0; }
+  }
+  #scanner-wrap.qr-found { border-color: #16a34a !important; box-shadow: 0 0 0 4px rgba(22,163,74,.3) !important; }
+
+  .cam-btn {
+    border: none; border-radius: 10px; padding: 9px 18px;
+    font-weight: 600; font-size: .88rem; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: opacity .15s, transform .1s;
+  }
+  .cam-btn:active { transform: scale(.95); }
+  .cam-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .result-card { border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,.12); }
+  .stat-box { border-radius: 12px; padding: 14px 10px; border: 1.5px solid #e2e8f0; background: #f8fafc; }
+
+  .ctrl-tab {
+    padding: 8px 20px; border-radius: 8px; border: 2px solid #e2e8f0;
+    background: #fff; font-weight: 600; font-size: .88rem;
+    cursor: pointer; transition: all .15s; color: #374151;
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .ctrl-tab.active { background: #0d2244; color: #fff; border-color: #0d2244; }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Contrôle Accueil Personnel</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="max-width: 1100px;">
+
+  <div class="page-header mb-4">
+    <h1 class="page-title">
+      <span class="icon" style="background:#0d2244;"><i class="bi bi-person-badge-fill"></i></span>
+      Contrôle Accueil — Pointage Personnel
+    </h1>
+    <small class="text-muted">
+      Scannez le QR code du verso de la carte du personnel pour enregistrer la présence.
+    </small>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- ── Colonne gauche : scanner + saisie ── -->
+    <div class="col-lg-5">
+
+      <!-- Tabs -->
+      <div class="d-flex gap-2 mb-3">
+        <button class="ctrl-tab active" id="tab-cam"    onclick="switchTab('cam')">
+          <i class="bi bi-camera-video-fill"></i> Scanner QR
+        </button>
+        <button class="ctrl-tab"        id="tab-manual" onclick="switchTab('manual')">
+          <i class="bi bi-keyboard"></i> Saisie manuelle
+        </button>
+      </div>
+
+      <!-- Panel caméra -->
+      <div id="panel-cam">
+        <div id="scanner-wrap">
+          <video id="video" playsinline muted></video>
+          <canvas id="scanner-canvas"></canvas>
+          <div id="cam-placeholder">
+            <i class="bi bi-camera-video-off" style="font-size:2.5rem;"></i>
+            <div>Caméra inactive</div>
+            <small>Cliquez sur <strong>Démarrer</strong> pour activer</small>
+          </div>
+          <div id="viewfinder">
+            <div id="scan-line"></div>
+          </div>
+        </div>
+
+        <div id="cam-status" class="mt-2 text-center" style="font-size:.83rem; display:none;"></div>
+
+        <div class="d-flex gap-2 justify-content-center mt-3 flex-wrap">
+          <button class="cam-btn" id="btn-start"  onclick="startCamera()"
+                  style="background:#0d2244;color:#fff;">
+            <i class="bi bi-play-circle-fill"></i> Démarrer
+          </button>
+          <button class="cam-btn" id="btn-stop"   onclick="stopCamera()"  disabled
+                  style="background:#e2e8f0;color:#374151;">
+            <i class="bi bi-stop-circle"></i> Arrêter
+          </button>
+          <button class="cam-btn" id="btn-switch" onclick="switchCamera()" disabled
+                  style="background:#e2e8f0;color:#374151;">
+            <i class="bi bi-arrow-repeat"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Panel saisie manuelle -->
+      <div id="panel-manual" style="display:none;">
+        <div class="card-section p-4">
+          <label class="form-label fw-bold mb-2" style="font-size:.9rem;">
+            <i class="bi bi-search me-1 text-primary"></i>
+            Rechercher un employé
+          </label>
+          <div class="input-group">
+            <input type="text" id="manual-input" class="form-control form-control-lg"
+                   placeholder="Matricule ou nom de l'employé…"
+                   autocomplete="off"
+                   onkeydown="if(event.key==='Enter'&&!event.repeat) doManualLookup()">
+            <button type="button" id="btn-verify" class="btn btn-primary fw-semibold px-4"
+                    onclick="doManualLookup()">
+              <span id="btn-verify-text"><i class="bi bi-search me-1"></i>Vérifier</span>
+              <span id="btn-verify-spin" style="display:none;">
+                <span class="spinner-border spinner-border-sm me-1"></span>Recherche…
+              </span>
+            </button>
+          </div>
+          <small class="text-muted mt-2 d-block">
+            Exemple : <code>EMP-2024-001</code> · <code>Diallo</code>
+          </small>
+        </div>
+      </div>
+
+      <!-- Erreur -->
+      <div id="error-msg" class="alert alert-danger mt-3 d-none align-items-start gap-2 mb-0">
+        <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+        <div>
+          <div class="fw-semibold" id="error-title"></div>
+          <div id="error-text" style="font-size:.83rem;"></div>
+        </div>
+      </div>
+
+    </div><!-- /col-lg-5 -->
+
+    <!-- ── Colonne droite : résultat ── -->
+    <div class="col-lg-7" id="result-section">
+
+      <!-- Carte résultat (cachée initialement) -->
+      <div id="result-card" class="result-card" style="display:none;">
+
+        <!-- Bandeau dynamique selon statut -->
+        <div class="p-3 text-white text-center" id="result-header"
+             style="background:#16a34a; font-size:1.1rem; font-weight:700;">
+          <i id="result-header-icon" class="bi bi-check-circle-fill me-2"></i>
+          <span id="result-header-label">PRÉSENCE ENREGISTRÉE</span>
+        </div>
+
+        <div class="p-4 bg-white">
+          <!-- Identité -->
+          <div class="d-flex gap-3 align-items-center mb-3">
+            <div id="emp-avatar-wrap"></div>
+            <div>
+              <div class="fw-bold fs-5" id="emp-name"></div>
+              <div class="text-muted" id="emp-role" style="font-size:.85rem;"></div>
+              <div class="text-muted" id="emp-matricule" style="font-size:.78rem; font-family:monospace;"></div>
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <!-- Stats -->
+          <div class="row g-3 text-center">
+            <div class="col-4">
+              <div class="stat-box" id="box-heure">
+                <i class="bi bi-clock-fill" id="icon-heure" style="font-size:1.3rem; color:#1565c0;"></i>
+                <div class="fw-bold mt-1" id="val-heure" style="font-size:1.2rem; color:#0d2244;"></div>
+                <div style="font-size:.72rem; color:#6b7280;">Heure d'arrivée</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="stat-box" id="box-statut">
+                <i class="bi bi-person-check-fill" id="icon-statut" style="font-size:1.3rem; color:#1565c0;"></i>
+                <div class="fw-bold mt-1" id="val-statut" style="font-size:.95rem; color:#0d2244;"></div>
+                <div style="font-size:.72rem; color:#6b7280;">Statut</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="stat-box">
+                <i class="bi bi-calendar-check-fill" style="font-size:1.3rem; color:#1565c0;"></i>
+                <div class="fw-bold mt-1" id="val-date" style="font-size:1.1rem; color:#0d2244;"></div>
+                <div style="font-size:.72rem; color:#6b7280;">Date</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="already-msg" style="display:none;"
+               class="alert alert-warning mt-3 mb-0 py-2" style="font-size:.82rem;">
+            <i class="bi bi-info-circle me-1"></i>
+            Présence déjà enregistrée pour aujourd'hui.
+          </div>
+        </div>
+
+        <div class="px-4 py-2 text-center" style="background:#f8fafc; border-top:1px solid #e2e8f0;">
+          <small class="text-muted">
+            <i class="bi bi-clock me-1"></i>Scanné le <span id="scan-time"></span>
+          </small>
+          <button type="button" class="btn btn-sm btn-outline-secondary ms-3" onclick="resetScan()">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>Nouveau scan
+          </button>
+        </div>
+      </div>
+
+      <!-- Placeholder initial -->
+      <div id="result-placeholder" class="text-center py-5" style="color:#94a3b8;">
+        <i class="bi bi-qr-code-scan" style="font-size:3.5rem; display:block; margin-bottom:12px;"></i>
+        <div style="font-size:.95rem; font-weight:600;">En attente de scan</div>
+        <small>Pointez la caméra vers le QR code au verso de la carte du personnel</small>
+      </div>
+
+    </div><!-- /col-lg-7 -->
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script>
+'use strict';
+
+const LOOKUP_URL = "{% url 'hr:accueil_staff_lookup' %}";
+const CSRF_TOKEN = "{{ csrf_token }}";
+
+// ── État caméra ───────────────────────────────────────────────────────────────
+let mediaStream  = null;
+let scanning     = false;
+let facingMode   = 'environment';
+let lastQR       = null;
+let lastQRTime   = 0;
+let jsqrReady    = false;
+let lookupBusy   = false;
+
+const videoEl  = document.getElementById('video');
+const canvasEl = document.getElementById('scanner-canvas');
+const ctx2d    = canvasEl.getContext('2d');
+
+window.addEventListener('load', () => {
+  jsqrReady = (typeof jsQR === 'function');
+  if (!jsqrReady) {
+    setCamStatus('warning',
+      'Bibliothèque QR non disponible. Le scan QR est désactivé — utilisez la <strong>saisie manuelle</strong>.');
+  }
+  startCamera();
+});
+
+// ── UI ────────────────────────────────────────────────────────────────────────
+function setCamStatus(type, msg) {
+  const el = document.getElementById('cam-status');
+  el.style.display = msg ? '' : 'none';
+  el.innerHTML = msg
+    ? `<span class="text-${type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'success'}">`
+      + `<i class="bi bi-${type === 'error' ? 'exclamation-triangle' : type === 'warning' ? 'exclamation-circle' : 'check-circle'} me-1"></i>${msg}</span>`
+    : '';
+}
+
+function setCamRunning(running) {
+  document.getElementById('btn-start').disabled  = running;
+  document.getElementById('btn-stop').disabled   = !running;
+  document.getElementById('btn-switch').disabled = !running;
+  document.getElementById('cam-placeholder').style.display = running ? 'none' : '';
+  document.getElementById('viewfinder').classList.toggle('active', running);
+}
+
+function showError(title, text) {
+  const el = document.getElementById('error-msg');
+  el.classList.remove('d-none');
+  el.classList.add('d-flex');
+  document.getElementById('error-title').textContent = title;
+  document.getElementById('error-text').textContent  = text;
+}
+function hideError() {
+  const el = document.getElementById('error-msg');
+  el.classList.add('d-none');
+  el.classList.remove('d-flex');
+}
+
+// ── Caméra ────────────────────────────────────────────────────────────────────
+async function startCamera() {
+  stopCamera();
+  setCamStatus('', '');
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 1280 } }
+    });
+    videoEl.srcObject = mediaStream;
+    await videoEl.play();
+    scanning = true;
+    setCamRunning(true);
+    setCamStatus('success', 'Caméra active — positionnez le QR code dans le cadre');
+    requestAnimationFrame(scanFrame);
+  } catch (err) {
+    let msg = "Impossible d'accéder à la caméra.";
+    if (!navigator.mediaDevices)         msg = "Caméra indisponible (HTTP). Utilisez la saisie manuelle.";
+    else if (err.name === 'NotAllowedError') msg = "Permission caméra refusée. Autorisez-la dans votre navigateur.";
+    else if (err.name === 'NotFoundError')   msg = "Aucune caméra détectée.";
+    else if (err.name === 'NotReadableError') msg = "La caméra est utilisée par une autre application.";
+    setCamStatus('error', msg);
+    setCamRunning(false);
+  }
+}
+
+function stopCamera() {
+  scanning = false;
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+    videoEl.srcObject = null;
+  }
+  setCamRunning(false);
+  setCamStatus('', '');
+}
+
+function switchCamera() {
+  facingMode = facingMode === 'environment' ? 'user' : 'environment';
+  startCamera();
+}
+
+// ── Scan frame ────────────────────────────────────────────────────────────────
+function scanFrame() {
+  if (!scanning || !jsqrReady) return;
+  if (videoEl.readyState >= videoEl.HAVE_ENOUGH_DATA
+      && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+    canvasEl.width  = videoEl.videoWidth;
+    canvasEl.height = videoEl.videoHeight;
+    ctx2d.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+    const imgData = ctx2d.getImageData(0, 0, canvasEl.width, canvasEl.height);
+    const code    = jsQR(imgData.data, imgData.width, imgData.height,
+                         { inversionAttempts: 'dontInvert' });
+
+    if (code && code.data && code.data.length > 4) {
+      const raw = code.data.trim();
+      // Accepter : URL carte personnel (/hr/pointer/…) ou matricule employé
+      const isStaffUrl = /\/hr\/pointer\/[^/?#]+\//.test(raw);
+      const isMatricule = /[A-Za-z0-9]/.test(raw) && raw.length >= 3;
+      const isValid = isStaffUrl || isMatricule;
+
+      if (isValid && !lookupBusy) {
+        const now = Date.now();
+        if (raw !== lastQR || now - lastQRTime > 4000) {
+          lastQR = raw; lastQRTime = now;
+          document.getElementById('scanner-wrap').classList.add('qr-found');
+          setTimeout(() => document.getElementById('scanner-wrap').classList.remove('qr-found'), 500);
+          doLookup({ qr_data: raw });
+        }
+      }
+    }
+  }
+  requestAnimationFrame(scanFrame);
+}
+
+window.addEventListener('beforeunload', stopCamera);
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  const isCam = tab === 'cam';
+  document.getElementById('panel-cam').style.display    = isCam ? '' : 'none';
+  document.getElementById('panel-manual').style.display = isCam ? 'none' : '';
+  document.getElementById('tab-cam').classList.toggle('active', isCam);
+  document.getElementById('tab-manual').classList.toggle('active', !isCam);
+  if (!isCam) stopCamera();
+  hideError();
+}
+
+// ── Saisie manuelle ───────────────────────────────────────────────────────────
+function doManualLookup() {
+  const val = document.getElementById('manual-input').value.trim();
+  if (!val) { showError('Saisissez un matricule ou un nom.', ''); return; }
+  doLookup({ matricule: val });
+}
+
+// ── Requête AJAX ──────────────────────────────────────────────────────────────
+async function doLookup(payload) {
+  if (lookupBusy) return;
+  lookupBusy = true;
+  hideError();
+
+  const verifyText = document.getElementById('btn-verify-text');
+  const verifySpin = document.getElementById('btn-verify-spin');
+  if (verifyText) verifyText.style.display = 'none';
+  if (verifySpin) verifySpin.style.display = '';
+
+  try {
+    const resp = await fetch(LOOKUP_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+      body:    JSON.stringify(payload),
+    });
+    const data = await resp.json();
+
+    if (!data.found) {
+      showError('Employé introuvable', data.message || 'Aucun résultat pour cette référence.');
+      resetResultArea();
+    } else {
+      hideError();
+      renderResult(data);
+    }
+  } catch (e) {
+    showError('Erreur réseau', 'Impossible de contacter le serveur.');
+    resetResultArea();
+  } finally {
+    lookupBusy = false;
+    if (verifyText) verifyText.style.display = '';
+    if (verifySpin) verifySpin.style.display = 'none';
+  }
+}
+
+// ── Affichage du résultat ─────────────────────────────────────────────────────
+const STATUT_COLORS = {
+  PRESENT:  { bg: '#16a34a', border: '#bbf7d0', boxBg: '#f0fdf4', text: '#15803d', icon: 'check-circle-fill',  label: 'PRÉSENCE ENREGISTRÉE' },
+  RETARD:   { bg: '#d97706', border: '#fde68a', boxBg: '#fffbeb', text: '#b45309', icon: 'clock-history',       label: 'RETARD ENREGISTRÉ'     },
+  ABSENT:   { bg: '#dc2626', border: '#fecaca', boxBg: '#fef2f2', text: '#b91c1c', icon: 'x-circle-fill',      label: 'ABSENT — fenêtre dépassée' },
+};
+
+function renderResult(data) {
+  const pr      = data.presence;
+  const emp     = data.staff;
+  const colors  = STATUT_COLORS[pr.statut] || STATUT_COLORS.PRESENT;
+
+  // Bandeau
+  const header = document.getElementById('result-header');
+  header.style.background = colors.bg;
+  document.getElementById('result-header-icon').className = `bi bi-${colors.icon} me-2`;
+  document.getElementById('result-header-label').textContent = colors.label;
+
+  // Avatar
+  const avatarWrap = document.getElementById('emp-avatar-wrap');
+  if (emp.avatar) {
+    avatarWrap.innerHTML =
+      `<img src="${emp.avatar}" alt="" style="width:64px;height:64px;border-radius:10px;object-fit:cover;border:2.5px solid #e2e8f0;">`;
+  } else {
+    const initials = (emp.nom || '').split(' ').slice(0,2).map(p => p[0]||'').join('').toUpperCase();
+    avatarWrap.innerHTML =
+      `<div style="width:64px;height:64px;border-radius:10px;background:linear-gradient(135deg,#0d2244,#1565c0);`
+      + `display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;font-weight:700;">${initials}</div>`;
+  }
+
+  document.getElementById('emp-name').textContent      = emp.nom      || '—';
+  document.getElementById('emp-role').textContent      = emp.role     || '—';
+  document.getElementById('emp-matricule').textContent = emp.matricule || '—';
+
+  // Stats boxes
+  ['box-heure', 'box-statut'].forEach(id => {
+    const box = document.getElementById(id);
+    box.style.borderColor = colors.border;
+    box.style.background  = colors.boxBg;
+  });
+  document.getElementById('icon-heure').style.color  = colors.text;
+  document.getElementById('icon-statut').style.color = colors.text;
+  document.getElementById('val-heure').style.color   = colors.text;
+  document.getElementById('val-statut').style.color  = colors.text;
+
+  document.getElementById('val-heure').textContent  = pr.heure_arrivee || '—';
+  document.getElementById('val-statut').textContent = pr.statut_label   || '—';
+  document.getElementById('val-date').textContent   = pr.date            || '—';
+
+  document.getElementById('already-msg').style.display = pr.nouvelle ? 'none' : '';
+  document.getElementById('scan-time').textContent = new Date().toLocaleString('fr-FR', {
+    day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'
+  });
+
+  document.getElementById('result-placeholder').style.display = 'none';
+  document.getElementById('result-card').style.display = '';
+}
+
+function resetResultArea() {
+  document.getElementById('result-card').style.display        = 'none';
+  document.getElementById('result-placeholder').style.display = '';
+}
+
+function resetScan() {
+  resetResultArea();
+  hideError();
+  const inp = document.getElementById('manual-input');
+  if (inp) inp.value = '';
+  lastQR = null;
+}
+</script>
+{% endblock %}

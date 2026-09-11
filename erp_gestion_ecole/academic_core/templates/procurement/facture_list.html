@@ -1,0 +1,128 @@
+{% extends "base/base.html" %}
+
+{% block title %}Factures{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-receipt me-2"></i>Factures & Paiements</h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Achats — Pilotage et Suivi Budgétaire</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'procurement:demande_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+    <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('factModal')).show()"><i class="bi bi-plus-lg me-1"></i>Nouvelle facture</button>
+  </div>
+</div>
+
+{% for f in factures %}
+<div class="card-section mb-3" style="padding:18px;">
+  <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+    <div>
+      <div style="font-weight:700;color:var(--navy);">{{ f.numero_facture }} — {{ f.commande.reference }} ({{ f.commande.fournisseur }})</div>
+      <div class="text-muted" style="font-size:.78rem;">Montant : {{ f.montant|floatformat:0 }} FCFA</div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span style="border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;
+        {% if f.statut == 'payee' %}background:#dcfce7;color:#166534;
+        {% elif f.statut == 'validee' %}background:#eff6ff;color:#1d4ed8;
+        {% else %}background:#fef3c7;color:#92400e;{% endif %}">{{ f.get_statut_display }}</span>
+      {% if f.statut == 'en_attente' %}
+      <form method="post" action="{% url 'procurement:facture_valider' f.pk %}">{% csrf_token %}
+        <button type="submit" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:2px 8px;font-size:.68rem;">Valider</button></form>
+      {% elif f.statut == 'validee' %}
+      <button type="button" class="btn btn-sm" style="background:#dcfce7;color:#166534;border-radius:7px;padding:2px 8px;font-size:.68rem;"
+        onclick="document.getElementById('pay_facture').value={{ f.pk }};document.getElementById('pay_montant').value='{{ f.montant }}';new bootstrap.Modal(document.getElementById('payModal')).show()">Planifier paiement</button>
+      {% endif %}
+    </div>
+  </div>
+  {% if f.paiements.all %}
+  <table class="table table-sm mt-2" style="font-size:.78rem;">
+    <thead><tr><th>Date</th><th class="text-end">Montant</th><th>Mode</th><th class="text-center">Statut</th><th class="text-center" style="width:150px;">Action</th></tr></thead>
+    <tbody>
+      {% for p in f.paiements.all %}
+      <tr>
+        <td>{{ p.date_paiement|date:"d/m/Y" }}</td>
+        <td class="text-end">{{ p.montant|floatformat:0 }}</td>
+        <td>{{ p.get_mode_paiement_display }}</td>
+        <td class="text-center">
+          <span style="border-radius:20px;padding:1px 8px;font-size:.68rem;font-weight:700;
+            {% if p.statut == 'effectue' %}background:#dcfce7;color:#166534;
+            {% elif p.statut == 'annule' %}background:#fee2e2;color:#991b1b;
+            {% else %}background:#fef3c7;color:#92400e;{% endif %}">{{ p.get_statut_display }}</span>
+        </td>
+        <td class="text-center">
+          {% if p.statut == 'planifie' %}
+          <form method="post" action="{% url 'procurement:paiement_effectuer' p.pk %}" onsubmit="return confirm('Effectuer ce paiement ? Une dépense sera générée et le budget mis à jour.');">
+            {% csrf_token %}<button type="submit" class="btn btn-sm" style="background:#dcfce7;color:#166534;border-radius:7px;padding:2px 8px;font-size:.68rem;">Effectuer</button></form>
+          {% elif p.statut == 'effectue' %}
+          <form method="post" action="{% url 'procurement:paiement_annuler' p.pk %}" onsubmit="return confirm('Annuler ce paiement ? La dépense générée sera retirée.');">
+            {% csrf_token %}<button type="submit" class="btn btn-sm" style="background:#f1f5f9;color:#64748b;border-radius:7px;padding:2px 8px;font-size:.68rem;">Annuler</button></form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% empty %}
+<div class="card-section text-center" style="padding:40px;color:#94a3b8;">Aucune facture.</div>
+{% endfor %}
+
+<div class="modal fade" id="factModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nouvelle facture</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'procurement:facture_create' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Commande <span class="text-danger">*</span></label>
+            <select name="commande" class="form-select" required>
+              <option value="">— Sélectionner —</option>{% for c in commandes %}<option value="{{ c.pk }}">{{ c.reference }} — {{ c.fournisseur }}</option>{% endfor %}
+            </select></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Numéro de facture <span class="text-danger">*</span></label>
+            <input type="text" name="numero_facture" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Montant (FCFA) <span class="text-danger">*</span></label>
+            <input type="number" name="montant" class="form-control" min="1" step="500" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Pièce jointe</label>
+            <input type="file" name="piece_jointe" class="form-control"></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="payModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-cash-coin me-2"></i>Planifier un paiement</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'procurement:paiement_create' %}">
+        {% csrf_token %}
+        <input type="hidden" name="facture" id="pay_facture">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Montant (FCFA) <span class="text-danger">*</span></label>
+            <input type="number" name="montant" id="pay_montant" class="form-control" min="1" step="500" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Mode de paiement</label>
+            <select name="mode_paiement" class="form-select">{% for val, label in MODE_CHOICES %}<option value="{{ val }}">{{ label }}</option>{% endfor %}</select></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Référence de paiement</label>
+            <input type="text" name="reference_paiement" class="form-control"></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Planifier</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

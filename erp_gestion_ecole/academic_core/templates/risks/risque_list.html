@@ -1,0 +1,180 @@
+{% extends "base/base.html" %}
+
+{% block title %}Risques{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-exclamation-triangle-fill me-2"></i>Risques</h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Pilotage et Suivi Budgétaire</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'risks:matrice' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-grid-3x3-gap me-1"></i>Matrice</a>
+    <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('risqueModal')).show()"><i class="bi bi-plus-lg me-1"></i>Nouveau risque</button>
+  </div>
+</div>
+
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Code</th><th>Libellé</th><th>Catégorie</th><th class="text-center">G × P</th><th class="text-center">Niveau</th><th>Statut</th><th class="text-center" style="width:170px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in risques %}
+        <tr>
+          <td style="padding:8px 16px;font-weight:700;color:var(--navy);">{{ r.code }}</td>
+          <td>{{ r.libelle }}</td>
+          <td style="font-size:.78rem;">{{ r.get_categorie_display }}</td>
+          <td class="text-center">{{ r.gravite }} × {{ r.probabilite }} = {{ r.score }}</td>
+          <td class="text-center">
+            <span class="risk-badge risk-cell-{{ r.niveau }}">{{ r.niveau|capfirst }}</span>
+          </td>
+          <td>
+            <span style="border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;
+              {% if r.statut == 'maitrise' %}background:#dcfce7;color:#166534;
+              {% elif r.statut == 'en_traitement' %}background:#eff6ff;color:#1d4ed8;
+              {% elif r.statut == 'clos' %}background:#f1f5f9;color:#64748b;
+              {% else %}background:#fef3c7;color:#92400e;{% endif %}">{{ r.get_statut_display }}</span>
+          </td>
+          <td class="text-center">
+            <div class="d-flex gap-1 justify-content-center flex-wrap">
+              <button type="button" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 8px;font-size:.7rem;"
+                onclick="editRisque({{ r.pk }}, '{{ r.libelle|escapejs }}', '{{ r.description|escapejs }}', '{{ r.categorie }}', {{ r.gravite }}, {{ r.probabilite }}, {{ r.responsable_id|default:'null' }}, '{{ r.plan_mitigation|escapejs }}', '{{ r.statut }}')">Modifier</button>
+              <button type="button" class="btn btn-sm" style="background:#f1f5f9;color:#334155;border-radius:7px;padding:3px 8px;font-size:.7rem;"
+                onclick="document.getElementById('suivi_risque').value={{ r.pk }};new bootstrap.Modal(document.getElementById('suiviModal')).show()">Suivi</button>
+              <form method="post" action="{% url 'risks:risque_delete' r.pk %}" onsubmit="return confirm('Supprimer ce risque ?');">
+                {% csrf_token %}<button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:3px 8px;font-size:.7rem;">Suppr.</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:40px;">Aucun risque défini.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+.risk-cell-faible   { background:#d1e7dd; color:#0f5132; }
+.risk-cell-modere   { background:#fff3cd; color:#664d03; }
+.risk-cell-eleve    { background:#ffe5d0; color:#9a3b00; }
+.risk-cell-critique { background:#f8d7da; color:#842029; }
+.risk-badge { border-radius:20px; padding:2px 10px; font-size:.72rem; font-weight:700; }
+</style>
+
+<div class="modal fade" id="risqueModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0" id="risqueModalTitle"><i class="bi bi-plus-circle me-2"></i>Nouveau risque</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="risqueForm" action="{% url 'risks:risque_create' %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="row mb-3">
+            <div class="col-4" id="risque_code_wrap"><label class="form-label fw-semibold" style="font-size:.82rem;">Code <span class="text-danger">*</span></label>
+              <input type="text" name="code" id="risque_code" class="form-control" required></div>
+            <div class="col-8"><label class="form-label fw-semibold" style="font-size:.82rem;">Libellé <span class="text-danger">*</span></label>
+              <input type="text" name="libelle" id="risque_libelle" class="form-control" required></div>
+          </div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Description</label>
+            <textarea name="description" id="risque_description" class="form-control" rows="2"></textarea></div>
+          <div class="row mb-3">
+            <div class="col-4"><label class="form-label fw-semibold" style="font-size:.82rem;">Catégorie <span class="text-danger">*</span></label>
+              <select name="categorie" id="risque_categorie" class="form-select" required>
+                {% for val, label in CATEGORIE_CHOICES %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+              </select></div>
+            <div class="col-4"><label class="form-label fw-semibold" style="font-size:.82rem;">Gravité (1-5) <span class="text-danger">*</span></label>
+              <input type="number" name="gravite" id="risque_gravite" class="form-control" min="1" max="5" required></div>
+            <div class="col-4"><label class="form-label fw-semibold" style="font-size:.82rem;">Probabilité (1-5) <span class="text-danger">*</span></label>
+              <input type="number" name="probabilite" id="risque_probabilite" class="form-control" min="1" max="5" required></div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-6"><label class="form-label fw-semibold" style="font-size:.82rem;">Responsable</label>
+              <select name="responsable" id="risque_responsable" class="form-select">
+                <option value="">— Aucun —</option>{% for u in users %}<option value="{{ u.pk }}">{{ u.get_full_name }}</option>{% endfor %}
+              </select></div>
+            <div class="col-6" id="risque_date_wrap"><label class="form-label fw-semibold" style="font-size:.82rem;">Date d'identification <span class="text-danger">*</span></label>
+              <input type="date" name="date_identification" id="risque_date_identification" class="form-control" required></div>
+          </div>
+          <div class="mb-3" id="risque_statut_wrap" style="display:none;"><label class="form-label fw-semibold" style="font-size:.82rem;">Statut</label>
+            <select name="statut" id="risque_statut" class="form-select">
+              {% for val, label in STATUT_CHOICES %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+            </select></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Plan de mitigation</label>
+            <textarea name="plan_mitigation" id="risque_plan_mitigation" class="form-control" rows="2"></textarea></div>
+          <div class="mb-3" id="risque_rattachement_wrap">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Rattachement au Plan Stratégique (optionnel)</label>
+            <select name="rattachement" class="form-select">
+              <option value="">— Aucun —</option>
+              {% for label, ct, objs in rattachements %}
+              <optgroup label="{{ label }}">{% for o in objs %}<option value="{{ ct.pk }}|{{ o.pk }}">{{ o.code }} — {{ o.libelle }}</option>{% endfor %}</optgroup>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="suiviModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-clipboard-plus me-2"></i>Ajouter un suivi</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'risks:suivi_create' %}">
+        {% csrf_token %}
+        <input type="hidden" name="risque" id="suivi_risque">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Date de suivi <span class="text-danger">*</span></label>
+            <input type="date" name="date_suivi" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Commentaire</label>
+            <textarea name="commentaire" class="form-control" rows="2"></textarea></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Nouveau statut (optionnel)</label>
+            <select name="nouveau_statut" class="form-select">
+              <option value="">— Inchangé —</option>
+              {% for val, label in STATUT_CHOICES %}<option value="{{ val }}">{{ label }}</option>{% endfor %}
+            </select></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function editRisque(pk, libelle, description, categorie, gravite, probabilite, responsableId, planMitigation, statut) {
+  document.getElementById('risqueModalTitle').innerHTML = '<i class="bi bi-pencil me-2"></i>Modifier le risque';
+  document.getElementById('risqueForm').action = '/risques/' + pk + '/modifier/';
+  document.getElementById('risque_code_wrap').style.display = 'none';
+  document.getElementById('risque_code').required = false;
+  document.getElementById('risque_date_wrap').style.display = 'none';
+  document.getElementById('risque_date_identification').required = false;
+  document.getElementById('risque_rattachement_wrap').style.display = 'none';
+  document.getElementById('risque_statut_wrap').style.display = 'block';
+  document.getElementById('risque_libelle').value = libelle;
+  document.getElementById('risque_description').value = description;
+  document.getElementById('risque_categorie').value = categorie;
+  document.getElementById('risque_gravite').value = gravite;
+  document.getElementById('risque_probabilite').value = probabilite;
+  document.getElementById('risque_responsable').value = responsableId || '';
+  document.getElementById('risque_plan_mitigation').value = planMitigation;
+  document.getElementById('risque_statut').value = statut;
+  new bootstrap.Modal(document.getElementById('risqueModal')).show();
+}
+</script>
+{% endblock %}

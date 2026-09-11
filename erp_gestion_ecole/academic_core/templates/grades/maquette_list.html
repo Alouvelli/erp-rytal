@@ -1,0 +1,240 @@
+{% extends 'base/base.html' %}
+{% block title %}Maquettes de formation{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Maquettes de formation</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <h1 class="page-title">
+    <span class="icon" style="background:#1e3a5f;"><i class="bi bi-diagram-3"></i></span>
+    Maquettes de formation LMD
+  </h1>
+  <a href="{% url 'grades:maquette_ue_create' %}{% if selected_program and selected_semester %}?program={{ selected_program.pk }}&semester={{ selected_semester.pk }}{% endif %}"
+     class="btn btn-sm" style="background:var(--navy);color:#fff;border:none;padding:8px 18px;">
+    <i class="bi bi-plus-lg me-1"></i>Nouvelle UE
+  </a>
+</div>
+
+<!-- Filtres -->
+<div class="card-section mb-4">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#7c3aed;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-funnel"></i></span>
+      Sélectionner la filière et le semestre
+    </h6>
+  </div>
+  <div class="p-4">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label fw-semibold" style="font-size:.84rem;">Année académique</label>
+        <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">— Choisir une année —</option>
+          {% for y in academic_years %}
+          <option value="{{ y.pk }}" {% if selected_year.pk == y.pk %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold" style="font-size:.84rem;">Filière</label>
+        <select name="program" class="form-select form-select-sm">
+          <option value="">— Choisir une filière —</option>
+          {% for p in programs %}
+          <option value="{{ p.pk }}" {% if selected_program.pk == p.pk %}selected{% endif %}>{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold" style="font-size:.84rem;">Semestre</label>
+        <select name="semester" class="form-select form-select-sm">
+          <option value="">— Choisir un semestre —</option>
+          {% for s in semesters %}
+          <option value="{{ s.pk }}" {% if selected_semester.pk == s.pk %}selected{% endif %}>{{ s.name }}{% if s.level %} — {{ s.level.name }}{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-sm w-100" style="background:var(--navy);color:#fff;border:none;padding:8px 0;">
+          <i class="bi bi-search me-1"></i>Afficher
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if selected_year and not has_maquettes_for_selected_year and previous_year_with_maquettes %}
+<div class="card-section mb-4" style="border-left:4px solid #7c3aed;">
+  <div class="p-4 d-flex align-items-center justify-content-between flex-wrap gap-3">
+    <div>
+      <div style="font-weight:700;font-size:.9rem;color:#1e293b;">
+        <i class="bi bi-info-circle-fill me-2" style="color:#7c3aed;"></i>
+        Aucune maquette définie pour {{ selected_year.label }}
+      </div>
+      <div style="font-size:.82rem;color:#64748b;margin-top:3px;">
+        Vous pouvez dupliquer le référentiel des maquettes (UE + modules EC) depuis {{ previous_year_with_maquettes.label }}.
+      </div>
+    </div>
+    <a href="{% url 'grades:maquette_duplicate' %}?year={{ selected_year.pk }}&source={{ previous_year_with_maquettes.pk }}"
+       class="btn btn-sm" style="background:#7c3aed;color:#fff;border:none;padding:8px 18px;white-space:nowrap;">
+      <i class="bi bi-copy me-1"></i>Dupliquer depuis {{ previous_year_with_maquettes.label }}
+    </a>
+  </div>
+</div>
+{% endif %}
+
+{% if selected_program and selected_semester %}
+<div class="card-section">
+  <div class="card-section-header d-flex align-items-center justify-content-between">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-nested"></i></span>
+      {{ selected_program.name }} — {{ selected_semester.name }}
+    </h6>
+    <a href="{% url 'grades:bulletin_class_list' %}" class="btn btn-sm btn-outline-primary" style="font-size:.78rem;">
+      <i class="bi bi-journal-text me-1"></i>Bulletins
+    </a>
+  </div>
+
+  {% if ues %}
+  <div class="p-4 d-flex flex-column gap-3">
+    {% for ue in ues %}
+    <div style="border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+      <!-- UE header -->
+      <div class="d-flex align-items-center justify-content-between px-4 py-3"
+           style="background:#eff6ff;border-bottom:1px solid #e2e8f0;">
+        <div>
+          <span style="font-weight:700;color:#1e3a5f;font-size:.9rem;">{{ ue.code }}</span>
+          <span style="color:#64748b;margin:0 8px;">—</span>
+          <span style="font-weight:600;font-size:.9rem;">{{ ue.title }}</span>
+          <span class="ms-3" style="font-size:.75rem;color:#64748b;">{{ ue.computed_credits }} crédits</span>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="{% url 'grades:maquette_assign_subjects' ue.pk %}"
+             class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;padding:3px 10px;">
+            <i class="bi bi-link-45deg me-1"></i>Affecter modules (EC)
+          </a>
+          <a href="{% url 'grades:maquette_ue_edit' ue.pk %}"
+             class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;padding:3px 10px;">
+            <i class="bi bi-pencil"></i>
+          </a>
+          <form method="post" action="{% url 'grades:maquette_ue_delete' ue.pk %}" style="display:inline;"
+                onsubmit="return confirm('Supprimer cette UE et désaffecter ses modules (EC) ?');">
+            {% csrf_token %}
+            <button class="btn btn-sm btn-outline-danger" style="font-size:.75rem;padding:3px 10px;">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- EC list -->
+      {% if ue.subjects.all %}
+      <div class="table-responsive">
+        <table class="table mb-0" style="font-size:.8rem;">
+          <thead style="background:#f8fafc;">
+            <tr>
+              <th style="padding:6px 16px;">Code EC</th>
+              <th>Intitulé</th>
+              <th class="text-center">CM (h)</th>
+              <th class="text-center">TD (h)</th>
+              <th class="text-center">TP (h)</th>
+              <th class="text-center">TPE (h)</th>
+              <th class="text-center">Vol. H. Total</th>
+              <th class="text-center">Coeff.</th>
+              <th class="text-center">Crédits</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in ue.subjects.all %}
+            <tr>
+              <td style="font-weight:600;color:#1e293b;padding:5px 16px;">{{ s.code }}</td>
+              <td>{{ s.title }}</td>
+              <td class="text-center">{{ s.volume_cm|floatformat:0 }}</td>
+              <td class="text-center">{{ s.volume_td|floatformat:0 }}</td>
+              <td class="text-center">{{ s.volume_tp|floatformat:0 }}</td>
+              <td class="text-center">{{ s.volume_tpe|floatformat:0 }}</td>
+              <td class="text-center" style="font-weight:700;color:#1e3a5f;">{{ s.volume_total_ue|floatformat:0 }} h</td>
+              <td class="text-center">{{ s.coefficient }}</td>
+              {% if forloop.first %}
+              <td class="text-center align-middle"
+                  rowspan="{{ ue.subjects.all|length }}"
+                  style="background:#f0fdf4;border-left:2px solid #86efac;font-weight:800;font-size:1rem;color:#16a34a;vertical-align:middle;">
+                {{ ue.computed_credits }}
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="px-4 py-3" style="font-size:.8rem;color:#94a3b8;font-style:italic;">
+        <i class="bi bi-info-circle me-1"></i>Aucun module (EC) affecté — cliquer sur "Affecter modules (EC)"
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    {% if totals %}
+    <!-- Ligne totaux globaux -->
+    <div style="border:2px solid #1e3a5f;border-radius:10px;overflow:hidden;">
+      <div class="px-4 py-2" style="background:#1e3a5f;">
+        <span style="font-weight:700;color:#fff;font-size:.85rem;"><i class="bi bi-sigma me-2"></i>Totaux généraux — {{ selected_program.name }} / Semestre {{ selected_semester.number }}</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table mb-0" style="font-size:.82rem;">
+          <thead style="background:#eff6ff;">
+            <tr>
+              <th style="padding:8px 16px;width:30%;">Récapitulatif</th>
+              <th class="text-center">CM (h)</th>
+              <th class="text-center">TD (h)</th>
+              <th class="text-center">TP (h)</th>
+              <th class="text-center">TPE (h)</th>
+              <th class="text-center">Vol. H. Total</th>
+              <th class="text-center">Coeff.</th>
+              <th class="text-center">Crédits</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background:#f0f9ff;">
+              <td style="padding:10px 16px;font-weight:700;color:#1e3a5f;">
+                <i class="bi bi-calculator me-1"></i>Total
+              </td>
+              <td class="text-center" style="font-weight:700;color:#1e3a5f;">{{ totals.cm|floatformat:0 }} h</td>
+              <td class="text-center" style="font-weight:700;color:#1e3a5f;">{{ totals.td|floatformat:0 }} h</td>
+              <td class="text-center" style="font-weight:700;color:#1e3a5f;">{{ totals.tp|floatformat:0 }} h</td>
+              <td class="text-center" style="font-weight:700;color:#7c3aed;">{{ totals.tpe|floatformat:0 }} h</td>
+              <td class="text-center">
+                <span style="background:#003D82;color:#fff;font-weight:800;font-size:.85rem;padding:3px 10px;border-radius:6px;">
+                  {{ totals.volume_total_ue|floatformat:0 }} h
+                </span>
+              </td>
+              <td class="text-center" style="font-weight:700;color:#1e3a5f;">{{ totals.coeff|floatformat:1 }}</td>
+              <td class="text-center">
+                <span style="background:#16a34a;color:#fff;font-weight:800;font-size:.85rem;padding:3px 10px;border-radius:6px;">
+                  {{ totals.credits }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+    <i class="bi bi-diagram-3 d-block mb-3" style="font-size:2.5rem;color:#cbd5e1;"></i>
+    <div style="font-size:.9rem;font-weight:600;">Aucune UE définie</div>
+    <div style="font-size:.8rem;margin-top:4px;">
+      Créez des Unités d'Enseignement pour constituer la maquette de formation.
+    </div>
+    <a href="{% url 'grades:maquette_ue_create' %}?program={{ selected_program.pk }}&semester={{ selected_semester.pk }}"
+       class="btn btn-sm mt-3" style="background:var(--navy);color:#fff;border:none;">
+      <i class="bi bi-plus-lg me-1"></i>Créer la première UE
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

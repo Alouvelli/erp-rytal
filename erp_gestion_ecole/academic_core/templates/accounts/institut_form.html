@@ -1,0 +1,140 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-card { background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;max-width:720px;margin:0 auto; }
+.form-card-header { background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);color:#fff;padding:22px 28px;display:flex;align-items:center;gap:14px; }
+.form-card-header h1 { font-size:1.2rem;font-weight:800;margin:0; }
+.form-card-body { padding:28px; }
+.form-section { margin-bottom:22px; }
+.form-section-title { font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:12px;border-bottom:1px solid #f1f5f9;padding-bottom:6px; }
+.form-label { font-size:.85rem;font-weight:600;color:#374151;margin-bottom:4px; }
+.logo-preview { max-height:80px;max-width:140px;object-fit:contain;border-radius:8px;border:1px solid #e2e8f0;padding:4px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="max-width:760px;">
+
+  <div class="mb-3">
+    <a href="{% url 'accounts:inst_admin_list' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Retour à la liste
+    </a>
+  </div>
+
+  <div class="form-card">
+    <div class="form-card-header">
+      {% if inst.logo %}
+        <img src="{{ inst.logo.url }}" style="height:46px;width:46px;object-fit:contain;border-radius:8px;background:#fff;padding:3px;" alt="Logo">
+      {% else %}
+        <div style="width:46px;height:46px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:800;">
+          {{ inst.sigle|slice:":2"|upper|default:"IS" }}
+        </div>
+      {% endif %}
+      <h1>{{ title }}</h1>
+    </div>
+    <div class="form-card-body">
+
+      {% if form.errors %}
+      <div class="alert alert-danger">
+        <strong>Erreurs à corriger :</strong>
+        <ul class="mb-0 mt-1">
+          {% for field in form %}{% for error in field.errors %}
+            <li>{{ field.label }} : {{ error }}</li>
+          {% endfor %}{% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Identité -->
+        <div class="form-section">
+          <div class="form-section-title"><i class="bi bi-building me-1"></i>Identité de l'établissement</div>
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label">Nom complet <span class="text-danger">*</span></label>
+              {{ form.nom }}
+              {% if form.nom.errors %}<div class="text-danger" style="font-size:.78rem;">{{ form.nom.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Sigle / Acronyme</label>
+              {{ form.sigle }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Devise / Slogan</label>
+              {{ form.slogan }}
+            </div>
+            <div class="col-12">
+              <label class="form-label">Logo</label>
+              {% if inst.logo %}
+                <div class="mb-2 d-flex align-items-center gap-3">
+                  <img class="logo-preview" src="{{ inst.logo.url }}" alt="Logo actuel">
+                  <span class="text-muted" style="font-size:.8rem;">Logo actuel — remplacez en sélectionnant un nouveau fichier</span>
+                </div>
+              {% endif %}
+              {{ form.logo }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact -->
+        <div class="form-section">
+          <div class="form-section-title"><i class="bi bi-telephone me-1"></i>Coordonnées</div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              {{ form.email }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Téléphone</label>
+              {{ form.telephone }}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Adresse</label>
+              {{ form.adresse }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Site web</label>
+              {{ form.site_web }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Direction -->
+        <div class="form-section">
+          <div class="form-section-title"><i class="bi bi-person-badge me-1"></i>Direction</div>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Titre DG</label>
+              {{ form.dg_titre }}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Nom DG</label>
+              {{ form.dg_nom }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Titre DE</label>
+              {{ form.de_titre }}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Nom DE</label>
+              {{ form.de_nom }}
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-3 pt-2 border-top">
+          <button type="submit" class="btn btn-primary fw-bold px-4">
+            <i class="bi bi-check-lg me-1"></i>Enregistrer les modifications
+          </button>
+          <a href="{% url 'accounts:inst_admin_list' %}" class="btn btn-outline-secondary">Annuler</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

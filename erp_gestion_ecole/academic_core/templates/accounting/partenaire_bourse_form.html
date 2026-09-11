@@ -1,0 +1,68 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ action }} un partenaire de bourse{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Direction Administrative Financière</a></li>
+<li class="breadcrumb-item"><a href="{% url 'accounting:partenaire_bourse_list' %}">Partenaires de bourse</a></li>
+<li class="breadcrumb-item active">{{ action }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#166534;"><i class="bi bi-mortarboard-fill"></i></span>
+    {{ action }} un partenaire de bourse
+  </h1>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-mortarboard-fill"></i></span>
+          Informations du partenaire
+        </h6>
+      </div>
+      <div class="p-4">
+        <form method="post">
+          {% csrf_token %}
+
+          <div class="mb-4">
+            <label class="form-label" style="font-weight:600;font-size:.85rem;">
+              Code <span style="color:#ef4444;">*</span>
+            </label>
+            {{ form.code }}
+            {% for e in form.code.errors %}
+            <div style="font-size:.78rem;color:#ef4444;margin-top:4px;"><i class="bi bi-exclamation-circle me-1"></i>{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-4">
+            <label class="form-label" style="font-weight:600;font-size:.85rem;">
+              Intitulé <span style="color:#ef4444;">*</span>
+            </label>
+            {{ form.intitule }}
+            {% for e in form.intitule.errors %}
+            <div style="font-size:.78rem;color:#ef4444;margin-top:4px;"><i class="bi bi-exclamation-circle me-1"></i>{{ e }}</div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-4 form-check">
+            {{ form.is_active }}
+            <label class="form-check-label" style="font-size:.85rem;" for="{{ form.is_active.id_for_label }}">
+              Partenaire actif
+            </label>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'accounting:partenaire_bourse_list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-check-lg me-1"></i>{{ action }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

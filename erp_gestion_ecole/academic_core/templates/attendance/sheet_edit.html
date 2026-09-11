@@ -1,0 +1,57 @@
+{% extends 'base/base.html' %}
+{% block title %}Modifier la fiche d'émargement{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_list' %}">Émargements</a></li>
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_detail' sheet.pk %}">Détail</a></li>
+<li class="breadcrumb-item active">Modifier</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:var(--navy);"><i class="bi bi-pencil"></i></span>Modifier la fiche d'émargement</h1>
+</div>
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-pencil-square"></i></span>
+          Informations de la fiche
+        </h6>
+      </div>
+      <div class="p-3" style="font-size:.83rem;color:#64748b;">
+        <strong>Module (EC) :</strong> {{ sheet.timetable_entry.subject.title }} &nbsp;|&nbsp;
+        <strong>Enseignant :</strong> {{ sheet.timetable_entry.teacher.full_name }} &nbsp;|&nbsp;
+        <strong>Classe :</strong> {{ sheet.timetable_entry.class_group.name }}
+      </div>
+      <form method="post" class="p-3">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.84rem;">Date de la séance</label>
+          <input type="date" name="session_date" class="form-control form-control-sm"
+                 value="{{ sheet.session_date|date:'Y-m-d' }}" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.84rem;">Statut</label>
+          <select name="status" class="form-select form-select-sm">
+            {% for val, label in status_choices %}
+            <option value="{{ val }}" {% if sheet.status == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.84rem;">Commentaire enseignant</label>
+          <textarea name="teacher_comment" class="form-control form-control-sm" rows="3">{{ sheet.teacher_comment }}</textarea>
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold" style="font-size:.84rem;">Motif de rejet (si applicable)</label>
+          <textarea name="rejection_reason" class="form-control form-control-sm" rows="2">{{ sheet.rejection_reason }}</textarea>
+        </div>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+          <a href="{% url 'attendance:sheet_detail' sheet.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x me-1"></i>Annuler</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

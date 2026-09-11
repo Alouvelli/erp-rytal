@@ -1,0 +1,43 @@
+{% extends 'base/base.html' %}
+{% block title %}Configuration e-mails de clôture{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:clotures_list' %}">Clôtures</a></li>
+<li class="breadcrumb-item active">E-mails</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0891b2;"><i class="bi bi-envelope-fill"></i></span>
+    Destinataires du rapport de clôture
+  </h1>
+</div>
+
+<div class="card-section" style="max-width:640px;">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#0891b2;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-at"></i></span>
+      Adresses e-mail
+    </h6>
+  </div>
+  <div class="p-4">
+    <p style="font-size:.84rem;color:#64748b;margin-bottom:16px;">
+      Un e-mail récapitulatif sera envoyé à ces adresses après chaque clôture journalière.
+      Saisissez <strong>une adresse par ligne</strong>.
+    </p>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-4">
+        <textarea name="recipients" rows="8" class="form-control" style="font-family:monospace;font-size:.85rem;"
+                  placeholder="directeur@ecole.sn&#10;comptable@ecole.sn&#10;daf@ecole.sn">{{ cfg.recipients }}</textarea>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="bi bi-check-lg me-1"></i>Enregistrer
+        </button>
+        <a href="{% url 'accounting:clotures_list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

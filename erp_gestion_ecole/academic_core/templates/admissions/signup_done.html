@@ -1,0 +1,31 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vérifiez votre email — {{ config.nom|default:config.sigle }}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background: linear-gradient(135deg, #003d82, #0066cc); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .card { border: none; border-radius: 14px; box-shadow: 0 16px 48px rgba(0,0,0,.3); }
+  </style>
+</head>
+<body>
+  <div class="container" style="max-width: 480px;">
+    <div style="background:#fff;border-radius:14px;padding:16px 20px 2px;margin-bottom:16px;">
+      {% include 'admissions/_stepper.html' with current_step=current_step|default:1 %}
+    </div>
+    <div class="card p-4 text-center">
+      <i class="bi bi-envelope-check display-1 text-primary mb-3"></i>
+      <h1 class="h5 fw-bold">Vérifiez votre boîte mail</h1>
+      <p class="text-muted">
+        Un lien de confirmation vous a été envoyé. Cliquez dessus pour activer
+        votre compte, vous serez ensuite redirigé(e) vers la page de connexion.
+      </p>
+      <a href="{% url 'admission_portal:portail' institut_code %}" class="btn btn-outline-primary mt-2">Retour au portail</a>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,61 @@
+{% extends "base/base.html" %}
+
+{% block title %}Matrice des risques{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-grid-3x3-gap me-2"></i>Matrice des risques
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">{{ nb_risques }} risque(s) actif(s) (hors clos)</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounting:budget_dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+    <a href="{% url 'risks:risque_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list-ul me-1"></i>Liste des risques</a>
+  </div>
+</div>
+
+<div class="card-section" style="padding:20px;">
+  <div style="overflow-x:auto;">
+    <table class="table table-bordered mb-0" style="font-size:.78rem;table-layout:fixed;">
+      <thead>
+        <tr>
+          <th style="width:90px;background:#f1f5f9;"></th>
+          {% for p in "12345" %}<th class="text-center" style="background:#f1f5f9;">Probabilité {{ p }}</th>{% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for gravite, cellules in lignes %}
+        <tr>
+          <th style="background:#f1f5f9;white-space:nowrap;">Gravité {{ gravite }}</th>
+          {% for probabilite, niveau, risques_cellule in cellules %}
+          <td class="risk-cell-{{ niveau }}" style="vertical-align:top;height:90px;padding:6px;">
+            {% for r in risques_cellule %}
+            <div style="background:rgba(255,255,255,.6);border-radius:6px;padding:3px 6px;margin-bottom:3px;font-weight:600;">
+              <a href="{% url 'risks:risque_list' %}" style="text-decoration:none;color:inherit;">{{ r.code }}</a>
+            </div>
+            {% endfor %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="d-flex gap-3 mt-3" style="font-size:.75rem;">
+    <span><span class="risk-legend risk-cell-faible"></span> Faible</span>
+    <span><span class="risk-legend risk-cell-modere"></span> Modéré</span>
+    <span><span class="risk-legend risk-cell-eleve"></span> Élevé</span>
+    <span><span class="risk-legend risk-cell-critique"></span> Critique</span>
+  </div>
+</div>
+
+<style>
+.risk-cell-faible   { background:#d1e7dd; }
+.risk-cell-modere   { background:#fff3cd; }
+.risk-cell-eleve    { background:#ffe5d0; }
+.risk-cell-critique { background:#f8d7da; }
+.risk-legend { display:inline-block; width:14px; height:14px; border-radius:3px; margin-right:4px; vertical-align:middle; }
+</style>
+{% endblock %}

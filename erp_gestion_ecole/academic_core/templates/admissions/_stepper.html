@@ -1,0 +1,63 @@
+{% comment %}
+Repère horizontal des étapes du parcours d'inscription en ligne — autonome
+(styles inline, aucune dépendance à une feuille de style externe), utilisable
+aussi bien dans les pages indépendantes (signup.html...) que dans celles qui
+étendent base/base.html. Attend une variable de contexte `current_step`
+(entier, 1 à 5). Les 5 étapes sont codées en dur ici (pas de boucle sur une
+liste passée par le contexte) pour que chaque template appelant n'ait qu'à
+écrire `{% include 'admissions/_stepper.html' with current_step=N %}`.
+{% endcomment %}
+<div style="max-width:720px;margin:0 auto 28px;">
+  <div style="position:relative;padding:0 4px;">
+    <div style="position:absolute;top:17px;left:10%;right:10%;height:3px;background:#e2e8f0;z-index:0;border-radius:2px;overflow:hidden;">
+      <div style="height:100%;background:#16a34a;
+        width:{% if current_step <= 1 %}0{% elif current_step == 2 %}25{% elif current_step == 3 %}50{% elif current_step == 4 %}75{% else %}100{% endif %}%;"></div>
+    </div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;position:relative;z-index:1;">
+
+      <div style="flex:1;text-align:center;">
+        <div style="width:34px;height:34px;border-radius:50%;margin:0 auto 6px;font-weight:700;font-size:.85rem;color:#fff;display:flex;align-items:center;justify-content:center;
+          background:{% if current_step > 1 %}#16a34a{% elif current_step == 1 %}#1d4ed8{% else %}#cbd5e1{% endif %};">
+          {% if current_step > 1 %}<i class="bi bi-check-lg"></i>{% else %}1{% endif %}
+        </div>
+        <div style="font-size:.72rem;font-weight:{% if current_step == 1 %}700{% else %}500{% endif %};
+          color:{% if current_step == 1 %}#1d4ed8{% elif current_step > 1 %}#16a34a{% else %}#94a3b8{% endif %};">Compte</div>
+      </div>
+
+      <div style="flex:1;text-align:center;">
+        <div style="width:34px;height:34px;border-radius:50%;margin:0 auto 6px;font-weight:700;font-size:.85rem;color:#fff;display:flex;align-items:center;justify-content:center;
+          background:{% if current_step > 2 %}#16a34a{% elif current_step == 2 %}#1d4ed8{% else %}#cbd5e1{% endif %};">
+          {% if current_step > 2 %}<i class="bi bi-check-lg"></i>{% else %}2{% endif %}
+        </div>
+        <div style="font-size:.72rem;font-weight:{% if current_step == 2 %}700{% else %}500{% endif %};
+          color:{% if current_step == 2 %}#1d4ed8{% elif current_step > 2 %}#16a34a{% else %}#94a3b8{% endif %};">Candidature</div>
+      </div>
+
+      <div style="flex:1;text-align:center;">
+        <div style="width:34px;height:34px;border-radius:50%;margin:0 auto 6px;font-weight:700;font-size:.85rem;color:#fff;display:flex;align-items:center;justify-content:center;
+          background:{% if current_step > 3 %}#16a34a{% elif current_step == 3 %}#1d4ed8{% else %}#cbd5e1{% endif %};">
+          {% if current_step > 3 %}<i class="bi bi-check-lg"></i>{% else %}3{% endif %}
+        </div>
+        <div style="font-size:.72rem;font-weight:{% if current_step == 3 %}700{% else %}500{% endif %};
+          color:{% if current_step == 3 %}#1d4ed8{% elif current_step > 3 %}#16a34a{% else %}#94a3b8{% endif %};">Documents</div>
+      </div>
+
+      <div style="flex:1;text-align:center;">
+        <div style="width:34px;height:34px;border-radius:50%;margin:0 auto 6px;font-weight:700;font-size:.85rem;color:#fff;display:flex;align-items:center;justify-content:center;
+          background:{% if current_step > 4 %}#16a34a{% elif current_step == 4 %}#1d4ed8{% else %}#cbd5e1{% endif %};">
+          {% if current_step > 4 %}<i class="bi bi-check-lg"></i>{% else %}4{% endif %}
+        </div>
+        <div style="font-size:.72rem;font-weight:{% if current_step == 4 %}700{% else %}500{% endif %};
+          color:{% if current_step == 4 %}#1d4ed8{% elif current_step > 4 %}#16a34a{% else %}#94a3b8{% endif %};">Inscription</div>
+      </div>
+
+      <div style="flex:1;text-align:center;">
+        <div style="width:34px;height:34px;border-radius:50%;margin:0 auto 6px;font-weight:700;font-size:.85rem;color:#fff;display:flex;align-items:center;justify-content:center;
+          background:{% if current_step == 5 %}#1d4ed8{% else %}#cbd5e1{% endif %};">5</div>
+        <div style="font-size:.72rem;font-weight:{% if current_step == 5 %}700{% else %}500{% endif %};
+          color:{% if current_step == 5 %}#1d4ed8{% else %}#94a3b8{% endif %};">Paiement</div>
+      </div>
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,223 @@
+{% extends 'base/base.html' %}
+{% block title %}Programmer une évaluation{% endblock %}
+
+{% block extra_head %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
+<style>
+  .select2-container--default .select2-selection--single {
+    height: 38px;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: .875rem;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 36px;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 28px;
+    color: #212529;
+  }
+  .select2-dropdown { border-color: #ced4da; border-radius: 6px; font-size: .875rem; }
+  .select2-container--default .select2-results__option--highlighted { background: var(--navy); }
+  .select2-container { width: 100% !important; }
+</style>
+{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'grades:evaluation_list' %}">Notes & Évaluations</a></li>
+<li class="breadcrumb-item active">Nouvelle évaluation</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-calendar-plus"></i></span>
+    Programmer une évaluation
+  </h1>
+  <a href="{% url 'grades:evaluation_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<!-- Info notification -->
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:13px 16px;margin-bottom:20px;display:flex;gap:10px;align-items:flex-start;">
+  <i class="bi bi-bell-fill" style="color:var(--navy);flex-shrink:0;margin-top:1px;"></i>
+  <div style="font-size:.83rem;color:#1e40af;">
+    <strong>Notification automatique :</strong> dès que vous enregistrez cette évaluation,
+    tous les étudiants de la classe sélectionnée recevront une notification avec les détails.
+  </div>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="row g-3">
+
+    <!-- Colonne gauche -->
+    <div class="col-lg-7">
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title"><i class="bi bi-info-circle me-2" style="color:var(--navy);"></i>Informations générales</h6>
+        </div>
+        <div style="padding:16px;">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.83rem;">{{ form.title.label }} <span class="text-danger">*</span></label>
+            {{ form.title }}
+            {% if form.title.errors %}<div class="text-danger" style="font-size:.78rem;">{{ form.title.errors.0 }}</div>{% endif %}
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.83rem;">{{ form.evaluation_type.label }} <span class="text-danger">*</span></label>
+              {{ form.evaluation_type }}
+              {% if form.evaluation_type.errors %}<div class="text-danger" style="font-size:.78rem;">{{ form.evaluation_type.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.83rem;">{{ form.subject.label }} <span class="text-danger">*</span></label>
+              {{ form.subject }}
+              {% if form.subject.errors %}<div class="text-danger" style="font-size:.78rem;">{{ form.subject.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="row g-3 mt-0">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.83rem;">{{ form.class_group.label }} <span class="text-danger">*</span></label>
+              {{ form.class_group }}
+              {% if form.class_group.errors %}<div class="text-danger" style="font-size:.78rem;">{{ form.class_group.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.83rem;">
+                {{ form.semester.label }} <span class="text-danger">*</span>
+                <span id="sem-auto-badge" style="display:none;font-size:.68rem;background:#dcfce7;color:#166534;padding:1px 7px;border-radius:10px;margin-left:6px;font-weight:600;">
+                  <i class="bi bi-magic me-1"></i>Auto
+                </span>
+              </label>
+              {{ form.semester }}
+              {% if form.semester.errors %}<div class="text-danger" style="font-size:.78rem;">{{ form.semester.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <label class="form-label fw-semibold" style="font-size:.83rem;">{{ form.instructions.label }}</label>
+            {{ form.instructions }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Colonne droite -->
+    <div class="col-lg-5">
+      <div class="card-section mb-3">
+        <div class="card-section-header">
+          <h6 class="card-section-title"><i class="bi bi-calendar-event me-2" style="color:var(--navy);"></i>Date & Lieu</h6>
+        </div>
+        <div style="padding:16px;">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.83rem;">{{ form.date.label }} <span class="text-danger">*</span></label>
+            {{ form.date }}
+            {% if form.date.errors %}<div class="text-danger" style="font-size:.78rem;">{{ form.date.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.83rem;">{{ form.duration_minutes.label }}</label>
+            {{ form.duration_minutes }}
+          </div>
+          <div>
+            <label class="form-label fw-semibold" style="font-size:.83rem;">{{ form.room.label }}</label>
+            {{ form.room }}
+          </div>
+        </div>
+      </div>
+
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title"><i class="bi bi-calculator me-2" style="color:var(--navy);"></i>Notation</h6>
+        </div>
+        <div style="padding:16px;">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.83rem;">{{ form.max_score.label }} <span class="text-danger">*</span></label>
+            {{ form.max_score }}
+            {% if form.max_score.errors %}<div class="text-danger" style="font-size:.78rem;">{{ form.max_score.errors.0 }}</div>{% endif %}
+          </div>
+          <div>
+            <label class="form-label fw-semibold" style="font-size:.83rem;">{{ form.coefficient.label }}</label>
+            {{ form.coefficient }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 justify-content-end mt-3">
+    <a href="{% url 'grades:evaluation_list' %}" class="btn btn-outline-secondary">Annuler</a>
+    <button type="submit" class="btn btn-primary" style="padding:8px 28px;">
+      <i class="bi bi-bell me-2"></i>Enregistrer & Notifier les étudiants
+    </button>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function () {
+  $('#id_class_group').select2({
+    placeholder: 'Rechercher une classe…',
+    language: { noResults: () => 'Aucune classe trouvée' },
+  });
+
+  $('#id_subject').select2({
+    placeholder: 'Rechercher un module…',
+    allowClear: true,
+    language: { noResults: () => 'Aucun module trouvé' },
+  });
+
+  // ── Maps injectées depuis le formulaire ──
+  const semMap   = JSON.parse($('#id_subject').attr('data-sem-map')   || '{}');
+  const coeffMap = JSON.parse($('#id_subject').attr('data-coeff-map') || '{}');
+
+  function applySubjectData(subjectId) {
+    const badge  = document.getElementById('sem-auto-badge');
+    const semSel = $('#id_semester');
+
+    // ── Semestre ──
+    if (subjectId && semMap[subjectId]) {
+      const semId = String(semMap[subjectId]);
+      if (semSel.find('option[value="' + semId + '"]').length) {
+        semSel.val(semId).trigger('change');
+        if (badge) badge.style.display = '';
+      }
+    } else {
+      if (badge) badge.style.display = 'none';
+    }
+
+    // ── Coefficient ──
+    if (subjectId && coeffMap[subjectId] !== undefined) {
+      const coeffField = document.getElementById('id_coefficient');
+      if (coeffField) {
+        coeffField.value = coeffMap[subjectId];
+        // Mise en évidence visuelle brève
+        coeffField.style.background = '#dcfce7';
+        setTimeout(() => { coeffField.style.background = ''; }, 1200);
+      }
+    }
+  }
+
+  // Déclencher à la sélection
+  $('#id_subject').on('change', function () {
+    applySubjectData($(this).val());
+  });
+
+  // Déclencher au chargement si un module est déjà sélectionné (mode édition)
+  const initialSubject = $('#id_subject').val();
+  if (initialSubject) applySubjectData(initialSubject);
+
+  // Masquer le badge si l'utilisateur change manuellement le semestre
+  $('#id_semester').on('change', function () {
+    const subjectId = $('#id_subject').val();
+    const badge = document.getElementById('sem-auto-badge');
+    if (!subjectId || !semMap[subjectId] || String(semMap[subjectId]) !== $(this).val()) {
+      if (badge) badge.style.display = 'none';
+    }
+  });
+});
+</script>
+{% endblock %}

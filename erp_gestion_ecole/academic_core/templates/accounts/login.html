@@ -1,0 +1,185 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion — Plateforme de Gestion Académique</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    :root { --navy: #003d82; --navy-light: #0055b3; }
+    body {
+      background: linear-gradient(135deg, #003d82 0%, #0066cc 100%);
+      min-height: 100vh; display: flex; align-items: center;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    .login-card {
+      border: none; border-radius: 14px;
+      box-shadow: 0 16px 48px rgba(0,0,0,.3);
+      overflow: hidden;
+    }
+    .login-header {
+      background: linear-gradient(135deg, #003d82, #0066cc);
+      padding: 1.75rem 1.5rem 1.5rem;
+      text-align: center;
+    }
+    .login-logo {
+      max-height: 80px; max-width: 200px; object-fit: contain;
+    }
+    .login-body { padding: 1.75rem 1.75rem 1.5rem; }
+    .form-label { font-size: .8rem; font-weight: 600; color: #475569; margin-bottom: 5px; }
+    .form-control {
+      font-size: .875rem; border: 1.5px solid #e2e8f0;
+      border-radius: 8px; padding: 9px 12px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .form-control:focus {
+      border-color: var(--navy); box-shadow: 0 0 0 3px rgba(0,61,130,.12); outline: none;
+    }
+    .input-group-text {
+      border: 1.5px solid #e2e8f0; border-right: none;
+      background: #f8fafc; color: #94a3b8;
+    }
+    .input-group .form-control { border-left: none; }
+    .input-group:focus-within .input-group-text { border-color: var(--navy); }
+    .input-group:focus-within .form-control { border-color: var(--navy); }
+    .btn-login {
+      background: linear-gradient(135deg, #003d82, #0055b3);
+      color: #fff; border: none; border-radius: 8px;
+      padding: 10px; font-size: .9rem; font-weight: 700;
+      width: 100%; transition: all .18s;
+      box-shadow: 0 4px 12px rgba(0,61,130,.35);
+    }
+    .btn-login:hover {
+      background: linear-gradient(135deg, #002d62, #003d82);
+      color: #fff; transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(0,61,130,.4);
+    }
+    .alert-danger {
+      background: #fff1f2; color: #9f1239;
+      border: none; border-radius: 8px;
+      font-size: .82rem; padding: 10px 14px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .login-footer {
+      text-align: center; font-size: .72rem; color: rgba(255,255,255,.5);
+      margin-top: 1.25rem;
+    }
+    .toggle-pwd {
+      border: 1.5px solid #e2e8f0; border-left: none; background: #f8fafc;
+      cursor: pointer; padding: 0 12px; color: #94a3b8;
+      transition: color .15s;
+    }
+    .toggle-pwd:hover { color: var(--navy); }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-12 col-sm-9 col-md-6 col-lg-4">
+
+      <div class="card login-card my-4">
+
+        <!-- Header -->
+        <div class="login-header">
+          <!-- Icône académique SVG -->
+          <div style="width:82px;height:82px;border-radius:16px;background:rgba(255,255,255,.15);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;border:2px solid rgba(255,255,255,.25);box-shadow:0 4px 20px rgba(0,0,0,.18);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="46" height="46" fill="white" viewBox="0 0 16 16">
+              <path d="M8.211 2.047a.5.5 0 0 0-.422 0l-7.5 3.5a.5.5 0 0 0 .025.917l7.5 3a.5.5 0 0 0 .372 0L14 7.14V13a1 1 0 0 0-1 1v2h3v-2a1 1 0 0 0-1-1V6.739l.686-.275a.5.5 0 0 0 .025-.917z"/>
+              <path d="M4.176 9.032a.5.5 0 0 0-.656.327l-.5 1.7a.5.5 0 0 0 .294.605l4.5 1.8a.5.5 0 0 0 .372 0l4.5-1.8a.5.5 0 0 0 .294-.605l-.5-1.7a.5.5 0 0 0-.656-.327L8 10.466z"/>
+            </svg>
+          </div>
+          <div class="text-white fw-bold mt-1" style="font-size:.95rem;letter-spacing:.01em;">Plateforme de Gestion Académique</div>
+          <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.12);border-radius:20px;padding:3px 12px;margin-top:6px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:#4ade80;display:inline-block;"></span>
+            <span class="text-white" style="font-size:.72rem;font-weight:600;letter-spacing:.04em;">Unifiée &amp; Intégrée</span>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="login-body">
+          <div class="text-center mb-4">
+            <h5 class="fw-bold text-dark mb-1">Connexion</h5>
+            <p class="text-muted mb-0" style="font-size:.8rem;">Accès réservé au personnel autorisé</p>
+          </div>
+
+          {% if form.non_field_errors %}
+          <div class="alert-danger mb-3">
+            <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+            <span>{% for error in form.non_field_errors %}{{ error }}{% endfor %}</span>
+          </div>
+          {% endif %}
+
+          <form method="post" action="{% url 'accounts:login' %}">
+            {% csrf_token %}
+
+            <!-- Adresse email -->
+            <div class="mb-3">
+              <label class="form-label">Adresse email</label>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                <input type="email" name="username" class="form-control" placeholder="vous@exemple.com"
+                       value="{{ form.username.value|default:'' }}" autocomplete="email" autofocus>
+              </div>
+              {% if form.username.errors %}
+              <div class="text-danger mt-1" style="font-size:.75rem;">{{ form.username.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <!-- Mot de passe -->
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label mb-0">Mot de passe</label>
+                <a href="{% url 'accounts:password_reset_request' %}" style="font-size:.75rem;color:var(--navy);text-decoration:none;">
+                  <i class="bi bi-question-circle me-1"></i>Oublié ?
+                </a>
+              </div>
+              <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                <input type="password" name="password" id="pwd" class="form-control"
+                       placeholder="Votre mot de passe" autocomplete="current-password">
+                <button type="button" class="toggle-pwd" id="togglePwd">
+                  <i class="bi bi-eye" id="pwdIcon"></i>
+                </button>
+              </div>
+              {% if form.password.errors %}
+              <div class="text-danger mt-1" style="font-size:.75rem;">{{ form.password.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <button type="submit" class="btn-login">
+              <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
+            </button>
+          </form>
+
+          <div class="text-center mt-3 pt-3 border-top" style="font-size:.73rem;color:#94a3b8;">
+            <i class="bi bi-shield-check me-1 text-success"></i>Connexion sécurisée
+          </div>
+        </div>
+      </div>
+
+      <div class="login-footer">
+        &copy; {% now "Y" %} Plateforme de Gestion Académique &nbsp;|&nbsp;
+        Design by <strong style="color:rgba(255,255,255,.65);">Dr Latyr NDIAYE</strong> — Spécialiste : Télécommunications
+        <div style="color:rgba(255,255,255,.35);font-size:.7rem;margin-top:2px;">ERP-RYTAL, App-GEST V1.0</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  document.getElementById('togglePwd').addEventListener('click', function () {
+    const pwd = document.getElementById('pwd');
+    const icon = document.getElementById('pwdIcon');
+    if (pwd.type === 'password') {
+      pwd.type = 'text'; icon.className = 'bi bi-eye-slash';
+    } else {
+      pwd.type = 'password'; icon.className = 'bi bi-eye';
+    }
+  });
+</script>
+</body>
+</html>

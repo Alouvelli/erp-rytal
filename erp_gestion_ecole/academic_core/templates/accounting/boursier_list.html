@@ -1,0 +1,339 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Suivi des boursiers{% endblock %}
+
+{% block content %}
+<style>
+.taux-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 999px; font-size: .74rem; font-weight: 700;
+}
+.taux-high { background: #dcfce7; color: #166534; }
+.taux-low  { background: #fee2e2; color: #991b1b; }
+.taux-mid  { background: #fef3c7; color: #92400e; }
+.taux-none { background: #f1f5f9; color: #64748b; }
+</style>
+
+<!-- En-tête page -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-award-fill me-2" style="color:#7c3aed;"></i>Suivi des boursiers
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">
+      Régularisation du solde des étudiants boursiers avec leurs partenaires — Trésorier Général
+    </p>
+  </div>
+</div>
+
+<!-- Cartes résumé -->
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:1.4rem;font-weight:800;color:var(--navy);">{{ enrollments|length }}</div>
+      <div class="text-muted" style="font-size:.78rem;">Étudiants boursiers</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:1.4rem;font-weight:800;color:#92400e;">{{ nb_attente }}</div>
+      <div class="text-muted" style="font-size:.78rem;">En attente de régularisation</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:1.4rem;font-weight:800;color:#991b1b;">{{ nb_en_retard }}</div>
+      <div class="text-muted" style="font-size:.78rem;">Échéance dépassée</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:1.15rem;font-weight:800;color:#166534;">{{ total_a_recouvrer|floatformat:0|intcomma }} F</div>
+      <div class="text-muted" style="font-size:.78rem;">Total à recouvrer (partenaires)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtres -->
+<div class="card-section mb-3" style="padding:16px 20px;">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Année académique</label>
+      <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for y in years %}
+        <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Classe</label>
+      <select name="classe" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">Toutes les classes</option>
+        {% for c in classes %}
+        <option value="{{ c.pk }}" {% if selected_classe and c.pk == selected_classe.pk %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Statut</label>
+      <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="" {% if not status_filter %}selected{% endif %}>Tous</option>
+        <option value="attente" {% if status_filter == 'attente' %}selected{% endif %}>En attente</option>
+        <option value="regularise" {% if status_filter == 'regularise' %}selected{% endif %}>Régularisé</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Partenaire</label>
+      <select name="partenaire" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">Tous les partenaires</option>
+        {% for p in partenaires %}
+        <option value="{{ p.pk }}" {% if selected_partenaire and p.pk == selected_partenaire.pk %}selected{% endif %}>{{ p.intitule }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Recherche</label>
+      <input type="text" name="q" value="{{ search }}" class="form-control form-control-sm" placeholder="Nom ou matricule…">
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+    </div>
+  </form>
+</div>
+
+<!-- Liste par classe (liste déroulante), 10 étudiants par page -->
+{% for group in class_groups %}
+<div class="card-section mb-3" style="padding:0;">
+  <div id="boursier-toggle-header-{{ group.class_group.pk }}"
+       onclick="toggleBoursierTable({{ group.class_group.pk }})"
+       style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-radius:12px;user-select:none;gap:14px;flex-wrap:wrap;cursor:pointer;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="width:28px;height:28px;border-radius:7px;background:#7c3aed;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-mortarboard-fill" style="color:#fff;font-size:.75rem;"></i>
+      </span>
+      <div>
+        <span style="font-weight:700;font-size:.92rem;color:var(--navy);">{{ group.class_group.name|default:"Classe non définie" }}</span>
+        <span style="font-size:.75rem;color:#64748b;margin-left:8px;">{{ group.rows|length }} boursier{{ group.rows|length|pluralize }}</span>
+      </div>
+    </div>
+    <i id="boursier-chevron-{{ group.class_group.pk }}" class="bi bi-chevron-down" style="color:#64748b;font-size:.9rem;transition:transform .25s;"></i>
+  </div>
+  <div id="boursier-body-{{ group.class_group.pk }}" style="overflow-x:auto;display:none;">
+    <table class="table table-hover mb-0 boursier-table" data-classpk="{{ group.class_group.pk }}" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Étudiant</th>
+          <th>Partenaire</th>
+          <th class="text-center">Bourse</th>
+          <th class="text-end">Montant global</th>
+          <th class="text-end">Part étudiant</th>
+          <th class="text-end">À recouvrer (partenaire)</th>
+          <th class="text-center">Échéance</th>
+          <th class="text-center">Statut</th>
+          <th class="text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for enr in group.rows %}
+        <tr class="boursier-row">
+          <td style="padding:8px 16px;">
+            <div class="fw-semibold">{{ enr.student.full_name }}</div>
+            <div style="font-size:.72rem;color:#94a3b8;">{{ enr.student.matricule }}</div>
+          </td>
+          <td>{{ enr.student.partenaire_bourse.intitule|default:"—" }}</td>
+          <td class="text-center">
+            {% if enr.bourse_pourcentage is not None %}{{ enr.bourse_pourcentage|floatformat:0 }} %{% else %}—{% endif %}
+          </td>
+          <td class="text-end">{% if enr.total_fees %}{{ enr.total_fees|floatformat:0|intcomma }} F{% else %}—{% endif %}</td>
+          <td class="text-end">{% if enr.bourse_montant_etudiant is not None %}{{ enr.bourse_montant_etudiant|floatformat:0|intcomma }} F{% else %}—{% endif %}</td>
+          <td class="text-end fw-bold" style="color:#166534;">
+            {% if enr.bourse_montant_a_recouvrer is not None %}{{ enr.bourse_montant_a_recouvrer|floatformat:0|intcomma }} F{% else %}—{% endif %}
+          </td>
+          <td class="text-center">
+            <form method="post" action="{% url 'accounting:boursier_update' enr.pk %}" class="d-flex align-items-center gap-1 justify-content-center">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="set_deadline">
+              <input type="date" name="bourse_deadline" value="{{ enr.bourse_deadline|date:'Y-m-d'|default:'' }}"
+                     class="form-control form-control-sm" style="font-size:.72rem;padding:2px 4px;max-width:130px;"
+                     {% if enr.bourse_regularized %}disabled{% endif %}
+                     onchange="this.form.submit()">
+            </form>
+            {% if not enr.bourse_regularized and enr.bourse_deadline and enr.bourse_deadline < today %}
+            <span class="taux-badge taux-low mt-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Dépassée</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if enr.bourse_regularized %}
+            <span class="taux-badge taux-high" title="Régularisé le {{ enr.bourse_regularized_date|date:'d/m/Y' }}{% if enr.bourse_regularized_by %} par {{ enr.bourse_regularized_by.get_full_name }}{% endif %}">
+              <i class="bi bi-check-circle-fill me-1"></i>Régularisé
+            </span>
+            {% else %}
+            <span class="taux-badge taux-mid"><i class="bi bi-hourglass-split me-1"></i>En attente</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            <div class="d-flex gap-1 justify-content-center flex-wrap">
+              {% if enr.bourse_regularized %}
+              <button type="button" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 10px;font-size:.72rem;" title="Modifier la régularisation"
+                      onclick="openRegModal({{ enr.pk }}, '{{ enr.student.full_name|escapejs }}', '{{ enr.bourse_regularized_amount|default_if_none:''|floatformat:0 }}', '{{ enr.bourse_regularized_date|date:'Y-m-d'|default:'' }}', '{{ enr.bourse_regularisation_notes|default:''|escapejs }}')">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+              <form method="post" action="{% url 'accounting:boursier_update' enr.pk %}" onsubmit="return confirm('Supprimer définitivement la régularisation de {{ enr.student.full_name|escapejs }} ? Le dossier repassera « en attente » sans historique.');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="supprimer_regularisation">
+                <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:3px 10px;font-size:.72rem;" title="Supprimer la régularisation">
+                  <i class="bi bi-trash-fill"></i>
+                </button>
+              </form>
+              {% else %}
+              <button type="button" class="btn btn-sm" style="background:#7c3aed;color:#fff;border-radius:7px;padding:3px 10px;font-size:.72rem;"
+                      onclick="openRegModal({{ enr.pk }}, '{{ enr.student.full_name|escapejs }}', '{% if enr.bourse_montant_a_recouvrer is not None %}{{ enr.bourse_montant_a_recouvrer|floatformat:0 }}{% endif %}', '', '')">
+                <i class="bi bi-check2-circle me-1"></i>Régulariser
+              </button>
+              {% endif %}
+              <a href="{% url 'accounting:boursier_attestation_pdf' enr.pk %}" target="_blank" class="btn btn-sm" style="background:#fef2f2;color:#dc2626;border-radius:7px;padding:3px 10px;font-size:.72rem;" title="Attestation PDF">
+                <i class="bi bi-file-earmark-pdf-fill"></i>
+              </a>
+              <a href="{% url 'accounting:boursier_attestation_word' enr.pk %}" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 10px;font-size:.72rem;" title="Attestation Word">
+                <i class="bi bi-file-earmark-word-fill"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="boursier-pagination d-flex align-items-center justify-content-between px-3 py-2" data-classpk="{{ group.class_group.pk }}" style="font-size:.78rem;border-top:1px solid #e2e8f0;">
+      <span class="boursier-page-info text-muted"></span>
+      <div class="d-flex gap-1">
+        <button type="button" class="btn btn-sm btn-outline-secondary boursier-prev" onclick="changeBoursierPage({{ group.class_group.pk }}, -1)"><i class="bi bi-chevron-left"></i> Précédent</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary boursier-next" onclick="changeBoursierPage({{ group.class_group.pk }}, 1)">Suivant <i class="bi bi-chevron-right"></i></button>
+      </div>
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="card-section text-center py-5 text-muted">
+  <i class="bi bi-award" style="font-size:2rem;opacity:.4;"></i>
+  <p class="mt-2 mb-0">Aucun étudiant boursier trouvé pour ces critères.</p>
+</div>
+{% endfor %}
+
+<!-- Modal régularisation -->
+<div class="modal fade" id="regModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:#7c3aed;color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-check2-circle me-2"></i>Régulariser avec le partenaire</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="regForm">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="regulariser">
+        <div class="modal-body p-4">
+          <p style="font-size:.85rem;color:#64748b;">
+            Confirmer la régularisation du solde de <strong id="regStudentName"></strong> auprès de son partenaire de bourse.
+          </p>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Montant régularisé (FCFA)</label>
+            <input type="number" name="regularized_amount" id="regAmount" class="form-control" min="0" step="500">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Date de régularisation</label>
+            <input type="date" name="regularized_date" id="regDate" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Observations</label>
+            <textarea name="notes" id="regNotes" class="form-control" rows="2" placeholder="Référence virement, remarques…"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-sm" style="background:#7c3aed;color:#fff;">
+            <i class="bi bi-check-lg me-1"></i>Confirmer la régularisation
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openRegModal(pk, name, montant, dateVal, notes) {
+  document.getElementById('regForm').action = `/accounting/boursiers/${pk}/`;
+  document.getElementById('regStudentName').textContent = name;
+  document.getElementById('regAmount').value = montant || '';
+  document.getElementById('regDate').value = dateVal || new Date().toISOString().split('T')[0];
+  document.getElementById('regNotes').value = notes || '';
+  document.querySelector('#regModal .modal-title').innerHTML = dateVal
+    ? '<i class="bi bi-pencil-square me-2"></i>Modifier la régularisation'
+    : '<i class="bi bi-check2-circle me-2"></i>Régulariser avec le partenaire';
+  new bootstrap.Modal(document.getElementById('regModal')).show();
+}
+
+// ── Accordéon par classe + pagination (10 étudiants par page) ──────────────
+const BOURSIER_PAGE_SIZE = 10;
+const _boursierOpen = {};
+const _boursierPage = {};
+
+function _setBoursierState(classPk, open) {
+  const body    = document.getElementById(`boursier-body-${classPk}`);
+  const chevron = document.getElementById(`boursier-chevron-${classPk}`);
+  if (!body) return;
+  _boursierOpen[classPk] = open;
+  body.style.display = open ? '' : 'none';
+  if (chevron) chevron.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+function toggleBoursierTable(classPk) {
+  const willOpen = !(_boursierOpen[classPk] ?? false);
+  // Un seul groupe ouvert à la fois (comme sur Paiements Mensualités)
+  if (willOpen) {
+    document.querySelectorAll('[id^="boursier-body-"]').forEach(el => {
+      const pk = el.id.replace('boursier-body-', '');
+      if (pk !== String(classPk)) _setBoursierState(pk, false);
+    });
+  }
+  _setBoursierState(classPk, willOpen);
+  if (willOpen) paginateBoursierTable(classPk);
+}
+
+function paginateBoursierTable(classPk) {
+  const table = document.querySelector(`table.boursier-table[data-classpk="${classPk}"]`);
+  if (!table) return;
+  const rows  = table.querySelectorAll('tbody tr.boursier-row');
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / BOURSIER_PAGE_SIZE));
+  let page = _boursierPage[classPk] || 0;
+  page = Math.max(0, Math.min(totalPages - 1, page));
+  _boursierPage[classPk] = page;
+
+  rows.forEach((row, idx) => {
+    row.style.display = (idx >= page * BOURSIER_PAGE_SIZE && idx < (page + 1) * BOURSIER_PAGE_SIZE) ? '' : 'none';
+  });
+
+  const pag = document.querySelector(`.boursier-pagination[data-classpk="${classPk}"]`);
+  if (pag) {
+    const info = pag.querySelector('.boursier-page-info');
+    if (info) info.textContent = `Page ${page + 1} / ${totalPages} — ${total} étudiant${total > 1 ? 's' : ''}`;
+    const prevBtn = pag.querySelector('.boursier-prev');
+    const nextBtn = pag.querySelector('.boursier-next');
+    if (prevBtn) prevBtn.disabled = page <= 0;
+    if (nextBtn) nextBtn.disabled = page >= totalPages - 1;
+  }
+}
+
+function changeBoursierPage(classPk, delta) {
+  _boursierPage[classPk] = (_boursierPage[classPk] || 0) + delta;
+  paginateBoursierTable(classPk);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('table.boursier-table').forEach(t => paginateBoursierTable(t.dataset.classpk));
+});
+</script>
+{% endblock %}

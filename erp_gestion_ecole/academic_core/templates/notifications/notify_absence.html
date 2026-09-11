@@ -1,0 +1,139 @@
+{% extends 'base/base.html' %}
+{% block title %}Notifier une absence / un retard{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'notifications:list' %}">Notifications</a></li>
+<li class="breadcrumb-item active">Absence / Retard enseignant</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#dc2626;"><i class="bi bi-megaphone-fill"></i></span>
+    Notifier une absence ou un retard
+  </h1>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+
+    {% if messages %}
+    {% for msg in messages %}
+    <div class="alert alert-{% if msg.tags == 'success' %}success{% elif msg.tags == 'error' %}danger{% else %}warning{% endif %} alert-dismissible fade show mb-3" role="alert" style="font-size:.85rem;">
+      <i class="bi bi-{% if msg.tags == 'success' %}check-circle-fill{% else %}exclamation-triangle-fill{% endif %} me-2"></i>
+      {{ msg }}
+      <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#dc2626;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-bell-fill"></i></span>
+          Envoyer une alerte aux étudiants
+        </h6>
+      </div>
+      <div class="p-4">
+        <p style="font-size:.85rem;color:#64748b;margin-bottom:1.2rem;">
+          Sélectionnez la classe et l'enseignant concerné. Une notification sera envoyée à tous les étudiants actifs de cette classe.
+        </p>
+        <form method="post" id="absence-form">
+          {% csrf_token %}
+
+          <!-- Type d'alerte -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Type d'alerte <span class="text-danger">*</span></label>
+            <div class="d-flex gap-3">
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="alert_type" id="type_absence" value="ABSENCE" checked>
+                <label class="form-check-label" for="type_absence">
+                  <span style="color:#dc2626;font-weight:600;"><i class="bi bi-x-circle-fill me-1"></i>Absence</span>
+                </label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="radio" name="alert_type" id="type_retard" value="RETARD">
+                <label class="form-check-label" for="type_retard">
+                  <span style="color:#d97706;font-weight:600;"><i class="bi bi-clock-fill me-1"></i>Retard</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Enseignant -->
+          <div class="mb-3">
+            <label for="teacher" class="form-label fw-semibold">Enseignant concerné <span class="text-danger">*</span></label>
+            <select name="teacher" id="teacher" class="form-select" required>
+              <option value="">— Sélectionner un enseignant —</option>
+              {% for t in teachers %}
+              <option value="{{ t.pk }}">{{ t.full_name }} {% if t.specialty %}({{ t.specialty }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Classe -->
+          <div class="mb-3">
+            <label for="class_group" class="form-label fw-semibold">Classe à notifier <span class="text-danger">*</span></label>
+            <select name="class_group" id="class_group" class="form-select" required>
+              <option value="">— Sélectionner une classe —</option>
+              {% for c in classes %}
+              <option value="{{ c.pk }}">{{ c.name }}{% if c.program %} · {{ c.program.name }}{% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- Message personnalisé -->
+          <div class="mb-4">
+            <label for="message" class="form-label fw-semibold">Message personnalisé <small class="text-muted fw-normal">(optionnel)</small></label>
+            <textarea name="message" id="message" rows="3" class="form-control"
+              placeholder="Laissez vide pour utiliser le message automatique…" style="font-size:.85rem;"></textarea>
+            <div id="default-msg-preview" class="mt-2 p-2 rounded" style="background:#f1f5f9;font-size:.78rem;color:#475569;display:none;">
+              <i class="bi bi-info-circle me-1"></i><span id="preview-text"></span>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end border-top pt-3">
+            <a href="{% url 'notifications:list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-danger btn-sm">
+              <i class="bi bi-megaphone me-1"></i>Envoyer la notification
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const typeRadios   = document.querySelectorAll('input[name="alert_type"]');
+const teacherSel   = document.getElementById('teacher');
+const previewDiv   = document.getElementById('default-msg-preview');
+const previewText  = document.getElementById('preview-text');
+const messageArea  = document.getElementById('message');
+
+function updatePreview() {
+  const alertType    = document.querySelector('input[name="alert_type"]:checked').value;
+  const teacherOpt   = teacherSel.options[teacherSel.selectedIndex];
+  const teacherName  = teacherSel.value ? teacherOpt.text.split('(')[0].trim() : null;
+
+  if (!teacherName) { previewDiv.style.display = 'none'; return; }
+
+  let msg;
+  if (alertType === 'ABSENCE') {
+    msg = `L'enseignant(e) ${teacherName} est absent(e) pour la séance d'aujourd'hui.`;
+  } else {
+    msg = `L'enseignant(e) ${teacherName} sera en retard pour la séance d'aujourd'hui.`;
+  }
+
+  if (!messageArea.value.trim()) {
+    previewText.textContent = 'Message automatique : ' + msg;
+    previewDiv.style.display = '';
+  } else {
+    previewDiv.style.display = 'none';
+  }
+}
+
+typeRadios.forEach(r => r.addEventListener('change', updatePreview));
+teacherSel.addEventListener('change', updatePreview);
+messageArea.addEventListener('input', updatePreview);
+</script>
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends 'base/base.html' %}
+{% block title %}Liste des abandons{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:list' %}">Étudiants</a></li>
+<li class="breadcrumb-item active">Abandons</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#b91c1c;"><i class="bi bi-person-x-fill"></i></span>Liste des abandons
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'students:suspension_list' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-pause-circle me-1"></i>Suspensions d'inscription
+    </a>
+    <a href="{% url 'students:list' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+  </div>
+</div>
+
+<!-- Filtre classe / année -->
+<div class="card-section mb-3">
+  <div style="padding:16px 20px;">
+    <form method="get" class="d-flex flex-wrap gap-3 align-items-end">
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Classe</label>
+        <select name="class_id" class="form-select form-select-sm" style="min-width:220px;">
+          <option value="">— Toutes les classes —</option>
+          {% for cls in all_classes %}
+          <option value="{{ cls.pk }}" {% if selected_class_id == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Année académique</label>
+        <select name="year_id" class="form-select form-select-sm" style="min-width:180px;">
+          {% for yr in all_years %}
+          <option value="{{ yr.pk }}" {% if selected_year_id == yr.pk|stringformat:"s" %}selected{% endif %}>{{ yr.name }}{% if yr.is_current %} (en cours){% endif %}</option>
+          {% endfor %}
+          <option value="all" {% if year_filter_raw == 'all' %}selected{% endif %}>Toutes les années</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+      {% if selected_class_id or selected_year_id %}
+      <a href="{% url 'students:abandon_list' %}" class="btn btn-sm btn-outline-secondary">Réinitialiser</a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="card-section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#b91c1c;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ul"></i></span>
+      {{ rows|length }} abandon{{ rows|length|pluralize }}
+    </h6>
+    {% if rows and user.can_manage_dept %}
+    <form method="post" action="{% url 'students:abandon_reactivate_all' %}"
+          onsubmit="return confirm('Réactiver et réintégrer les {{ rows|length }} étudiant{{ rows|length|pluralize }} affiché{{ rows|length|pluralize }} ici dans leur classe ?');">
+      {% csrf_token %}
+      <input type="hidden" name="class_id" value="{{ selected_class_id }}">
+      <input type="hidden" name="year_id" value="{{ selected_year_id }}">
+      <button type="submit" class="btn btn-sm btn-outline-success">
+        <i class="bi bi-arrow-counterclockwise me-1"></i>Réactiver tous les étudiants affichés
+      </button>
+    </form>
+    {% endif %}
+  </div>
+  {% if rows %}
+  <div class="table-responsive">
+    <table class="table" style="margin:0;">
+      <thead>
+        <tr>
+          <th>Étudiant</th>
+          <th>Matricule</th>
+          <th>Classe</th>
+          <th>Année académique</th>
+          <th>Motif</th>
+          <th>Enregistré par</th>
+          <th>Date</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% with enr=row.enrollment %}
+        <tr style="font-size:.85rem;">
+          <td style="font-weight:600;">{{ enr.student.full_name }}</td>
+          <td style="color:#64748b;">{{ enr.student.matricule }}</td>
+          <td>{{ enr.class_group.name }}</td>
+          <td style="color:#64748b;">{{ enr.academic_year.label }}</td>
+          <td style="color:#64748b;max-width:220px;">{{ enr.status_reason|default:"—"|truncatechars:60 }}</td>
+          <td style="color:#64748b;">{{ enr.status_changed_by.get_full_name|default:"—" }}</td>
+          <td style="color:#64748b;white-space:nowrap;">{{ enr.status_changed_at|date:"d/m/Y H:i"|default:"—" }}</td>
+          {% if user.can_manage_dept %}
+          <td class="text-end">
+            <form method="post" action="{% url 'students:enrollment_reactivate' enr.pk %}"
+                  onsubmit="return confirm('Annuler l\'abandon de {{ enr.student.full_name|escapejs }} et réactiver son compte ?');">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="btn btn-sm btn-outline-success">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Annuler l'abandon
+              </button>
+            </form>
+          </td>
+          {% else %}
+          <td></td>
+          {% endif %}
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-5" style="color:#94a3b8;">
+    <i class="bi bi-emoji-smile" style="font-size:2.5rem;display:block;margin-bottom:10px;"></i>
+    Aucun abandon enregistré.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

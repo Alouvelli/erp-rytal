@@ -1,0 +1,399 @@
+{% extends 'base/base.html' %}
+{% load l10n %}
+{% block title %}Classes{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academic_structure:index' %}">Structure</a></li>
+<li class="breadcrumb-item active">Classes</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:#dc2626;"><i class="bi bi-mortarboard"></i></span>Classes</h1>
+  {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalClass"><i class="bi bi-plus-lg"></i> Nouvelle classe</button>
+  {% endif %}
+</div>
+<div class="card-section mb-3">
+  <div class="p-3 d-flex align-items-center gap-2 flex-wrap">
+    <label class="form-label fw-semibold mb-0" style="font-size:.83rem;">Année académique</label>
+    <select class="form-select form-select-sm" style="max-width:260px;" onchange="window.location.href='?year='+this.value">
+      {% for y in academic_years %}
+      <option value="{{ y.pk }}" {% if selected_year_param == y.pk|stringformat:"s" or not selected_year_param and y.is_current %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+      {% endfor %}
+      <option value="all" {% if selected_year_param == 'all' %}selected{% endif %}>Toutes les années</option>
+    </select>
+  </div>
+</div>
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:#dc2626;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ul"></i></span>Liste des classes</h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table" id="tbl-classes">
+      <thead><tr><th>Nom</th><th>Département</th><th>Filière</th><th>Niveau</th><th>Année académique</th><th>Effectif</th><th>Délégué</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for cls in classes %}
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:30px;height:30px;border-radius:8px;background:#fff1f2;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="bi bi-mortarboard" style="color:#dc2626;font-size:.8rem;"></i></div>
+              <span style="font-weight:600;font-size:.85rem;">{{ cls.name }}</span>
+            </div>
+          </td>
+          <td style="font-size:.83rem;color:#64748b;">{{ cls.program.department.name|default:"—" }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ cls.program.name|default:"—" }}</td>
+          <td>
+            {% if cls.level %}
+            <span style="padding:3px 10px;background:#eff6ff;color:var(--navy);border-radius:20px;font-size:.78rem;font-weight:600;">{{ cls.level.name }}</span>
+            {% else %}
+            <span style="color:#f59e0b;font-size:.78rem;">Non défini</span>
+            {% endif %}
+          </td>
+          <td style="font-size:.83rem;color:#64748b;">{{ cls.academic_year.name|default:"—" }}</td>
+          <td>
+            <a href="{% url 'students:list' %}?class_id={{ cls.pk }}{% if cls.academic_year %}&year_id={{ cls.academic_year.pk }}{% endif %}"
+               style="font-weight:700;color:var(--navy);text-decoration:none;"
+               title="Voir la liste des étudiants">
+              {{ cls.student_count|default:"0" }} <span style="font-size:.75rem;color:#94a3b8;">étudiants</span>
+            </a>
+          </td>
+          <td style="font-size:.83rem;color:#64748b;">{{ cls.delegate.get_full_name|default:"—" }}</td>
+          <td>
+            {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+            <div class="d-flex gap-1">
+              <button class="btn-action edit" title="Modifier"
+                onclick="openEditClass({{ cls.pk }},'{{ cls.name|escapejs }}',{{ cls.program_id|default:'null' }},{{ cls.academic_year_id|default:'null' }},{{ cls.capacity|default:'null' }},{{ cls.level_id|default:'null' }},'{{ cls.domaine|escapejs }}','{{ cls.mention|escapejs }}',{{ cls.program.department_id|default:'null' }},{% localize off %}{{ cls.frais_mensuel_config.montant_global|default_if_none:'null' }},{{ cls.frais_mensuel_config.frais_mensuel|default_if_none:'null' }},{{ cls.frais_mensuel_config.frais_tenue|default_if_none:'null' }},{{ cls.frais_mensuel_config.frais_assurance|default_if_none:'null' }},{{ cls.frais_mensuel_config.frais_amea|default_if_none:'null' }},{{ cls.frais_mensuel_config.frais_bibliotheque|default_if_none:'null' }},{{ cls.frais_mensuel_config.frais_soutenance|default_if_none:'null' }},{{ cls.frais_mensuel_config.frais_soutenance_speciale|default_if_none:'null' }},{{ cls.frais_mensuel_config.frais_inscription|default_if_none:'null' }}{% endlocalize %})">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <form method="post" style="display:inline;" onsubmit="return confirm('Supprimer cette classe ?');">
+                {% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="pk" value="{{ cls.pk }}">
+                <button type="submit" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+<!-- Modal création -->
+<div class="modal fade" id="modalClass" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:#dc2626;color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nouvelle classe</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'academic_structure:class_create' %}">
+        {% csrf_token %}<input type="hidden" name="action" value="create">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label">Nom <span class="text-danger">*</span></label><input type="text" name="name" class="form-control" placeholder="ex: L3 Informatique A" required></div>
+          <div class="mb-3">
+            <label class="form-label">Département <span class="text-danger">*</span></label>
+            <select id="crtDept" class="form-select">
+              <option value="">— Tous les départements —</option>
+              {% for dept in departments %}<option value="{{ dept.pk }}">{{ dept.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Filière</label>
+            <select name="program" id="crtProg" class="form-select">
+              <option value="">— Aucune —</option>
+              {% for prog in programs %}<option value="{{ prog.pk }}" data-dept="{{ prog.department_id }}">{{ prog.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Niveau <span class="text-danger">*</span></label>
+            <select name="level" id="crtLevel" class="form-select" required>
+              <option value="">— Sélectionnez un niveau —</option>
+              {% for lvl in levels %}<option value="{{ lvl.pk }}">{{ lvl.name }}</option>{% endfor %}
+            </select>
+            <div style="font-size:.75rem;color:#64748b;margin-top:4px;">Le niveau détermine le taux horaire applicable pour l'émargement.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Année académique</label>
+            <select name="academic_year" class="form-select">
+              <option value="">— Aucune —</option>
+              {% for yr in academic_years %}<option value="{{ yr.pk }}" {% if yr.is_current %}selected{% endif %}>{{ yr.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Domaine</label>
+              <input type="text" name="domaine" class="form-control" placeholder="ex: Sciences et Technologies">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Mention</label>
+              <input type="text" name="mention" class="form-control" placeholder="ex: Informatique">
+            </div>
+          </div>
+          <div class="mb-3"><label class="form-label">Capacité max</label><input type="number" name="max_students" class="form-control" min="0"></div>
+
+          <hr class="my-3">
+          <h6 class="mb-3" style="font-size:.85rem;font-weight:700;color:#dc2626;"><i class="bi bi-cash-coin me-1"></i>Frais de la formation</h6>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Montant global de la formation <span class="text-danger">*</span></label>
+              <input type="number" step="1" name="montant_global" class="form-control" placeholder="FCFA" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Mensualité de la formation <span class="text-danger">*</span></label>
+              <input type="number" step="1" name="frais_mensuel" class="form-control" placeholder="FCFA" required>
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Frais d'inscription</label>
+              <input type="number" step="1" name="frais_inscription" class="form-control" placeholder="FCFA">
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Frais de tenue</label>
+              <input type="number" step="1" name="frais_tenue" class="form-control" placeholder="FCFA">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Frais d'assurance</label>
+              <input type="number" step="1" name="frais_assurance" class="form-control" placeholder="FCFA">
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Frais Amicale</label>
+              <input type="number" step="1" name="frais_amea" class="form-control" placeholder="FCFA">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Frais Bibliothèque</label>
+              <input type="number" step="1" name="frais_bibliotheque" class="form-control" placeholder="FCFA">
+            </div>
+          </div>
+          <div class="row g-3 mb-3" id="crtSoutenanceWrap" style="display:none;">
+            <div class="col-md-6">
+              <label class="form-label">Frais de Soutenance normal</label>
+              <input type="number" step="1" name="frais_soutenance" id="crtSoutenance" class="form-control" placeholder="FCFA">
+              <div style="font-size:.75rem;color:#64748b;margin-top:4px;">Pré-rempli automatiquement pour ce niveau — modifiable.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Frais de Soutenance spéciale</label>
+              <input type="number" step="1" name="frais_soutenance_speciale" id="crtSoutenanceSpeciale" class="form-control" placeholder="FCFA">
+              <div style="font-size:.75rem;color:#64748b;margin-top:4px;">Pré-rempli automatiquement pour ce niveau — modifiable.</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal édition -->
+<div class="modal fade" id="modalEditClass" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:#dc2626;color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-pencil me-2"></i>Modifier la classe</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post">
+        {% csrf_token %}<input type="hidden" name="action" value="edit"><input type="hidden" name="pk" id="eclPk">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label">Nom <span class="text-danger">*</span></label><input type="text" name="name" id="eclName" class="form-control" required></div>
+          <div class="mb-3">
+            <label class="form-label">Département</label>
+            <select id="eclDept" class="form-select">
+              <option value="">— Tous les départements —</option>
+              {% for dept in departments %}<option value="{{ dept.pk }}">{{ dept.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Filière</label>
+            <select name="program" id="eclProg" class="form-select">
+              <option value="">— Aucune —</option>
+              {% for prog in programs %}<option value="{{ prog.pk }}" data-dept="{{ prog.department_id }}">{{ prog.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Niveau <span class="text-danger">*</span></label>
+            <select name="level" id="eclLevel" class="form-select">
+              <option value="">— Sélectionnez un niveau —</option>
+              {% for lvl in levels %}<option value="{{ lvl.pk }}">{{ lvl.name }}</option>{% endfor %}
+            </select>
+            <div style="font-size:.75rem;color:#64748b;margin-top:4px;">Le niveau détermine le taux horaire applicable pour l'émargement.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Année académique</label>
+            <select name="academic_year" id="eclYear" class="form-select">
+              <option value="">— Aucune —</option>
+              {% for yr in academic_years %}<option value="{{ yr.pk }}">{{ yr.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Domaine</label>
+              <input type="text" name="domaine" id="eclDomaine" class="form-control" placeholder="ex: Sciences et Technologies">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Mention</label>
+              <input type="text" name="mention" id="eclMention" class="form-control" placeholder="ex: Informatique">
+            </div>
+          </div>
+          <div class="mb-3"><label class="form-label">Capacité max</label><input type="number" name="max_students" id="eclMax" class="form-control" min="0"></div>
+
+          <hr class="my-3">
+          <h6 class="mb-3" style="font-size:.85rem;font-weight:700;color:#dc2626;"><i class="bi bi-cash-coin me-1"></i>Frais de la formation</h6>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Montant global de la formation <span class="text-danger">*</span></label>
+              <input type="number" step="1" name="montant_global" id="eclMontantGlobal" class="form-control" placeholder="FCFA" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Mensualité de la formation <span class="text-danger">*</span></label>
+              <input type="number" step="1" name="frais_mensuel" id="eclFraisMensuel" class="form-control" placeholder="FCFA" required>
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Frais d'inscription</label>
+              <input type="number" step="1" name="frais_inscription" id="eclFraisInscription" class="form-control" placeholder="FCFA">
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Frais de tenue</label>
+              <input type="number" step="1" name="frais_tenue" id="eclFraisTenue" class="form-control" placeholder="FCFA">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Frais d'assurance</label>
+              <input type="number" step="1" name="frais_assurance" id="eclFraisAssurance" class="form-control" placeholder="FCFA">
+            </div>
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Frais Amicale</label>
+              <input type="number" step="1" name="frais_amea" id="eclFraisAmea" class="form-control" placeholder="FCFA">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Frais Bibliothèque</label>
+              <input type="number" step="1" name="frais_bibliotheque" id="eclFraisBiblio" class="form-control" placeholder="FCFA">
+            </div>
+          </div>
+          <div class="row g-3 mb-3" id="eclSoutenanceWrap" style="display:none;">
+            <div class="col-md-6">
+              <label class="form-label">Frais de Soutenance normal</label>
+              <input type="number" step="1" name="frais_soutenance" id="eclFraisSoutenance" class="form-control" placeholder="FCFA">
+              <div style="font-size:.75rem;color:#64748b;margin-top:4px;">Pré-rempli automatiquement pour ce niveau — modifiable.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Frais de Soutenance spéciale</label>
+              <input type="number" step="1" name="frais_soutenance_speciale" id="eclFraisSoutenanceSpeciale" class="form-control" placeholder="FCFA">
+              <div style="font-size:.75rem;color:#64748b;margin-top:4px;">Pré-rempli automatiquement pour ce niveau — modifiable.</div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+$(document).ready(function(){ $('#tbl-classes').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}}); });
+
+function filterPrograms(deptSelectId, progSelectId, selectedProgId) {
+  var deptId = document.getElementById(deptSelectId).value;
+  var progSel = document.getElementById(progSelectId);
+  Array.from(progSel.options).forEach(function(opt) {
+    if (!opt.value) return; // keep the "— Aucune —" option
+    opt.hidden = deptId && opt.dataset.dept !== deptId;
+  });
+  if (selectedProgId) progSel.value = String(selectedProgId);
+}
+
+document.getElementById('crtDept').addEventListener('change', function() {
+  filterPrograms('crtDept', 'crtProg', null);
+  document.getElementById('crtProg').value = '';
+});
+
+document.getElementById('eclDept').addEventListener('change', function() {
+  filterPrograms('eclDept', 'eclProg', null);
+  document.getElementById('eclProg').value = '';
+});
+
+// Frais de soutenance (normal / spéciale) — automatiquement ajoutés et pré-remplis
+// pour Licence 3 / Master 2, mais modifiables ensuite.
+var SOUTENANCE_NORMAL_DEFAULTS   = { 'Licence 3': 60000,  'Master 2': 100000 };
+var SOUTENANCE_SPECIALE_DEFAULTS = { 'Licence 3': 180000, 'Master 2': 200000 };
+
+function applySoutenanceDefaults(levelSelectId, wrapId, fields) {
+  // fields: [{inputId, defaults}, ...]
+  var levelSelect = document.getElementById(levelSelectId);
+  var opt = levelSelect.options[levelSelect.selectedIndex];
+  var levelName = opt ? opt.textContent.trim() : '';
+  var wrap = document.getElementById(wrapId);
+  var applicable = fields.some(function(f) { return Object.prototype.hasOwnProperty.call(f.defaults, levelName); });
+  wrap.style.display = applicable ? '' : 'none';
+  fields.forEach(function(f) {
+    var input = document.getElementById(f.inputId);
+    if (applicable) {
+      if (!input.value) input.value = f.defaults[levelName];
+    } else {
+      input.value = '';
+    }
+  });
+}
+
+document.getElementById('crtLevel').addEventListener('change', function() {
+  applySoutenanceDefaults('crtLevel', 'crtSoutenanceWrap', [
+    { inputId: 'crtSoutenance',         defaults: SOUTENANCE_NORMAL_DEFAULTS },
+    { inputId: 'crtSoutenanceSpeciale', defaults: SOUTENANCE_SPECIALE_DEFAULTS },
+  ]);
+});
+
+document.getElementById('eclLevel').addEventListener('change', function() {
+  applySoutenanceDefaults('eclLevel', 'eclSoutenanceWrap', [
+    { inputId: 'eclFraisSoutenance',         defaults: SOUTENANCE_NORMAL_DEFAULTS },
+    { inputId: 'eclFraisSoutenanceSpeciale', defaults: SOUTENANCE_SPECIALE_DEFAULTS },
+  ]);
+});
+
+function openEditClass(pk, name, progId, yearId, maxStudents, levelId, domaine, mention, deptId,
+                        montantGlobal, fraisMensuel, fraisTenue, fraisAssurance, fraisAmea, fraisBiblio,
+                        fraisSoutenance, fraisSoutenanceSpeciale, fraisInscription) {
+  document.getElementById('eclPk').value = pk;
+  document.getElementById('eclName').value = name;
+  document.getElementById('eclYear').value = yearId ? String(yearId) : '';
+  document.getElementById('eclMax').value = maxStudents !== null ? maxStudents : '';
+  document.getElementById('eclLevel').value = levelId ? String(levelId) : '';
+  document.getElementById('eclDomaine').value = domaine || '';
+  document.getElementById('eclMention').value = mention || '';
+  document.getElementById('eclMontantGlobal').value = montantGlobal !== null && montantGlobal !== undefined ? montantGlobal : '';
+  document.getElementById('eclFraisMensuel').value = fraisMensuel !== null && fraisMensuel !== undefined ? fraisMensuel : '';
+  document.getElementById('eclFraisInscription').value = fraisInscription !== null && fraisInscription !== undefined ? fraisInscription : '';
+  document.getElementById('eclFraisTenue').value = fraisTenue !== null && fraisTenue !== undefined ? fraisTenue : '';
+  document.getElementById('eclFraisAssurance').value = fraisAssurance !== null && fraisAssurance !== undefined ? fraisAssurance : '';
+  document.getElementById('eclFraisAmea').value = fraisAmea !== null && fraisAmea !== undefined ? fraisAmea : '';
+  document.getElementById('eclFraisBiblio').value = fraisBiblio !== null && fraisBiblio !== undefined ? fraisBiblio : '';
+  document.getElementById('eclFraisSoutenance').value = fraisSoutenance !== null && fraisSoutenance !== undefined ? fraisSoutenance : '';
+  document.getElementById('eclFraisSoutenanceSpeciale').value = fraisSoutenanceSpeciale !== null && fraisSoutenanceSpeciale !== undefined ? fraisSoutenanceSpeciale : '';
+  applySoutenanceDefaults('eclLevel', 'eclSoutenanceWrap', [
+    { inputId: 'eclFraisSoutenance',         defaults: SOUTENANCE_NORMAL_DEFAULTS },
+    { inputId: 'eclFraisSoutenanceSpeciale', defaults: SOUTENANCE_SPECIALE_DEFAULTS },
+  ]);
+  // Set dept first, filter programs, then select the right program
+  document.getElementById('eclDept').value = deptId ? String(deptId) : '';
+  filterPrograms('eclDept', 'eclProg', progId);
+  new bootstrap.Modal(document.getElementById('modalEditClass')).show();
+}
+</script>
+{% endblock %}

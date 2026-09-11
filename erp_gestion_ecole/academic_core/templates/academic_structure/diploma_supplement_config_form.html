@@ -1,0 +1,96 @@
+{% extends 'base/base.html' %}
+{% block title %}Supplément de diplôme — {{ program.name }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academic_structure:diploma_supplement_config_list' %}">Suppléments de diplôme</a></li>
+<li class="breadcrumb-item active">{{ program.name }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-award-fill"></i></span>
+    Supplément de diplôme — {{ program.name }}
+  </h1>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="card-section mb-3">
+    <div class="card-section-header">
+      <h6 class="card-section-title"><i class="bi bi-mortarboard me-2" style="color:var(--navy);"></i>Identification de la qualification</h6>
+    </div>
+    <div class="p-4">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label" style="font-weight:600;font-size:.85rem;">Domaine</label>
+          <input type="text" name="domaine" class="form-control" value="{{ config.domaine }}" placeholder="Ex. : Sciences et technologies">
+          <div style="font-size:.75rem;color:#94a3b8;margin-top:3px;">Laisser vide pour reprendre automatiquement le domaine de la classe.</div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label" style="font-weight:600;font-size:.85rem;">Langue d'études</label>
+          <input type="text" name="langue_etudes" class="form-control" value="{{ config.langue_etudes }}" placeholder="Le français">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-section mb-3">
+    <div class="card-section-header">
+      <h6 class="card-section-title"><i class="bi bi-patch-check me-2" style="color:var(--navy);"></i>Niveau de qualification</h6>
+    </div>
+    <div class="p-4">
+      <div class="mb-3">
+        <label class="form-label" style="font-weight:600;font-size:.85rem;">Définition de la qualification</label>
+        <textarea name="definition_qualification" class="form-control" rows="3"
+                  placeholder="Ce que le diplômé est capable de faire — compétences et champ professionnel visés.">{{ config.definition_qualification }}</textarea>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" style="font-weight:600;font-size:.85rem;">Durée</label>
+        <input type="text" name="duree_texte" class="form-control" value="{{ config.duree_texte }}"
+               placeholder="Ex. : 2 années universitaires après l'obtention de la licence">
+      </div>
+      <div>
+        <label class="form-label" style="font-weight:600;font-size:.85rem;">Conditions d'admission</label>
+        <textarea name="conditions_admission" class="form-control" rows="4"
+                  placeholder="Une condition par ligne — chaque ligne devient une puce du document.">{{ config.conditions_admission }}</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-section mb-3">
+    <div class="card-section-header">
+      <h6 class="card-section-title"><i class="bi bi-briefcase me-2" style="color:var(--navy);"></i>Fonction de la qualification acquise</h6>
+    </div>
+    <div class="p-4">
+      <div class="mb-3">
+        <label class="form-label" style="font-weight:600;font-size:.85rem;">Poursuite d'études</label>
+        <textarea name="poursuite_etudes" class="form-control" rows="2">{{ config.poursuite_etudes }}</textarea>
+      </div>
+      <div>
+        <label class="form-label" style="font-weight:600;font-size:.85rem;">Statut professionnel conféré</label>
+        <input type="text" name="statut_professionnel" class="form-control" value="{{ config.statut_professionnel }}" placeholder="Ex. : Cadre supérieur">
+      </div>
+    </div>
+  </div>
+
+  <div class="card-section mb-3">
+    <div class="card-section-header">
+      <h6 class="card-section-title"><i class="bi bi-journal-text me-2" style="color:var(--navy);"></i>Contenus des enseignements</h6>
+    </div>
+    <div class="p-4">
+      <label class="form-label" style="font-weight:600;font-size:.85rem;">Forme des études</label>
+      <input type="text" name="forme_etudes" class="form-control" value="{{ config.forme_etudes }}" placeholder="En présentiel" style="max-width:280px;">
+      <div style="font-size:.75rem;color:#94a3b8;margin-top:3px;">
+        Le tableau des unités d'enseignement, modules, quota horaire et crédits est généré automatiquement
+        à partir des modules (EC) réellement définis pour cette filière — aucune saisie requise ici.
+      </div>
+    </div>
+  </div>
+
+  <div class="d-flex justify-content-end">
+    <button type="submit" class="btn btn-primary btn-sm">
+      <i class="bi bi-check-lg me-1"></i>Enregistrer
+    </button>
+  </div>
+</form>
+{% endblock %}

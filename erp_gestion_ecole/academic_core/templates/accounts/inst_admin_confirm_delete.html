@@ -1,0 +1,34 @@
+{% extends 'base/base.html' %}
+{% block title %}Supprimer l'administrateur{% endblock %}
+{% block content %}
+<div class="container-fluid py-4" style="max-width:520px;">
+  <div class="card border-danger" style="border-radius:14px;overflow:hidden;">
+    <div class="card-header bg-danger text-white py-3">
+      <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmer la suppression</h5>
+    </div>
+    <div class="card-body p-4">
+      <p class="mb-1">Vous êtes sur le point de supprimer l'administrateur :</p>
+      <div class="my-3 p-3" style="background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">
+        <div style="font-size:1rem;font-weight:700;color:#1e293b;">{{ obj.get_full_name }}</div>
+        <div style="font-size:.85rem;color:#64748b;margin-top:4px;">
+          <i class="bi bi-envelope me-1"></i>{{ obj.email }}
+          {% if obj.institut_config %} · <i class="bi bi-building me-1"></i>{{ obj.institut_config.nom }}{% endif %}
+        </div>
+        <div style="font-size:.8rem;color:#7c3aed;margin-top:4px;">
+          <i class="bi bi-shield me-1"></i>{{ obj.role.get_name_display }}
+        </div>
+      </div>
+      <p class="text-danger mb-3" style="font-size:.88rem;">
+        <i class="bi bi-exclamation-circle me-1"></i>Cette action est <strong>irréversible</strong>.
+      </p>
+      <form method="post" class="d-flex gap-3">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger fw-bold px-4">
+          <i class="bi bi-trash3 me-1"></i>Supprimer définitivement
+        </button>
+        <a href="{% url 'accounts:inst_admin_list' %}" class="btn btn-outline-secondary">Annuler</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

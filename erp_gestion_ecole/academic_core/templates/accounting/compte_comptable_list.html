@@ -1,0 +1,384 @@
+{% extends "base/base.html" %}
+
+{% block title %}Comptes comptables{% endblock %}
+
+{% block extra_head %}
+<style>
+/* Toggle switch statut */
+.cc-toggle {
+  position: relative; display: inline-flex; align-items: center; gap: 7px;
+  cursor: pointer; user-select: none;
+}
+.cc-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.cc-track {
+  width: 36px; height: 20px; border-radius: 10px;
+  background: #cbd5e1; transition: background .2s;
+  flex-shrink: 0; position: relative;
+}
+.cc-track::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; transition: transform .2s, box-shadow .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.cc-toggle input:checked + .cc-track { background: #16a34a; }
+.cc-toggle input:checked + .cc-track::after { transform: translateX(16px); }
+.cc-toggle.loading .cc-track { opacity: .55; pointer-events: none; }
+.cc-status-label { font-size: .72rem; font-weight: 600; min-width: 38px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- En-tête page -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-journal-bookmark-fill me-2" style="color:#0d2244;"></i>Comptes comptables
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">
+      Plan comptable SYSCOHADA révisé — défini par le Trésorier Général
+    </p>
+  </div>
+  <button type="button" class="btn btn-primary btn-sm" onclick="openCompteModal('create')">
+    <i class="bi bi-plus-lg me-1"></i>Nouveau compte
+  </button>
+</div>
+
+<!-- Recherche -->
+<div class="card-section mb-3" style="padding:16px 20px;">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Recherche</label>
+      <input type="text" name="q" value="{{ search }}" class="form-control form-control-sm" placeholder="Matricule ou libellé…">
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+    </div>
+    {% if search %}
+    <div class="col-md-2">
+      <a href="{% url 'accounting:compte_comptable_list' %}" class="btn btn-outline-secondary btn-sm w-100">Effacer</a>
+    </div>
+    {% endif %}
+  </form>
+</div>
+
+<!-- Liste par classe SYSCOHADA — toutes les 8 classes affichées -->
+{% for group in classe_groups %}
+<div class="card-section mb-3" style="padding:0;">
+  <div id="cc-toggle-header-{{ group.classe }}"
+       onclick="toggleCompteTable('{{ group.classe }}')"
+       style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-radius:12px;user-select:none;gap:14px;flex-wrap:wrap;cursor:pointer;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="width:28px;height:28px;border-radius:7px;background:#0d2244;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span style="color:#fbbf24;font-weight:800;font-size:.75rem;">{{ group.classe }}</span>
+      </span>
+      <div>
+        <span style="font-weight:700;font-size:.92rem;color:var(--navy);">{{ group.classe_label }}</span>
+        {% if group.comptes %}
+        <span id="cc-summary-{{ group.classe }}"
+              data-total="{{ group.comptes|length }}" data-actifs="{{ group.actifs }}" data-inactifs="{{ group.inactifs }}"
+              style="font-size:.75rem;color:#64748b;margin-left:8px;">{{ group.comptes|length }} compte{{ group.comptes|length|pluralize }}
+          — <span style="color:#16a34a;">{{ group.actifs }} actif{{ group.actifs|pluralize }}</span>
+          {% if group.inactifs %}<span style="color:#94a3b8;"> / {{ group.inactifs }} inactif{{ group.inactifs|pluralize }}</span>{% endif %}</span>
+        {% else %}
+        <span style="font-size:.75rem;color:#94a3b8;margin-left:8px;font-style:italic;">Aucun compte</span>
+        {% endif %}
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button type="button" class="btn btn-sm"
+              style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 12px;font-size:.72rem;border:none;"
+              onclick="event.stopPropagation(); openCompteModal('create', null, null, null, null, '{{ group.classe }}')">
+        <i class="bi bi-plus-lg me-1"></i>Ajouter
+      </button>
+      <i id="cc-chevron-{{ group.classe }}" class="bi bi-chevron-down" style="color:#64748b;font-size:.9rem;transition:transform .25s;"></i>
+    </div>
+  </div>
+
+  <div id="cc-body-{{ group.classe }}" style="display:none;">
+    {% if group.comptes %}
+    <!-- Recherche libellé par classe -->
+    <div style="padding:10px 16px 6px;border-top:1px solid #f1f5f9;background:#fafafa;">
+      <div style="position:relative;max-width:320px;">
+        <i class="bi bi-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:.75rem;pointer-events:none;"></i>
+        <input type="text"
+               id="cc-search-{{ group.classe }}"
+               oninput="filterClasseComptes('{{ group.classe }}', this.value)"
+               placeholder="Rechercher un libellé…"
+               class="form-control form-control-sm"
+               style="padding-left:28px;font-size:.78rem;border-radius:7px;">
+      </div>
+      <div id="cc-search-empty-{{ group.classe }}" style="display:none;font-size:.78rem;color:#94a3b8;margin-top:6px;">
+        <i class="bi bi-search me-1"></i>Aucun compte ne correspond à la recherche.
+      </div>
+    </div>
+    <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.85rem;" id="cc-table-{{ group.classe }}">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;white-space:nowrap;">Matricule</th>
+          <th>Libellé</th>
+          <th style="white-space:nowrap;">Nature</th>
+          <th style="white-space:nowrap;">Sens</th>
+          <th class="text-center" style="white-space:nowrap;">Statut</th>
+          <th class="text-center" style="width:100px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in group.comptes %}
+        <tr id="cc-row-{{ c.pk }}" data-classe="{{ group.classe }}">
+          <td style="padding:8px 16px;font-weight:600;color:var(--navy);white-space:nowrap;">{{ c.matricule }}</td>
+          <td>
+            {{ c.libelle }}
+            {% if c.categorie %}<div style="font-size:.7rem;color:#94a3b8;">{{ c.get_categorie_display }}</div>{% endif %}
+          </td>
+          <td style="font-size:.78rem;white-space:nowrap;">{{ c.get_nature_display }}</td>
+          <td style="font-size:.78rem;white-space:nowrap;">{{ c.get_sens_display }}</td>
+          <td class="text-center">
+            <label class="cc-toggle" id="toggle-label-{{ c.pk }}" title="{{ c.is_active|yesno:'Cliquer pour désactiver,Cliquer pour activer' }}">
+              <input type="checkbox" {% if c.is_active %}checked{% endif %}
+                     onchange="toggleStatut({{ c.pk }}, this)">
+              <span class="cc-track"></span>
+              <span class="cc-status-label" id="cc-status-{{ c.pk }}"
+                    style="color:{% if c.is_active %}#16a34a{% else %}#94a3b8{% endif %};">
+                {{ c.is_active|yesno:"Actif,Inactif" }}
+              </span>
+            </label>
+          </td>
+          <td class="text-center">
+            <div class="d-flex gap-1 justify-content-center">
+              <button type="button" class="btn btn-sm"
+                      style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 10px;font-size:.72rem;"
+                      title="Modifier"
+                      onclick="openCompteModal('edit', {{ c.pk }}, '{{ c.matricule|escapejs }}', '{{ c.libelle|escapejs }}', {{ c.is_active|yesno:'true,false' }}, '{{ c.classe }}', '{{ c.nature }}', '{{ c.sens }}', '{{ c.categorie }}')">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+              <form method="post" action="{% url 'accounting:compte_comptable_delete' c.pk %}"
+                    onsubmit="return confirm('Supprimer le compte « {{ c.matricule|escapejs }} — {{ c.libelle|escapejs }} » ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm"
+                        style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:3px 10px;font-size:.72rem;"
+                        title="Supprimer">
+                  <i class="bi bi-trash-fill"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>{# /overflow-x:auto #}
+    {% else %}
+    <div style="padding:24px 20px;text-align:center;color:#94a3b8;font-size:.83rem;border-top:1px solid #f1f5f9;">
+      <i class="bi bi-inbox" style="font-size:1.4rem;opacity:.5;display:block;margin-bottom:6px;"></i>
+      Aucun compte dans cette classe.
+      <button type="button" onclick="openCompteModal('create', null, null, null, null, '{{ group.classe }}')"
+              style="background:none;border:none;color:#1d4ed8;font-size:.83rem;cursor:pointer;text-decoration:underline;padding:0;margin-left:4px;">
+        Ajouter le premier compte
+      </button>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
+
+<!-- Modal compte comptable (création / modification) -->
+<div class="modal fade" id="compteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0" id="compteModalTitle"><i class="bi bi-plus-circle me-2"></i>Nouveau compte comptable</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="compteForm" action="{% url 'accounting:compte_comptable_create' %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Matricule <span class="text-danger">*</span></label>
+            <input type="text" name="matricule" id="cc-matricule" class="form-control" placeholder="Ex : 57110000" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Libellé <span class="text-danger">*</span></label>
+            <input type="text" name="libelle" id="cc-libelle" class="form-control" placeholder="Ex : CAISSE PRINCIPALE ISI" required>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Classe SYSCOHADA</label>
+              <select name="classe" id="cc-classe" class="form-select">
+                {% for val, label in CLASSE_CHOICES %}
+                <option value="{{ val }}">Classe {{ val }} — {{ label|slice:"10:" }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Nature</label>
+              <select name="nature" id="cc-nature" class="form-select">
+                {% for val, label in NATURE_CHOICES %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Sens</label>
+              <select name="sens" id="cc-sens" class="form-select">
+                {% for val, label in SENS_CHOICES %}
+                <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Catégorie de dépense associée</label>
+            <select name="categorie" id="cc-categorie" class="form-select">
+              <option value="">— Aucune —</option>
+              {% for val, label in CATEGORIE_CHOICES %}
+              <option value="{{ val }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text" style="font-size:.7rem;">Suggestion automatique pour les sorties caisse de cette catégorie.</div>
+          </div>
+          <div class="form-check" id="cc-active-wrap" style="display:none;">
+            <input class="form-check-input" type="checkbox" name="is_active" id="cc-active" checked>
+            <label class="form-check-label" for="cc-active" style="font-size:.82rem;">Compte actif</label>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-check-lg me-1"></i>Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const COMPTE_CREATE_URL = "{% url 'accounting:compte_comptable_create' %}";
+const CSRF_TOKEN = "{{ csrf_token }}";
+
+function openCompteModal(mode, pk, matricule, libelle, isActive, classe, nature, sens, categorie) {
+  const form  = document.getElementById('compteForm');
+  const title = document.getElementById('compteModalTitle');
+  const activeWrap = document.getElementById('cc-active-wrap');
+
+  if (mode === 'edit') {
+    form.action = `/accounting/comptes-comptables/${pk}/modifier/`;
+    title.innerHTML = '<i class="bi bi-pencil-square me-2"></i>Modifier le compte comptable';
+    document.getElementById('cc-matricule').value = matricule || '';
+    document.getElementById('cc-libelle').value   = libelle   || '';
+    document.getElementById('cc-active').checked  = !!isActive;
+    document.getElementById('cc-classe').value    = classe    || '5';
+    document.getElementById('cc-nature').value    = nature    || 'TRESORERIE';
+    document.getElementById('cc-sens').value      = sens      || 'MIXTE';
+    document.getElementById('cc-categorie').value = categorie || '';
+    activeWrap.style.display = '';
+  } else {
+    form.action = COMPTE_CREATE_URL;
+    title.innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nouveau compte comptable';
+    form.reset();
+    activeWrap.style.display = 'none';
+    // Pré-sélectionner la classe si fournie (bouton "Ajouter" d'une classe)
+    if (classe) document.getElementById('cc-classe').value = classe;
+  }
+  new bootstrap.Modal(document.getElementById('compteModal')).show();
+}
+
+/* ── Toggle Actif / Inactif ── */
+function toggleStatut(pk, checkbox) {
+  const label  = document.getElementById('toggle-label-' + pk);
+  const status = document.getElementById('cc-status-'    + pk);
+  const row    = document.getElementById('cc-row-'       + pk);
+  const classe = row ? row.dataset.classe : null;
+  label.classList.add('loading');
+  checkbox.disabled = true;
+
+  fetch(`/accounting/comptes-comptables/${pk}/toggle/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': CSRF_TOKEN, 'Content-Type': 'application/json' },
+  })
+  .then(r => r.json())
+  .then(data => {
+    const active = data.is_active;
+    checkbox.checked     = active;
+    status.textContent   = active ? 'Actif' : 'Inactif';
+    status.style.color   = active ? '#16a34a' : '#94a3b8';
+    label.title = active ? 'Cliquer pour désactiver' : 'Cliquer pour activer';
+    if (classe) _updateClasseSummary(classe, active);
+  })
+  .catch(() => {
+    // Revenir à l'état précédent en cas d'erreur
+    checkbox.checked = !checkbox.checked;
+  })
+  .finally(() => {
+    label.classList.remove('loading');
+    checkbox.disabled = false;
+  });
+}
+
+/* ── Met à jour en direct le décompte "X actif(s) / Y inactif(s)" affiché
+   dans l'en-tête de la classe, sans recharger la page ── */
+function _updateClasseSummary(classe, nowActive) {
+  const el = document.getElementById('cc-summary-' + classe);
+  if (!el) return;
+  const total = parseInt(el.dataset.total, 10) || 0;
+  let actifs   = parseInt(el.dataset.actifs, 10) || 0;
+  let inactifs = parseInt(el.dataset.inactifs, 10) || 0;
+  if (nowActive) { actifs += 1; inactifs = Math.max(0, inactifs - 1); }
+  else           { inactifs += 1; actifs = Math.max(0, actifs - 1); }
+  el.dataset.actifs   = actifs;
+  el.dataset.inactifs = inactifs;
+  let html = `${total} compte${total === 1 ? '' : 's'} — <span style="color:#16a34a;">${actifs} actif${actifs === 1 ? '' : 's'}</span>`;
+  if (inactifs > 0) {
+    html += ` <span style="color:#94a3b8;">/ ${inactifs} inactif${inactifs === 1 ? '' : 's'}</span>`;
+  }
+  el.innerHTML = html;
+}
+
+/* ── Recherche par libellé dans une classe ── */
+function filterClasseComptes(classe, term) {
+  const table   = document.getElementById('cc-table-'        + classe);
+  const empty   = document.getElementById('cc-search-empty-' + classe);
+  if (!table) return;
+  const q = term.trim().toLowerCase();
+  const rows = table.querySelectorAll('tbody tr');
+  let visible = 0;
+  rows.forEach(function(row) {
+    const libelle   = (row.cells[1] ? row.cells[1].textContent : '').toLowerCase();
+    const matricule = (row.cells[0] ? row.cells[0].textContent : '').toLowerCase();
+    const match = !q || libelle.indexOf(q) !== -1 || matricule.indexOf(q) !== -1;
+    row.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  if (empty) empty.style.display = (q && visible === 0) ? '' : 'none';
+}
+
+/* ── Accordéon classes ── */
+const _ccOpen = {};
+function toggleCompteTable(classe) {
+  const willOpen = !(_ccOpen[classe] ?? false);
+  if (willOpen) {
+    document.querySelectorAll('[id^="cc-body-"]').forEach(el => {
+      const c = el.id.replace('cc-body-', '');
+      if (c !== String(classe)) _setCompteState(c, false);
+    });
+  }
+  _setCompteState(classe, willOpen);
+}
+
+function _setCompteState(classe, open) {
+  _ccOpen[classe] = open;
+  const body    = document.getElementById('cc-body-'    + classe);
+  const chevron = document.getElementById('cc-chevron-' + classe);
+  if (body)    body.style.display        = open ? '' : 'none';
+  if (chevron) chevron.style.transform   = open ? 'rotate(180deg)' : 'rotate(0deg)';
+  if (!open) {
+    const inp = document.getElementById('cc-search-' + classe);
+    if (inp) { inp.value = ''; filterClasseComptes(classe, ''); }
+  }
+}
+</script>
+{% endblock %}

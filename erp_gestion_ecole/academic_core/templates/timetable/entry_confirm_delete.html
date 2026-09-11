@@ -1,0 +1,47 @@
+{% extends 'base/base.html' %}
+{% block title %}Supprimer le créneau{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'timetable:index' %}">Emploi du temps</a></li>
+<li class="breadcrumb-item active">Supprimer</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:#dc2626;"><i class="bi bi-calendar-x"></i></span>Supprimer le créneau</h1>
+</div>
+<div class="row justify-content-center">
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:#dc2626;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-exclamation-triangle"></i></span>Confirmation de suppression</h6>
+      </div>
+      <div class="p-4">
+        <div style="background:#fff1f2;border:1px solid #fecaca;border-radius:10px;padding:16px;margin-bottom:20px;">
+          <p style="margin:0;font-size:.88rem;color:#dc2626;">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            Cette action est <strong>irréversible</strong>. Êtes-vous sûr de vouloir supprimer ce créneau ?
+          </p>
+        </div>
+        {% if object %}
+        <div style="background:#f8fafc;border-radius:10px;padding:16px;margin-bottom:20px;">
+          <div style="font-size:.83rem;color:#64748b;margin-bottom:4px;">Créneau à supprimer :</div>
+          <div style="font-weight:600;font-size:.9rem;color:#1e293b;">
+            {{ object.subject.title }} — {{ object.get_day_of_week_display }}
+            {% if object.start_time %} · {{ object.start_time|time:"H:i" }} – {{ object.end_time|time:"H:i" }}{% endif %}
+          </div>
+          <div style="font-size:.82rem;color:#64748b;margin-top:4px;">Classe : {{ object.class_group.name }}</div>
+          {% if object.teacher %}<div style="font-size:.82rem;color:#64748b;margin-top:4px;">Enseignant : {{ object.teacher.full_name }}</div>{% endif %}
+          {% if object.room %}<div style="font-size:.82rem;color:#64748b;">Salle : {{ object.room.name }}</div>{% endif %}
+        </div>
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'timetable:index' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash me-1"></i>Supprimer définitivement</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

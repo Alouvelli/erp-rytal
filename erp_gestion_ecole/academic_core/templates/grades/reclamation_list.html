@@ -1,0 +1,153 @@
+{% extends 'base/base.html' %}
+{% block title %}Réclamations — {{ class_group.name }} {{ semester.label }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'grades:reclamation_class_list' %}">Réclamations de notes</a></li>
+<li class="breadcrumb-item active">{{ class_group.name }} — {{ semester.label }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-flag"></i></span>
+    Réclamations de notes — {{ class_group.name }} | {{ semester.label }}
+  </h1>
+</div>
+
+<div class="alert" style="background:#f5f3ff;border:1px solid #ddd6fe;color:#5b21b6;font-size:.84rem;border-radius:10px;">
+  <i class="bi bi-info-circle me-1"></i>
+  Enregistrer une réclamation ici signifie qu'elle a été <strong>traitée favorablement</strong> :
+  l'étudiant sera comptabilisé comme validé pour ce semestre grâce à cette réclamation dans le
+  « Rapport Annuel de la Direction » (au même titre qu'un repêchage).
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#7c3aed;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-plus-lg"></i></span>
+          Enregistrer une réclamation traitée
+        </h6>
+      </div>
+      <div class="p-4">
+        <form method="post" id="reclamation-form">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.84rem;">Étudiant <span class="text-danger">*</span></label>
+            <input type="text" id="student-search-input" class="form-control form-control-sm"
+                   placeholder="Rechercher par prénom ou nom..." autocomplete="off"
+                   list="student-datalist" required>
+            <datalist id="student-datalist">
+              {% for student in enrolled_students %}
+              <option data-id="{{ student.pk }}"
+                      value="{{ student.user.get_full_name }} ({{ student.matricule }}){% if student.pk in already_processed_ids %} — déjà traitée{% endif %}">
+              </option>
+              {% endfor %}
+            </datalist>
+            <input type="hidden" name="student" id="student-hidden-id">
+            <div id="student-search-error" class="text-danger" style="font-size:.76rem;display:none;margin-top:4px;">
+              Merci de choisir un étudiant dans la liste proposée.
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.84rem;">Motif de la réclamation <span class="text-danger">*</span></label>
+            <textarea name="description" class="form-control form-control-sm" rows="3" required
+                      placeholder="Ex : erreur de saisie sur l'EC Algorithmique, corrigée après vérification..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-sm w-100" style="background:#7c3aed;color:#fff;border:none;padding:9px 0;font-weight:600;">
+            <i class="bi bi-check-lg me-1"></i>Enregistrer la réclamation
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ul"></i></span>
+          Réclamations traitées
+          <span style="font-size:.75rem;font-weight:400;color:#64748b;margin-left:8px;">({{ complaints|length }})</span>
+        </h6>
+      </div>
+      {% if complaints %}
+      <div class="table-responsive">
+        <table class="table mb-0" style="font-size:.83rem;">
+          <thead>
+            <tr>
+              <th class="ps-3">Étudiant</th>
+              <th>Motif</th>
+              <th>Traitée par</th>
+              <th>Date</th>
+              <th class="text-center" style="width:60px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in complaints %}
+            <tr>
+              <td class="ps-3" style="font-weight:600;color:#1e293b;">{{ c.student.user.get_full_name }}</td>
+              <td style="color:#64748b;">{{ c.description|default:"—" }}</td>
+              <td style="font-size:.78rem;color:#64748b;">{{ c.processed_by.get_full_name|default:"—" }}</td>
+              <td style="font-size:.78rem;color:#94a3b8;">{{ c.processed_at|date:"d/m/Y H:i" }}</td>
+              <td class="text-center">
+                <form method="post" action="{% url 'grades:reclamation_delete' c.pk %}"
+                      onsubmit="return confirm('Supprimer cette réclamation ?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-size:.72rem;padding:3px 8px;">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div style="text-align:center;padding:40px 20px;color:#94a3b8;">
+        <i class="bi bi-inbox d-block mb-2" style="font-size:1.8rem;color:#cbd5e1;"></i>
+        Aucune réclamation enregistrée pour cette classe et ce semestre.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var input      = document.getElementById('student-search-input');
+  var hiddenId    = document.getElementById('student-hidden-id');
+  var errorBox    = document.getElementById('student-search-error');
+  var form        = document.getElementById('reclamation-form');
+  var datalist    = document.getElementById('student-datalist');
+  if (!input || !hiddenId || !form || !datalist) return;
+
+  var labelToId = {};
+  datalist.querySelectorAll('option').forEach(function (opt) {
+    labelToId[opt.value] = opt.getAttribute('data-id');
+  });
+
+  function syncHiddenId() {
+    var id = labelToId[input.value];
+    hiddenId.value = id || '';
+    errorBox.style.display = 'none';
+    input.classList.remove('is-invalid');
+  }
+
+  input.addEventListener('input', syncHiddenId);
+  input.addEventListener('change', syncHiddenId);
+
+  form.addEventListener('submit', function (e) {
+    if (!hiddenId.value) {
+      e.preventDefault();
+      errorBox.style.display = '';
+      input.classList.add('is-invalid');
+      input.focus();
+    }
+  });
+})();
+</script>
+{% endblock %}

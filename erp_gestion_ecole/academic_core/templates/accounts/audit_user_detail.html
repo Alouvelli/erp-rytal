@@ -1,0 +1,204 @@
+{% extends 'base/base.html' %}
+{% block title %}Activité — {{ target_user.get_full_name }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:audit_log' %}">Journal d'audit</a></li>
+<li class="breadcrumb-item active">{{ target_user.get_full_name|default:target_user.username }}</li>
+{% endblock %}
+
+{% block content %}
+<style>
+  .audit-badge { display:inline-block;padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:700; }
+  .ab-LOGIN    { background:#dbeafe;color:#1e40af; }
+  .ab-LOGOUT   { background:#f1f5f9;color:#475569; }
+  .ab-VIEW     { background:#f0fdf4;color:#166534; }
+  .ab-CREATE   { background:#dcfce7;color:#15803d; }
+  .ab-UPDATE   { background:#fef9c3;color:#854d0e; }
+  .ab-DELETE   { background:#fee2e2;color:#991b1b; }
+  .ab-VALIDATE { background:#ede9fe;color:#5b21b6; }
+  .ab-CANCEL   { background:#ffedd5;color:#9a3412; }
+  .stat-card { background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px;flex:1;min-width:130px; }
+  .stat-val  { font-size:1.6rem;font-weight:800;color:var(--navy); }
+  .stat-lbl  { font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.05em; }
+  .session-block { background:#fff;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:12px;overflow:hidden; }
+  .session-header { background:#f8fafc;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e2e8f0; }
+  .session-action { display:flex;align-items:center;gap:10px;padding:7px 16px;border-bottom:1px solid #f8fafc;font-size:.82rem; }
+  .session-action:last-child { border-bottom:none; }
+  .session-action:hover { background:#f8fafc; }
+  .timeline-dot { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
+  .dot-VIEW     { background:#16a34a; }
+  .dot-CREATE   { background:#15803d; }
+  .dot-UPDATE   { background:#b45309; }
+  .dot-DELETE   { background:#dc2626; }
+  .dot-VALIDATE { background:#7c3aed; }
+  .dot-LOGIN    { background:#1d4ed8; }
+  .dot-LOGOUT   { background:#64748b; }
+  .dot-CANCEL   { background:#ea580c; }
+  .url-mono { font-family:monospace;font-size:.72rem;color:#94a3b8; }
+  .fg label { font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px; }
+  .fg select,.fg input { border:1.5px solid #e2e8f0;border-radius:7px;padding:6px 10px;font-size:.83rem;background:#f8fafc;color:#1e293b;outline:none; }
+  .audit-table thead th { font-size:.71rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;background:#f8fafc;border-bottom:2px solid #e2e8f0;padding:9px 10px;white-space:nowrap; }
+  .audit-table tbody td { font-size:.81rem;padding:8px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle; }
+  .audit-table tbody tr:hover { background:#f8fafc; }
+  .btn-del { display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:#fee2e2;color:#991b1b;border:none;cursor:pointer;font-size:.8rem; }
+  .btn-del:hover { background:#fecaca; }
+</style>
+
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-person-lines-fill"></i></span>
+    Activité de {{ target_user.get_full_name|default:target_user.username }}
+  </h1>
+  <a href="{% url 'accounts:audit_log' %}?user_id={{ target_user.pk }}"
+     style="padding:7px 16px;background:var(--navy);color:#fff;border-radius:8px;font-size:.83rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+    <i class="bi bi-list-ul"></i>Voir dans le journal global
+  </a>
+</div>
+
+<!-- Infos utilisateur -->
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+  <div style="width:52px;height:52px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;color:#fff;font-size:1.3rem;font-weight:800;flex-shrink:0;">
+    {{ target_user.get_full_name|slice:":1"|upper }}
+  </div>
+  <div>
+    <div style="font-size:1.05rem;font-weight:800;color:var(--navy);">{{ target_user.get_full_name|default:target_user.username }}</div>
+    <div style="font-size:.82rem;color:#64748b;">{{ target_user.role }} — {{ target_user.email }}</div>
+    {% if target_user.last_login %}
+    <div style="font-size:.78rem;color:#94a3b8;margin-top:2px;">
+      Dernière connexion : {{ target_user.last_login|date:"d/m/Y à H:i" }}
+    </div>
+    {% endif %}
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-left:auto;">
+    <div class="stat-card" style="text-align:center;">
+      <div class="stat-val">{{ total_logs }}</div>
+      <div class="stat-lbl">Actions totales</div>
+    </div>
+    <div class="stat-card" style="text-align:center;">
+      <div class="stat-val">{{ sessions|length }}</div>
+      <div class="stat-lbl">Sessions récentes</div>
+    </div>
+  </div>
+</div>
+
+<!-- Dernières sessions -->
+{% if sessions %}
+<div style="margin-bottom:20px;">
+  <div style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-bottom:10px;">
+    <i class="bi bi-clock-history me-1"></i>Dernières sessions ({{ sessions|length }})
+  </div>
+  {% for session in sessions reversed %}
+  <div class="session-block">
+    <div class="session-header">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="audit-badge ab-LOGIN">Connexion</span>
+        <span style="font-size:.82rem;font-weight:700;color:#1e293b;">{{ session.login.timestamp|date:"d/m/Y à H:i:s" }}</span>
+        <span style="font-size:.75rem;color:#94a3b8;">IP : {{ session.login.ip_address|default:"—" }}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        {% if session.logout %}
+        <span class="audit-badge ab-LOGOUT">Déconnexion {{ session.logout.timestamp|date:"H:i:s" }}</span>
+        {% else %}
+        <span style="font-size:.75rem;color:#f59e0b;font-weight:600;"><i class="bi bi-circle-fill" style="font-size:.5rem;"></i> Session active</span>
+        {% endif %}
+        <span style="font-size:.75rem;color:#94a3b8;">{{ session.actions|length }} action{{ session.actions|length|pluralize }}</span>
+      </div>
+    </div>
+    {% for act in session.actions|slice:":15" %}
+    <div class="session-action">
+      <div class="timeline-dot dot-{{ act.action }}"></div>
+      <span style="color:#94a3b8;font-size:.75rem;min-width:60px;">{{ act.timestamp|date:"H:i:s" }}</span>
+      <span class="audit-badge ab-{{ act.action }}" style="font-size:.67rem;padding:1px 7px;">{{ act.get_action_display }}</span>
+      <span style="color:#374151;flex:1;">{{ act.details|default:"—" }}</span>
+      <span class="url-mono">{{ act.url|default:"" }}</span>
+    </div>
+    {% endfor %}
+    {% if session.actions|length > 15 %}
+    <div style="padding:6px 16px;font-size:.75rem;color:#94a3b8;background:#fafafa;text-align:center;">
+      + {{ session.actions|length|add:"-15" }} autre(s) action(s) dans cette session
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Filtre rapide + tableau complet -->
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:14px;">
+  <form method="get" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+    <div class="fg">
+      <label>Type d'action</label>
+      <select name="action">
+        <option value="">— Toutes —</option>
+        {% for code,label in action_choices %}
+        <option value="{{ code }}" {% if filters.action == code %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="fg">
+      <label>Date exacte</label>
+      <input type="date" name="date" value="{{ filters.date|default:'' }}">
+    </div>
+    <div class="fg">
+      <label>&nbsp;</label>
+      <div style="display:flex;gap:8px;">
+        <button type="submit" style="padding:7px 14px;background:var(--navy);color:#fff;border:none;border-radius:7px;font-size:.83rem;font-weight:700;cursor:pointer;">
+          <i class="bi bi-search me-1"></i>Filtrer
+        </button>
+        <a href="{% url 'accounts:audit_user_detail' target_user.pk %}"
+           style="padding:7px 12px;background:#f1f5f9;color:#475569;border-radius:7px;font-size:.83rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+          <i class="bi bi-x-lg"></i>Réinitialiser
+        </a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<div style="font-size:.78rem;color:#64748b;font-weight:600;margin-bottom:8px;">
+  {{ logs|length }} entrée{{ logs|length|pluralize }} affichée{{ logs|length|pluralize }}
+  {% if logs|length == 200 %} (200 max — utilisez les filtres pour affiner){% endif %}
+</div>
+
+<div class="card-section" style="padding:0;">
+  <div class="table-responsive">
+    <table class="table audit-table mb-0">
+      <thead>
+        <tr>
+          <th>Date &amp; Heure</th>
+          <th>Action</th>
+          <th>Description</th>
+          <th>URL</th>
+          <th>IP</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td style="white-space:nowrap;">
+            <div style="font-weight:700;font-size:.8rem;">{{ log.timestamp|date:"d/m/Y" }}</div>
+            <div style="color:#94a3b8;font-size:.74rem;">{{ log.timestamp|date:"H:i:s" }}</div>
+          </td>
+          <td><span class="audit-badge ab-{{ log.action }}">{{ log.get_action_display }}</span></td>
+          <td style="max-width:300px;color:#374151;">{{ log.details|default:log.object_repr|default:"—" }}</td>
+          <td><span class="url-mono" title="{{ log.url }}">{{ log.url|default:"—" }}</span></td>
+          <td style="font-family:monospace;font-size:.74rem;color:#94a3b8;">{{ log.ip_address|default:"—" }}</td>
+          <td>
+            <form method="post" action="{% url 'accounts:audit_log_delete' log.pk %}"
+                  onsubmit="return confirm('Supprimer cette entrée ?')" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="btn-del" title="Supprimer"><i class="bi bi-trash3"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center py-4" style="color:#94a3b8;">
+            Aucune action enregistrée pour ces critères.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

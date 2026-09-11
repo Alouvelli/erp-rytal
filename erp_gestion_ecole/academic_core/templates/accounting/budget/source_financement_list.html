@@ -1,0 +1,144 @@
+{% extends "base/base.html" %}
+
+{% block title %}Sources de financement{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-diagram-3 me-2"></i>Sources de financement
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Pilotage et Suivi Budgétaire</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounting:budget_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openSourceModal('create')">
+      <i class="bi bi-plus-lg me-1"></i>Nouvelle source
+    </button>
+  </div>
+</div>
+
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.85rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Code</th>
+          <th>Libellé</th>
+          <th>Type</th>
+          <th class="text-center">Statut</th>
+          <th class="text-center" style="width:110px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sources %}
+        <tr>
+          <td style="padding:8px 16px;font-weight:600;color:var(--navy);">{{ s.code }}</td>
+          <td>{{ s.libelle }}</td>
+          <td style="font-size:.8rem;">{{ s.get_type_source_display }}</td>
+          <td class="text-center">
+            {% if s.is_active %}
+            <span style="background:#dcfce7;color:#166534;border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;">Active</span>
+            {% else %}
+            <span style="background:#f1f5f9;color:#64748b;border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;">Inactive</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            <div class="d-flex gap-1 justify-content-center">
+              <button type="button" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 10px;font-size:.72rem;"
+                      onclick="openSourceModal('edit', {{ s.pk }}, '{{ s.libelle|escapejs }}', '{{ s.type_source }}', {{ s.is_active|yesno:'true,false' }})">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+              <form method="post" action="{% url 'accounting:source_financement_delete' s.pk %}"
+                    onsubmit="return confirm('Supprimer la source « {{ s.libelle|escapejs }} » ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:3px 10px;font-size:.72rem;">
+                  <i class="bi bi-trash-fill"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:40px;">Aucune source de financement.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal création / modification -->
+<div class="modal fade" id="sourceModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0" id="sourceModalTitle"><i class="bi bi-plus-circle me-2"></i>Nouvelle source de financement</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="sourceForm" action="{% url 'accounting:source_financement_create' %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3" id="src-code-wrap">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Code <span class="text-danger">*</span></label>
+            <input type="text" name="code" id="src-code" class="form-control" placeholder="Ex : frais-scolarite" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Libellé <span class="text-danger">*</span></label>
+            <input type="text" name="libelle" id="src-libelle" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Type <span class="text-danger">*</span></label>
+            <select name="type_source" id="src-type" class="form-select" required>
+              {% for val, label in TYPE_CHOICES %}
+              <option value="{{ val }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-check" id="src-active-wrap" style="display:none;">
+            <input class="form-check-input" type="checkbox" name="is_active" id="src-active" checked>
+            <label class="form-check-label" for="src-active" style="font-size:.82rem;">Source active</label>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SOURCE_CREATE_URL = "{% url 'accounting:source_financement_create' %}";
+
+function openSourceModal(mode, pk, libelle, typeSource, isActive) {
+  const form  = document.getElementById('sourceForm');
+  const title = document.getElementById('sourceModalTitle');
+  const codeWrap = document.getElementById('src-code-wrap');
+  const activeWrap = document.getElementById('src-active-wrap');
+
+  if (mode === 'edit') {
+    form.action = `/accounting/budget/sources/${pk}/modifier/`;
+    title.innerHTML = '<i class="bi bi-pencil-square me-2"></i>Modifier la source';
+    document.getElementById('src-libelle').value = libelle || '';
+    document.getElementById('src-type').value = typeSource || '';
+    document.getElementById('src-active').checked = !!isActive;
+    codeWrap.style.display = 'none';
+    document.getElementById('src-code').required = false;
+    activeWrap.style.display = '';
+  } else {
+    form.action = SOURCE_CREATE_URL;
+    title.innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nouvelle source de financement';
+    form.reset();
+    codeWrap.style.display = '';
+    document.getElementById('src-code').required = true;
+    activeWrap.style.display = 'none';
+  }
+  new bootstrap.Modal(document.getElementById('sourceModal')).show();
+}
+</script>
+{% endblock %}

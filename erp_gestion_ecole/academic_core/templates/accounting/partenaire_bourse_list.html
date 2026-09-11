@@ -1,0 +1,76 @@
+{% extends 'base/base.html' %}
+{% block title %}Partenaires de bourse{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Direction Administrative Financière</a></li>
+<li class="breadcrumb-item active">Partenaires de bourse</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#166534;"><i class="bi bi-mortarboard-fill"></i></span>
+    Partenaires de bourse
+  </h1>
+  <a href="{% url 'accounting:partenaire_bourse_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Nouveau partenaire
+  </a>
+</div>
+
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-check"></i></span>
+      Liste des partenaires
+    </h6>
+  </div>
+
+  {% if partenaires %}
+  <div class="table-responsive">
+    <table class="table" style="margin:0;">
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Intitulé</th>
+          <th>Statut</th>
+          <th>Créé par</th>
+          <th>Créé le</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in partenaires %}
+        <tr style="font-size:.85rem;">
+          <td style="font-weight:700;color:var(--navy);font-family:'Courier New',monospace;">{{ p.code }}</td>
+          <td style="font-weight:600;">{{ p.intitule }}</td>
+          <td>
+            {% if p.is_active %}
+            <span style="padding:3px 10px;background:#dcfce7;color:#166534;border-radius:20px;font-size:.78rem;font-weight:600;">Actif</span>
+            {% else %}
+            <span style="padding:3px 10px;background:#f1f5f9;color:#94a3b8;border-radius:20px;font-size:.78rem;font-weight:600;">Inactif</span>
+            {% endif %}
+          </td>
+          <td style="font-size:.78rem;color:#64748b;">{{ p.created_by.get_full_name|default:'—' }}</td>
+          <td style="font-size:.78rem;color:#64748b;">{{ p.created_at|date:"d/m/Y" }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'accounting:partenaire_bourse_edit' p.pk %}" class="btn-action edit" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'accounting:partenaire_bourse_delete' p.pk %}" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:50px 20px;color:#94a3b8;">
+    <i class="bi bi-mortarboard d-block mb-3" style="font-size:2.5rem;color:#cbd5e1;"></i>
+    <div style="font-size:.95rem;font-weight:600;margin-bottom:8px;">Aucun partenaire de bourse</div>
+    <div style="font-size:.83rem;margin-bottom:20px;">Ajoutez un organisme finançant des bourses d'étudiants (code + intitulé).</div>
+    <a href="{% url 'accounting:partenaire_bourse_create' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Créer le premier partenaire
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

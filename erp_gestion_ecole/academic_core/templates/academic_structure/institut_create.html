@@ -1,0 +1,237 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if editing %}Modifier{% else %}Nouvel{% endif %} institut{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academic_structure:institut_list' %}">Gestion des instituts</a></li>
+<li class="breadcrumb-item active">{% if editing %}Modifier « {{ config.nom }}»{% else %}Nouvel institut{% endif %}</li>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <div>
+    <h4 class="mb-0 fw-bold" style="color:var(--navy);">
+      <i class="bi bi-buildings me-2" style="color:var(--accent);"></i>
+      {% if editing %}Modifier l'institut{% else %}Ajouter un institut{% endif %}
+    </h4>
+    <p class="text-muted mb-0" style="font-size:.82rem;">
+      {% if editing %}Mettez à jour les informations de l'établissement.
+      {% else %}Configurez le nouvel établissement client.{% endif %}
+    </p>
+  </div>
+  <a href="{% url 'academic_structure:institut_list' %}" class="btn btn-sm"
+     style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:9px;font-size:.83rem;">
+    <i class="bi bi-arrow-left me-1"></i>Retour à la liste
+  </a>
+</div>
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+
+  <!-- ── IDENTITÉ ─────────────────────────────────────────────────────────── -->
+  <div class="card border-0 shadow-sm mb-4" style="border-radius:14px;">
+    <div class="card-header border-0" style="background:var(--navy);border-radius:14px 14px 0 0;padding:14px 20px;">
+      <span style="color:#fff;font-weight:700;font-size:.9rem;"><i class="bi bi-building me-2"></i>Identité de l'établissement</span>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3">
+
+        <div class="col-md-6">
+          <label class="form-label fw-600" style="font-size:.82rem;">Nom complet <span class="text-danger">*</span></label>
+          <input type="text" name="nom" class="form-control{% if errors.nom %} is-invalid{% endif %}"
+                 value="{{ config.nom }}" placeholder="Ex : Institut Supérieur d'Informatique" required>
+          {% if errors.nom %}<div class="invalid-feedback">{{ errors.nom }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-600" style="font-size:.82rem;">Sigle / Acronyme</label>
+          <input type="text" name="sigle" class="form-control"
+                 value="{{ config.sigle }}" placeholder="Ex : ISI">
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-600" style="font-size:.82rem;">Code unique <span class="text-danger">*</span></label>
+          <input type="text" name="code" class="form-control{% if errors.code %} is-invalid{% endif %}"
+                 value="{{ config.faculty.code }}" placeholder="Ex : ISI-DKR" required>
+          {% if errors.code %}<div class="invalid-feedback">{{ errors.code }}</div>{% endif %}
+        </div>
+
+        <div class="col-md-8">
+          <label class="form-label fw-600" style="font-size:.82rem;">Devise / Slogan</label>
+          <input type="text" name="slogan" class="form-control"
+                 value="{{ config.slogan }}" placeholder="Ex : L'excellence en formation">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label fw-600" style="font-size:.82rem;">Année de création</label>
+          <input type="number" name="annee_creation" class="form-control"
+                 value="{{ config.annee_creation }}"
+                 placeholder="Ex : 1997" min="1900" max="2099">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label fw-600" style="font-size:.82rem;">Statut juridique</label>
+          <input type="text" name="statut_juridique" class="form-control"
+                 value="{{ config.statut_juridique }}"
+                 placeholder="Ex : Société Anonyme, SARL…">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label fw-600" style="font-size:.82rem;">N° d'autorisation</label>
+          <input type="text" name="numero_autorisation" class="form-control"
+                 value="{{ config.numero_autorisation }}"
+                 placeholder="Ex : N°00234/MESRI/…">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label fw-600" style="font-size:.82rem;">Logo</label>
+          {% if editing and config.logo %}
+          <div class="mb-2">
+            <img src="{{ config.logo.url }}" alt="Logo actuel" style="height:50px;border-radius:6px;border:1px solid #e2e8f0;">
+            <label class="ms-2" style="font-size:.78rem;color:#64748b;">
+              <input type="checkbox" name="remove_logo" value="1"> Supprimer le logo
+            </label>
+          </div>
+          {% endif %}
+          <input type="file" name="logo" class="form-control" accept="image/*">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label fw-600" style="font-size:.82rem;">Couleur principale</label>
+          <div class="d-flex align-items-center gap-2">
+            <input type="color" name="couleur_primaire" class="form-control form-control-color"
+                   value="{{ config.couleur_primaire }}" style="width:48px;height:38px;padding:2px;">
+            <input type="text" id="txt_couleur_primaire" class="form-control"
+                   value="{{ config.couleur_primaire }}" placeholder="#00173B" style="font-size:.83rem;">
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label fw-600" style="font-size:.82rem;">Couleur secondaire</label>
+          <div class="d-flex align-items-center gap-2">
+            <input type="color" name="couleur_secondaire" class="form-control form-control-color"
+                   value="{{ config.couleur_secondaire }}" style="width:48px;height:38px;padding:2px;">
+            <input type="text" id="txt_couleur_secondaire" class="form-control"
+                   value="{{ config.couleur_secondaire }}" placeholder="#D4AF37" style="font-size:.83rem;">
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ── COORDONNÉES ──────────────────────────────────────────────────────── -->
+  <div class="card border-0 shadow-sm mb-4" style="border-radius:14px;">
+    <div class="card-header border-0" style="background:#1e3a5f;border-radius:14px 14px 0 0;padding:14px 20px;">
+      <span style="color:#fff;font-weight:700;font-size:.9rem;"><i class="bi bi-geo-alt me-2"></i>Coordonnées</span>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label fw-600" style="font-size:.82rem;">Pays</label>
+          <input type="text" name="pays" class="form-control"
+                 value="{{ config.pays }}" placeholder="Sénégal">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-600" style="font-size:.82rem;">Ville</label>
+          <input type="text" name="ville" class="form-control"
+                 value="{{ config.ville }}" placeholder="Dakar">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-600" style="font-size:.82rem;">Téléphone</label>
+          <input type="text" name="telephone" class="form-control"
+                 value="{{ config.telephone }}" placeholder="+221 33 …">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-600" style="font-size:.82rem;">Adresse</label>
+          <input type="text" name="adresse" class="form-control"
+                 value="{{ config.adresse }}" placeholder="Km1, avenue Cheikh Anta DIOP…">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-600" style="font-size:.82rem;">Email institutionnel</label>
+          <input type="email" name="email" class="form-control"
+                 value="{{ config.email }}" placeholder="contact@exemple.com">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-600" style="font-size:.82rem;">Site web</label>
+          <input type="url" name="site_web" class="form-control"
+                 value="{{ config.site_web }}" placeholder="https://www.exemple.com">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SIGNATAIRES ──────────────────────────────────────────────────────── -->
+  <div class="card border-0 shadow-sm mb-4" style="border-radius:14px;">
+    <div class="card-header border-0" style="background:#374151;border-radius:14px 14px 0 0;padding:14px 20px;">
+      <span style="color:#fff;font-weight:700;font-size:.9rem;"><i class="bi bi-person-badge me-2"></i>Signataires</span>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label fw-600" style="font-size:.82rem;">Titre Directeur Général</label>
+          <input type="text" name="dg_titre" class="form-control" value="{{ config.dg_titre }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-600" style="font-size:.82rem;">Nom Directeur Général</label>
+          <input type="text" name="dg_nom" class="form-control"
+                 value="{{ config.dg_nom }}" placeholder="Pr. Prénom NOM">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-600" style="font-size:.82rem;">Titre Directeur des Études</label>
+          <input type="text" name="de_titre" class="form-control" value="{{ config.de_titre }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-600" style="font-size:.82rem;">Nom Directeur des Études</label>
+          <input type="text" name="de_nom" class="form-control"
+                 value="{{ config.de_nom }}" placeholder="Dr. Prénom NOM">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PORTAIL PUBLIC D'ADMISSION ───────────────────────────────────────── -->
+  <div class="card border-0 shadow-sm mb-4" style="border-radius:14px;">
+    <div class="card-header border-0" style="background:#0f766e;border-radius:14px 14px 0 0;padding:14px 20px;">
+      <span style="color:#fff;font-weight:700;font-size:.9rem;"><i class="bi bi-wallet2 me-2"></i>Portail public d'admission</span>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label fw-600" style="font-size:.82rem;">Informations de paiement</label>
+          <textarea name="informations_paiement" class="form-control" rows="4"
+                    placeholder="Ex : Wave : +221 77 000 00 00&#10;Orange Money : +221 78 000 00 00&#10;RIB : SN000 00000000000000000">{{ config.informations_paiement }}</textarea>
+          <div class="form-text" style="font-size:.78rem;">
+            Coordonnées affichées au candidat sur le portail pour régler ses frais d'inscription
+            (numéros Wave/Orange Money, RIB pour virement, etc.).
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ACTIONS ──────────────────────────────────────────────────────────── -->
+  <div class="d-flex gap-2 justify-content-end">
+    <a href="{% url 'academic_structure:institut_list' %}"
+       class="btn" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:9px;">
+      Annuler
+    </a>
+    <button type="submit" class="btn"
+            style="background:var(--navy);color:#fff;border-radius:9px;padding:9px 24px;font-weight:600;">
+      <i class="bi bi-check-lg me-1"></i>
+      {% if editing %}Enregistrer les modifications{% else %}Créer l'institut{% endif %}
+    </button>
+  </div>
+</form>
+
+<script>
+document.querySelectorAll('input[type="color"]').forEach(picker => {
+  const txt = document.getElementById('txt_' + picker.name);
+  if (!txt) return;
+  picker.addEventListener('input', () => { txt.value = picker.value; });
+  txt.addEventListener('input', () => {
+    if (/^#[0-9a-fA-F]{6}$/.test(txt.value)) picker.value = txt.value;
+  });
+});
+</script>
+{% endblock %}

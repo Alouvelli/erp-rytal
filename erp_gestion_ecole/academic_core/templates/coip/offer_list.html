@@ -1,0 +1,71 @@
+{% extends 'base/base.html' %}
+{% block title %}COIP — Offres de stage{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item active">Offres de stage</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-briefcase-fill"></i></span>
+    Offres de stage
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'coip:internship_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-person-workspace me-1"></i>Stages en cours</a>
+    <a href="{% url 'coip:offer_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Nouvelle offre</a>
+  </div>
+</div>
+
+<div class="card-section mb-3">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <input type="text" name="q" class="form-control form-control-sm" value="{{ request.GET.q }}" placeholder="Titre, partenaire…">
+      </div>
+      <div class="col-md-4">
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Tous statuts</option>
+          {% for code, label in status_choices %}
+          <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{% url 'coip:offer_list' %}" class="btn btn-outline-secondary btn-sm">Réinit.</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="table-responsive">
+    <table class="table" id="tbl-offers">
+      <thead><tr><th>Titre</th><th>Partenaire</th><th>Type</th><th>Filière</th><th>Statut</th><th>Rémunéré</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for o in offers %}
+        <tr>
+          <td style="font-size:.85rem;font-weight:600;">{{ o.titre }}</td>
+          <td style="font-size:.82rem;">{{ o.partner.raison_sociale }}</td>
+          <td style="font-size:.82rem;">{{ o.get_type_stage_display }}</td>
+          <td style="font-size:.82rem;color:#64748b;">{{ o.filiere_cible.name|default:"Toutes" }}</td>
+          <td><span class="badge bg-{{ o.statut_color }}">{{ o.get_status_display }}</span></td>
+          <td>{% if o.remunere %}<span class="badge bg-success">Oui</span>{% else %}<span class="badge bg-secondary">Non</span>{% endif %}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'coip:offer_edit' o.pk %}" class="btn-action edit" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'coip:offer_delete' o.pk %}" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-4">Aucune offre de stage.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>$(document).ready(function(){ $('#tbl-offers').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}}); });</script>
+{% endblock %}

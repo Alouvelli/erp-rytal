@@ -1,0 +1,93 @@
+{% extends 'base/base.html' %}
+{% block title %}Modifier le contrat{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'teachers:contrat_list' %}">Contrats Enseignants</a></li>
+<li class="breadcrumb-item active">{{ contrat.teacher.full_name }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003D82;"><i class="bi bi-file-earmark-text-fill"></i></span>
+    Contrat — {{ contrat.teacher.full_name }} ({{ contrat.department.name }})
+  </h1>
+  <a href="{% url 'teachers:contrat_pdf' contrat.pk %}" target="_blank" class="btn btn-primary">
+    <i class="bi bi-file-earmark-pdf"></i> Voir le PDF
+  </a>
+</div>
+
+<form method="post">
+  {% csrf_token %}
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title">Informations civiles de l'enseignant</h6>
+        </div>
+        <div class="p-3">
+          <p class="text-muted small mb-3">
+            Ces informations sont partagées par tous les contrats de cet enseignant (une seule identité civile).
+          </p>
+          {% for field in civil_form %}
+          <div class="mb-3">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-5">
+      <div class="card-section mb-4">
+        <div class="card-section-header">
+          <h6 class="card-section-title">Signature</h6>
+        </div>
+        <div class="p-3">
+          {% for field in contrat_form %}
+          <div class="mb-3">
+            <label class="form-label">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="text-danger small">{{ field.errors }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            Modules affectés — {{ contrat.academic_year.label }}
+            <span class="badge bg-secondary">calculé automatiquement</span>
+          </h6>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr><th>Module</th><th>Semestre</th><th>Classe</th><th>Volume</th></tr>
+            </thead>
+            <tbody>
+              {% for r in modules_rows %}
+              <tr>
+                <td>{{ r.module }}</td>
+                <td>{{ r.semestre }}</td>
+                <td>{{ r.classes }}</td>
+                <td>{{ r.volume }}H</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="4" class="text-muted text-center py-3">Aucun module affecté pour le moment.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Enregistrer</button>
+    <a href="{% url 'teachers:contrat_list' %}" class="btn btn-outline-secondary">Annuler</a>
+  </div>
+</form>
+{% endblock %}

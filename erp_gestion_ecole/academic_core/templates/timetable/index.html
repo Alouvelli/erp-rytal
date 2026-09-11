@@ -1,0 +1,548 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block title %}Emploi du temps{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ─── Calendar wrapper ─────────────────────────────────────────────────── */
+#calendar-wrapper { background:#fff; border-radius:12px; border:1px solid var(--border); overflow:hidden; }
+
+/* ─── FullCalendar overrides ────────────────────────────────────────────── */
+.fc { font-family: inherit; }
+.fc .fc-toolbar-title { font-size:1.05rem; font-weight:700; color:#1e293b; }
+.fc .fc-button { font-size:.78rem; font-weight:600; border-radius:7px !important; padding:5px 12px; }
+.fc .fc-button-primary { background:var(--navy); border-color:var(--navy); }
+.fc .fc-button-primary:hover { background:var(--navy-dark); border-color:var(--navy-dark); }
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active { background:var(--navy-dark); border-color:var(--navy-dark); }
+.fc .fc-button-group { gap:2px; }
+.fc .fc-today-button { background:var(--accent); border-color:var(--accent); color:#fff; }
+.fc .fc-today-button:hover { background:var(--accent-dark); border-color:var(--accent-dark); }
+
+/* ─── Column headers ────────────────────────────────────────────────────── */
+.fc .fc-col-header-cell { background:#f8fafc; padding:8px 4px; }
+.fc .fc-col-header-cell-cushion { font-size:.78rem; font-weight:700; color:#475569; text-decoration:none; text-transform:uppercase; letter-spacing:.04em; }
+.fc .fc-day-today .fc-col-header-cell-cushion { color:var(--navy); }
+.fc .fc-day-today { background:#eff6ff !important; }
+
+/* ─── Time slots ────────────────────────────────────────────────────────── */
+.fc .fc-timegrid-slot { height:2.4rem; border-color:#f1f5f9; }
+.fc .fc-timegrid-slot-label-cushion { font-size:.72rem; font-weight:600; color:#94a3b8; }
+.fc .fc-timegrid-axis-cushion { font-size:.72rem; color:#94a3b8; }
+.fc .fc-scrollgrid { border-color:#e2e8f0; }
+.fc .fc-scrollgrid td, .fc .fc-scrollgrid th { border-color:#e2e8f0; }
+.fc .fc-now-indicator-line { border-color:#ef4444; border-width:2px; }
+.fc .fc-now-indicator-arrow { border-top-color:#ef4444; border-bottom-color:#ef4444; }
+
+/* ─── Events ────────────────────────────────────────────────────────────── */
+.fc-event { border-radius:6px !important; border:none !important; padding:3px 6px; cursor:pointer; }
+.fc-event-title { font-size:.76rem; font-weight:700; line-height:1.3; }
+.fc-event-time { font-size:.7rem; opacity:.85; }
+.fc-daygrid-event { border-radius:5px !important; }
+.fc-list-event-title a { font-weight:600; color:#1e293b; text-decoration:none; }
+.fc-list-event:hover td { background:#f8fafc; }
+.fc .fc-list-event-dot { border-radius:50%; }
+
+/* ─── Event detail modal ─────────────────────────────────────────────────── */
+.ev-modal-header { border-radius:14px 14px 0 0; padding:16px 20px; }
+.ev-detail-row { display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+.ev-detail-row:last-child { border-bottom:none; }
+.ev-detail-icon { width:32px; height:32px; border-radius:8px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:.88rem; }
+.ev-detail-label { font-size:.72rem; color:#94a3b8; margin-bottom:2px; }
+.ev-detail-value { font-size:.86rem; font-weight:600; color:#1e293b; }
+
+/* ─── Filter bar ─────────────────────────────────────────────────────────── */
+.filter-chip { display:flex; align-items:center; gap:6px; padding:5px 12px; background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:8px; font-size:.78rem; font-weight:600; color:#475569; cursor:pointer; transition:all .15s; white-space:nowrap; }
+.filter-chip:hover { border-color:var(--navy); color:var(--navy); background:#eff6ff; }
+.filter-chip.active { border-color:var(--navy); background:var(--navy); color:#fff; }
+
+/* ─── Impression de la grille de planning (classe/enseignant/salle) ────────── */
+@media print {
+  body * { visibility: hidden; }
+  #pane-grid, #pane-grid * { visibility: visible; }
+  #pane-grid { display: block !important; position: absolute; top: 0; left: 0; width: 100%; padding: 0 !important; }
+  #print-grid-header { display: block !important; }
+}
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Emploi du temps</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:var(--navy);"><i class="bi bi-calendar2-week-fill"></i></span>Emploi du temps</h1>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if user.can_manage_dept %}
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-send-teachers">
+      <i class="bi bi-envelope me-1"></i>Envoyer aux enseignants
+    </button>
+    {% endif %}
+    {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+    <a href="{% url 'timetable:create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Ajouter une séance</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if user.can_manage_dept %}
+<!-- ── Modal : envoyer le planning à tous les enseignants d'un département ── -->
+<div class="modal fade" id="modal-send-teachers" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:14px;">
+      <form method="post" action="{% url 'timetable:send_teacher_planning_emails' %}"
+            onsubmit="return confirm('Envoyer par email à chaque enseignant concerné son emploi du temps personnel ?');">
+        {% csrf_token %}
+        <div class="modal-header" style="background:var(--navy);border-radius:14px 14px 0 0;">
+          <h6 class="modal-title text-white"><i class="bi bi-envelope me-2"></i>Envoyer les plannings aux enseignants</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p style="font-size:.85rem;color:#64748b;">
+            Chaque enseignant concerné recevra individuellement par email son propre emploi du temps
+            (toutes ses classes dans le périmètre choisi ci-dessous).
+          </p>
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Périmètre</label>
+          <select name="department" class="form-select form-select-sm">
+            <option value="">Tous les départements de l'institut</option>
+            {% for dept in all_departments %}
+            <option value="{{ dept.pk }}">{{ dept.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-sm" style="background:var(--navy);color:#fff;">
+            <i class="bi bi-send me-1"></i>Envoyer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Filtres ──────────────────────────────────────────────────────────── -->
+<div class="card-section mb-3">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-funnel"></i></span>
+      Filtres
+    </h6>
+    <a href="{% url 'timetable:index' %}" class="btn btn-outline-secondary btn-sm" id="btn-reset-filters" style="display:none;"><i class="bi bi-x-circle me-1"></i>Réinitialiser</a>
+  </div>
+  <div class="p-3">
+    <form method="get" id="filter-form" class="row g-2 align-items-end">
+      <!-- Année académique -->
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Année académique</label>
+        <select name="year" class="form-select form-select-sm" onchange="document.getElementById('filter-form').submit()">
+          {% for y in academic_years %}
+          <option value="{{ y.pk }}" {% if selected_year_param == y.pk|stringformat:"s" or not selected_year_param and y.is_current %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+          {% endfor %}
+          <option value="all" {% if selected_year_param == 'all' %}selected{% endif %}>Toutes les années</option>
+        </select>
+      </div>
+      <!-- Semestre -->
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Semestre</label>
+        <select name="semester" class="form-select form-select-sm" id="sel-semester" onchange="document.getElementById('filter-form').submit()">
+          <option value="">Tous les semestres</option>
+          {% for sem in semesters %}
+          <option value="{{ sem.pk }}" {% if request.GET.semester == sem.pk|stringformat:"s" %}selected{% endif %}>{{ sem.name }}{% if sem.is_locked %} 🔒 verrouillé{% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <!-- Classe -->
+      {% if user.role_name != 'ETUDIANT' %}
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Classe</label>
+        <select name="class_group" class="form-select form-select-sm" id="sel-class" onchange="document.getElementById('filter-form').submit()">
+          <option value="">Toutes les classes</option>
+          {% for cls in classes %}
+          <option value="{{ cls.pk }}" {% if request.GET.class_group == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      <!-- Enseignant -->
+      {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Enseignant</label>
+        <select name="teacher" class="form-select form-select-sm" onchange="document.getElementById('filter-form').submit()">
+          <option value="">Tous les enseignants</option>
+          {% for t in teachers %}
+          <option value="{{ t.pk }}" {% if request.GET.teacher == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.user.get_full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <!-- Salle -->
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Salle</label>
+        <select name="room" class="form-select form-select-sm" onchange="document.getElementById('filter-form').submit()">
+          <option value="">Toutes les salles</option>
+          {% for rm in rooms %}
+          <option value="{{ rm.pk }}" {% if request.GET.room == rm.pk|stringformat:"s" %}selected{% endif %}>{{ rm.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+    </form>
+    <!-- Résumé des filtres actifs -->
+    {% if request.GET.semester or request.GET.class_group or request.GET.teacher or request.GET.room %}
+    <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+      <span style="font-size:.72rem;color:#94a3b8;font-weight:600;">FILTRES ACTIFS :</span>
+      {% for sem in semesters %}{% if request.GET.semester == sem.pk|stringformat:"s" %}<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;background:#eff6ff;color:var(--navy);border-radius:20px;font-size:.75rem;font-weight:600;"><i class="bi bi-calendar3"></i>{{ sem.name }}{% if sem.is_locked %}<i class="bi bi-lock-fill" style="color:#dc2626;" title="Semestre verrouillé"></i>{% endif %}</span>{% endif %}{% endfor %}
+      {% for cls in classes %}{% if request.GET.class_group == cls.pk|stringformat:"s" %}<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;background:#f0fdf4;color:#16a34a;border-radius:20px;font-size:.75rem;font-weight:600;"><i class="bi bi-mortarboard"></i>{{ cls.name }}</span>{% endif %}{% endfor %}
+      <a href="{% url 'timetable:index' %}" style="font-size:.73rem;color:#dc2626;font-weight:600;text-decoration:none;margin-left:4px;"><i class="bi bi-x me-1"></i>Effacer</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Tabs Calendrier / Liste ─────────────────────────────────────────── -->
+<div class="card-section">
+  <div class="card-section-header" style="border-bottom:none;padding-bottom:0;">
+    <div style="display:flex;gap:4px;">
+      <button id="tab-cal" onclick="switchTab('calendar')"
+        style="padding:7px 18px;border-radius:8px 8px 0 0;border:1.5px solid var(--border);border-bottom:none;font-size:.82rem;font-weight:600;cursor:pointer;background:var(--navy);color:#fff;transition:all .15s;">
+        <i class="bi bi-calendar3 me-1"></i>Calendrier
+      </button>
+      <button id="tab-list" onclick="switchTab('list')"
+        style="padding:7px 18px;border-radius:8px 8px 0 0;border:1.5px solid var(--border);border-bottom:none;font-size:.82rem;font-weight:600;cursor:pointer;background:#f8fafc;color:#64748b;transition:all .15s;">
+        <i class="bi bi-list-ul me-1"></i>Liste
+      </button>
+      <button id="tab-grid" onclick="switchTab('grid')"
+        style="padding:7px 18px;border-radius:8px 8px 0 0;border:1.5px solid var(--border);border-bottom:none;font-size:.82rem;font-weight:600;cursor:pointer;background:#f8fafc;color:#64748b;transition:all .15s;">
+        <i class="bi bi-grid-3x3 me-1"></i>Grille
+      </button>
+    </div>
+    <!-- Export -->
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-print-grid"
+              {% if not planning_grid %}disabled title="Sélectionnez une classe, un enseignant ou une salle"{% endif %}
+              onclick="printPlanningGrid()">
+        <i class="bi bi-printer me-1"></i>Imprimer
+      </button>
+      <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" {% if not planning_grid %}disabled title="Sélectionnez une classe, un enseignant ou une salle"{% endif %}>
+          <i class="bi bi-download me-1"></i>Exporter
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="{% url 'timetable:planning_pdf' %}?{{ request.GET.urlencode }}"><i class="bi bi-file-pdf me-2 text-danger"></i>Planning PDF</a></li>
+          <li><a class="dropdown-item" href="{% url 'timetable:planning_word' %}?{{ request.GET.urlencode }}"><i class="bi bi-file-word me-2 text-primary"></i>Planning Word</a></li>
+          <li><a class="dropdown-item" href="{% url 'timetable:planning_excel' %}?{{ request.GET.urlencode }}"><i class="bi bi-file-excel me-2 text-success"></i>Planning Excel</a></li>
+        </ul>
+      </div>
+      {% if planning_grid and axis_label == 'Classe' and user.can_manage_dept %}
+      <form method="post" action="{% url 'timetable:send_class_planning_emails' %}" class="d-inline"
+            onsubmit="return confirm('Envoyer par email l\'emploi du temps de {{ axis_name|escapejs }} à chaque étudiant de cette classe ?');">
+        {% csrf_token %}
+        <input type="hidden" name="class_group" value="{{ request.GET.class_group }}">
+        <button type="submit" class="btn btn-sm" style="background:var(--navy);color:#fff;">
+          <i class="bi bi-envelope me-1"></i>Envoyer aux étudiants
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Calendrier -->
+  <div id="pane-calendar" style="padding:16px;">
+    <div id="calendar-wrapper">
+      <div id="calendar" style="padding:12px;"></div>
+    </div>
+  </div>
+
+  <!-- Liste -->
+  <div id="pane-list" style="display:none;">
+    <div class="table-responsive">
+      <table class="table" id="tbl-timetable">
+        <thead>
+          <tr>
+            <th>Jour</th>
+            <th>Horaire</th>
+            <th>Module (EC)</th>
+            <th>Classe</th>
+            <th>Enseignant</th>
+            <th>Salle</th>
+            <th>Semestre</th>
+            <th>Récurrence</th>
+            {% if user.is_admin or user.is_inst_admin or user.is_responsable %}<th>Actions</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+          <tr>
+            <td>
+              <span style="display:inline-flex;align-items:center;gap:5px;font-weight:600;font-size:.83rem;">
+                <span style="width:8px;height:8px;border-radius:50%;background:{{ entry.color }};flex-shrink:0;"></span>
+                {{ entry.get_day_of_week_display }}
+              </span>
+            </td>
+            <td style="white-space:nowrap;">
+              <div style="font-weight:600;font-size:.84rem;color:#1e293b;">{{ entry.start_time|time:"H:i" }} — {{ entry.end_time|time:"H:i" }}</div>
+              <div style="font-size:.73rem;color:#94a3b8;">{{ entry.duration_hours|floatformat:1 }}h</div>
+            </td>
+            <td>
+              <div style="display:flex;align-items:center;gap:7px;">
+                <span style="padding:2px 7px;border-radius:5px;font-size:.74rem;font-weight:700;background:{{ entry.color }}22;color:{{ entry.color }};">{{ entry.subject.code }}</span>
+                <span style="font-size:.84rem;font-weight:500;">{{ entry.subject.title|truncatechars:25 }}</span>
+              </div>
+            </td>
+            <td style="font-size:.83rem;color:#475569;font-weight:600;">{{ entry.class_group.name }}</td>
+            <td style="font-size:.83rem;color:#475569;">{{ entry.teacher.full_name }}</td>
+            <td><span style="font-size:.8rem;font-weight:600;background:#f8fafc;padding:2px 7px;border-radius:5px;border:1px solid var(--border);">{{ entry.room.name|default:"—" }}</span></td>
+            <td style="font-size:.8rem;color:#64748b;">{{ entry.semester.label|default:"—" }}</td>
+            <td><span class="badge-statut-en_cours" style="font-size:.73rem;">{{ entry.get_recurrence_display }}</span></td>
+            {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+            <td>
+              <a href="{% url 'timetable:edit' entry.pk %}" class="btn-action edit" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'timetable:delete' entry.pk %}" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></a>
+            </td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Grille (planning hebdomadaire) -->
+  <div id="pane-grid" style="display:none;padding:16px;">
+    {% if planning_grid %}
+    <div id="print-grid-header" style="display:none;text-align:center;margin-bottom:14px;">
+      <div style="font-weight:800;font-size:1.05rem;color:#1e3a5f;">Emploi du temps{% if axis_label %} — {{ axis_label }} : {{ axis_name }}{% endif %}</div>
+      {% if request.GET.semester %}{% for sem in semesters %}{% if request.GET.semester == sem.pk|stringformat:"s" %}<div style="font-size:.85rem;color:#64748b;">{{ sem.name }}</div>{% endif %}{% endfor %}{% endif %}
+    </div>
+    <div class="table-responsive">
+      <table style="width:100%;border-collapse:collapse;font-size:.8rem;" id="tbl-grid">
+        <thead>
+          <tr>
+            <th style="padding:8px;background:var(--navy);color:#fff;border:1px solid #1e293b;white-space:nowrap;">Horaire</th>
+            {% for d in planning_grid.days %}
+            <th style="padding:8px;background:var(--navy);color:#fff;border:1px solid #1e293b;text-align:center;">{{ d.label }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in planning_grid.rows %}
+          <tr>
+            <td style="padding:6px 8px;background:#f8fafc;border:1px solid var(--border);white-space:nowrap;font-weight:700;color:#64748b;font-size:.74rem;text-align:center;">
+              {{ row.start|time:"H:i" }}<br>{{ row.end|time:"H:i" }}
+            </td>
+            {% for cell in row.cells %}
+              {% if cell != None %}
+              <td rowspan="{{ cell.span }}" style="padding:6px 8px;border:1px solid var(--border);vertical-align:middle;text-align:center;
+                        {% if cell.entry %}background:{{ cell.entry.color }}15;{% endif %}">
+                {% if cell.entry %}
+                <div style="font-weight:700;color:{{ cell.entry.color }};font-size:.78rem;" title="{{ cell.entry.subject.code }} — {{ cell.entry.subject.title }}">{{ cell.entry.subject.title|truncatechars:28 }}</div>
+                <div style="font-size:.72rem;color:#475569;margin-top:2px;">
+                  {% if request.GET.class_group %}{{ cell.entry.teacher.full_name }}
+                  {% elif request.GET.teacher or user.is_enseignant %}{{ cell.entry.class_group.name }}
+                  {% elif request.GET.room %}{{ cell.entry.class_group.name }} · {{ cell.entry.teacher.full_name }}
+                  {% else %}{{ cell.entry.teacher.full_name }}{% endif %}
+                </div>
+                {% if cell.entry.room and not request.GET.room %}
+                <div style="font-size:.68rem;color:#94a3b8;"><i class="bi bi-door-open"></i> {{ cell.entry.room.name }}</div>
+                {% endif %}
+                {% endif %}
+              </td>
+              {% endif %}
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="padding:40px;text-align:center;color:#94a3b8;">
+      <i class="bi bi-grid-3x3" style="font-size:2.5rem;color:#e2e8f0;"></i>
+      <p style="margin-top:12px;font-size:.85rem;">Sélectionnez une classe, un enseignant ou une salle dans les filtres pour afficher la grille du planning.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ── Modal détail événement ─────────────────────────────────────────── -->
+<div class="modal fade" id="eventModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:440px;">
+    <div class="modal-content" style="border:none;border-radius:14px;overflow:hidden;">
+      <div class="ev-modal-header" id="evModalHeader" style="background:var(--navy);color:#fff;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <h6 class="mb-0 fw-bold" id="evModalTitle" style="font-size:.95rem;"></h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div id="evModalTime" style="font-size:.78rem;opacity:.85;margin-top:4px;"></div>
+      </div>
+      <div class="modal-body" style="padding:16px 20px;" id="evModalBody"></div>
+      <div class="modal-footer border-0 pt-0 pb-3 px-4" id="evModalFooter"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Cache-buster (_t) : empêche le navigateur de servir une réponse mise en
+// cache pour cette URL lors d'un changement de filtre (semestre/classe/
+// enseignant/salle), qui aurait sinon la même querystring qu'un chargement précédent.
+const EVENTS_URL = "{% url 'timetable:events_api' %}?{{ request.GET.urlencode }}&_t=" + Date.now();
+const IS_EDITOR  = {% if user.is_admin or user.is_inst_admin or user.is_responsable %}true{% else %}false{% endif %};
+const JOURS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+
+// ── Tab switch ──────────────────────────────────────────────────────────
+function switchTab(tab) {
+  const panes = { calendar: 'pane-calendar', list: 'pane-list', grid: 'pane-grid' };
+  const tabs  = { calendar: 'tab-cal',       list: 'tab-list',  grid: 'tab-grid'  };
+  Object.keys(panes).forEach(key => {
+    const active = key === tab;
+    document.getElementById(panes[key]).style.display = active ? '' : 'none';
+    document.getElementById(tabs[key]).style.background = active ? 'var(--navy)' : '#f8fafc';
+    document.getElementById(tabs[key]).style.color       = active ? '#fff' : '#64748b';
+  });
+  if (tab === 'calendar' && window._fc) window._fc.updateSize();
+}
+
+// ── Impression de la grille de planning ──────────────────────────────────
+function printPlanningGrid() {
+  switchTab('grid');
+  setTimeout(function () { window.print(); }, 50);
+}
+
+// ── FullCalendar ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+  // DataTable for list view
+  if (typeof $.fn.DataTable !== 'undefined') {
+    $('#tbl-timetable').DataTable({ language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json' } });
+  }
+
+  const calEl = document.getElementById('calendar');
+  const fc = new FullCalendar.Calendar(calEl, {
+    locale:          'fr',
+    firstDay:        1,               // Lundi en premier
+    initialView:     'timeGridWeek',
+    slotMinTime:     '08:00:00',
+    slotMaxTime:     '22:00:00',
+    slotDuration:    '00:30:00',
+    slotLabelInterval: '01:00:00',
+    allDaySlot:      false,
+    nowIndicator:    true,
+    height:          'auto',
+    expandRows:      true,
+    stickyHeaderDates: true,
+    weekends:        true,
+    businessHours: {
+      daysOfWeek: [1, 2, 3, 4, 5, 6],
+      startTime: '08:00',
+      endTime: '21:00',
+    },
+    headerToolbar: {
+      left:   'prev,next today',
+      center: 'title',
+      right:  'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+    },
+    buttonText: {
+      today:    "Aujourd'hui",
+      month:    'Mois',
+      week:     'Semaine',
+      day:      'Jour',
+      list:     'Agenda'
+    },
+    views: {
+      timeGridWeek: {
+        titleFormat: { day: 'numeric', month: 'long', year: 'numeric' },
+        dayHeaderFormat: { weekday: 'short', day: '2-digit', month: '2-digit' },
+      },
+      timeGridDay: {
+        titleFormat: { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' },
+      },
+      listWeek: {
+        listDayFormat:     { weekday: 'long', day: 'numeric', month: 'long' },
+        listDaySideFormat: false,
+      }
+    },
+    events: EVENTS_URL,
+
+    // ── Rendu des événements ─────────────────────────────────────────────
+    eventContent: function (arg) {
+      const p = arg.event.extendedProps;
+      const view = arg.view.type;
+      if (view === 'dayGridMonth') {
+        return { html: `<div style="padding:2px 5px;font-size:.72rem;font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${arg.event.title}</div>` };
+      }
+      return {
+        html: `
+          <div style="padding:4px 6px;height:100%;display:flex;flex-direction:column;gap:1px;overflow:hidden;">
+            <div style="font-weight:700;font-size:.76rem;line-height:1.2;">${arg.event.title}</div>
+            <div style="font-size:.69rem;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              <i class="bi bi-person-fill" style="margin-right:2px;"></i>${p.teacher}
+            </div>
+            <div style="font-size:.69rem;opacity:.85;">
+              <i class="bi bi-door-open" style="margin-right:2px;"></i>${p.room}
+            </div>
+          </div>`
+      };
+    },
+
+    // ── Clic sur un événement ─────────────────────────────────────────────
+    eventClick: function (info) {
+      const p   = info.event.extendedProps;
+      const bg  = info.event.backgroundColor || 'var(--navy)';
+      const s   = info.event.startStr.slice(11, 16);
+      const e   = info.event.endStr.slice(11, 16);
+      document.getElementById('evModalHeader').style.background = bg;
+      document.getElementById('evModalTitle').textContent = info.event.title;
+      document.getElementById('evModalTime').textContent = `${s} – ${e}`;
+      document.getElementById('evModalBody').innerHTML = `
+        <div class="ev-detail-row">
+          <div class="ev-detail-icon" style="background:${bg}22;"><i class="bi bi-book-fill" style="color:${bg};"></i></div>
+          <div><div class="ev-detail-label">Module (EC)</div><div class="ev-detail-value">${p.subject}</div></div>
+        </div>
+        <div class="ev-detail-row">
+          <div class="ev-detail-icon" style="background:#f0fdf4;"><i class="bi bi-mortarboard-fill" style="color:#16a34a;"></i></div>
+          <div><div class="ev-detail-label">Classe</div><div class="ev-detail-value">${p.class_group}</div></div>
+        </div>
+        <div class="ev-detail-row">
+          <div class="ev-detail-icon" style="background:#eff6ff;"><i class="bi bi-person-fill" style="color:var(--navy);"></i></div>
+          <div><div class="ev-detail-label">Enseignant</div><div class="ev-detail-value">${p.teacher}</div></div>
+        </div>
+        <div class="ev-detail-row">
+          <div class="ev-detail-icon" style="background:#fffbeb;"><i class="bi bi-door-open-fill" style="color:#d97706;"></i></div>
+          <div><div class="ev-detail-label">Salle</div><div class="ev-detail-value">${p.room}</div></div>
+        </div>
+        ${p.semester ? `<div class="ev-detail-row">
+          <div class="ev-detail-icon" style="background:#f5f3ff;"><i class="bi bi-calendar-range-fill" style="color:#7c3aed;"></i></div>
+          <div><div class="ev-detail-label">Semestre</div><div class="ev-detail-value">${p.semester}</div></div>
+        </div>` : ''}
+      `;
+      const footer = document.getElementById('evModalFooter');
+      footer.innerHTML = IS_EDITOR && p.edit_url
+        ? `<a href="${p.edit_url}" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i>Modifier</a>
+           <a href="${p.delete_url}" class="btn btn-outline-danger btn-sm" onclick="return confirm('Supprimer ce créneau ?')"><i class="bi bi-trash me-1"></i>Supprimer</a>`
+        : '';
+      new bootstrap.Modal(document.getElementById('eventModal')).show();
+    },
+
+    // ── Survol tooltip ────────────────────────────────────────────────────
+    eventMouseEnter: function (info) {
+      const p = info.event.extendedProps;
+      info.el.title = `${p.subject} | ${p.teacher} | Salle: ${p.room}`;
+    },
+
+    // ── Drag (admin) ──────────────────────────────────────────────────────
+    editable: IS_EDITOR,
+    eventDrop: function (info) {
+      const url = `/timetable/api/move/${info.event.id}/`;
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ start: info.event.startStr, end: info.event.endStr }),
+      }).then(r => { if (!r.ok) info.revert(); });
+    },
+  });
+  fc.render();
+  window._fc = fc;
+});
+</script>
+{% endblock %}

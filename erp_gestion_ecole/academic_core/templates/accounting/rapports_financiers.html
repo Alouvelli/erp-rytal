@@ -1,0 +1,391 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Rapports financiers{% endblock %}
+
+{% block extra_head %}
+<style>
+@media print {
+  @page { size: landscape; margin: 8mm; }
+  /* Impression globale : toutes les rubriques repliées s'impriment quand même. */
+  .collapse:not(.show) { display: block !important; height: auto !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<style>
+.rf-summary-card { background:#f8fafc;border-radius:10px;padding:14px 18px;text-align:center; }
+.rf-summary-value { font-size:1.15rem;font-weight:800;color:var(--navy); }
+.rf-summary-label { font-size:.76rem;color:#64748b; }
+/* Toutes les valeurs des tableaux du rapport tiennent sur une seule ligne —
+   la largeur de colonne s'ajuste, et le défilement horizontal du conteneur
+   parent (overflow-x:auto) prend le relais plutôt que de faire retomber le
+   texte sur 2 lignes (ex. "10 000 F" coupé en "10 000" / "F"). */
+.card-section table th, .card-section table td { white-space: nowrap; }
+</style>
+
+{% with y=selected_year.pk|default:'' %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-graph-up me-2" style="color:#0891b2;"></i>Rapports financiers
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Direction Administrative Financière</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap no-print">
+    <button type="button" class="btn btn-sm btn-outline-dark" onclick="window.print()">
+      <i class="bi bi-printer me-1"></i>Imprimer tout
+    </button>
+    <a href="{% url 'accounting:rapports_financiers_export_excel' %}?report={{ selected_report }}&year={{ y }}&classe={{ selected_class_id }}&from={{ request.GET.from }}&to={{ request.GET.to }}&month={{ request.GET.month }}"
+       class="btn btn-sm" style="background:#059669;color:#fff;">
+      <i class="bi bi-file-earmark-excel-fill me-1"></i>Excel
+    </a>
+    <a href="{% url 'accounting:rapports_financiers_export_pdf' %}?report={{ selected_report }}&year={{ y }}&classe={{ selected_class_id }}&from={{ request.GET.from }}&to={{ request.GET.to }}&month={{ request.GET.month }}"
+       class="btn btn-sm" style="background:#dc2626;color:#fff;">
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>PDF
+    </a>
+    <a href="{% url 'accounting:rapports_financiers_export_word' %}?report={{ selected_report }}&year={{ y }}&classe={{ selected_class_id }}&from={{ request.GET.from }}&to={{ request.GET.to }}&month={{ request.GET.month }}"
+       class="btn btn-sm" style="background:#1d4ed8;color:#fff;">
+      <i class="bi bi-file-earmark-word-fill me-1"></i>Word
+    </a>
+  </div>
+</div>
+{% endwith %}
+
+<!-- Filtres -->
+<div class="card-section mb-3" style="padding:14px 20px;">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-4 col-lg-3">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Rapport</label>
+      <select name="report" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for group_label, codes in REPORT_GROUPS %}
+        <optgroup label="{{ group_label }}">
+          {% for code, label in codes %}
+          <option value="{{ code }}" {% if selected_report == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </optgroup>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3 col-lg-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Année académique</label>
+      <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for y in years %}
+        <option value="{{ y.pk }}" {% if selected_year.pk == y.pk %}selected{% endif %}>{{ y.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3 col-lg-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Classe</label>
+      <select name="classe" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">Toutes les classes</option>
+        {% for c in classes %}
+        <option value="{{ c.pk }}" {% if selected_class_id == c.pk|stringformat:'s' %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2 col-lg-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Du</label>
+      <input type="date" name="from" value="{{ request.GET.from }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-md-2 col-lg-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Au</label>
+      <input type="date" name="to" value="{{ request.GET.to }}" class="form-control form-control-sm">
+    </div>
+    <div class="col-md-2 col-lg-1">
+      <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+    </div>
+  </form>
+</div>
+
+<div class="row g-3">
+  <!-- Contenu du rapport sélectionné -->
+  <div class="col-12">
+    <div class="card-section" style="padding:20px 24px;">
+      <h6 class="fw-bold mb-3" style="color:var(--navy);">{{ selected_report_label }}</h6>
+
+      {% if not selected_year %}
+      <div class="alert alert-warning" style="border-radius:10px;font-size:.85rem;">
+        Aucune année académique disponible.
+      </div>
+      {% else %}
+
+      {% if data.summary %}
+      <div class="row g-2 mb-3">
+        {% for label, value in data.summary %}
+        <div class="col-md-4">
+          <div class="rf-summary-card">
+            <div class="rf-summary-value">{{ value }}</div>
+            <div class="rf-summary-label">{{ label }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if data.chart_labels %}
+      <div class="mb-4" style="max-width:100%;">
+        <canvas id="rfChart" height="90"></canvas>
+      </div>
+      {% endif %}
+
+      {% if data.main_table_title %}
+      <!-- Rapport "Prévision et recette" : chaque tableau (détail par
+           niveau + chaque section de synthèse) est un panneau repliable,
+           replié par défaut, avec une bande de couleur propre en en-tête —
+           colonnes du tableau principal également colorées par rubrique. -->
+      <div class="card-section overflow-hidden mb-3">
+        <div class="card-section-header" data-bs-toggle="collapse" data-bs-target="#rf-main-collapse"
+             aria-expanded="false" aria-controls="rf-main-collapse"
+             style="cursor:pointer;background:{{ data.main_table_color|default:'#0d2244' }};border:none;">
+          <h6 class="card-section-title mb-0" style="color:#fff;">{{ data.main_table_title }}</h6>
+          <div class="d-flex align-items-center gap-2 no-print" onclick="event.stopPropagation();">
+            <a href="{% url 'accounting:rapports_financiers_export_excel' %}?report={{ selected_report }}&year={{ selected_year.pk|default:'' }}&section=main"
+               class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="Excel"><i class="bi bi-file-earmark-excel"></i></a>
+            <a href="{% url 'accounting:rapports_financiers_export_pdf' %}?report={{ selected_report }}&year={{ selected_year.pk|default:'' }}&section=main"
+               class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="PDF"><i class="bi bi-file-earmark-pdf"></i></a>
+            <a href="{% url 'accounting:rapports_financiers_export_word' %}?report={{ selected_report }}&year={{ selected_year.pk|default:'' }}&section=main"
+               class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="Word"><i class="bi bi-file-earmark-word"></i></a>
+            <button type="button" class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;"
+                    onclick="rfPrintSection('rf-main-table', '{{ data.main_table_title }}');" title="Imprimer"><i class="bi bi-printer"></i></button>
+          </div>
+          <i class="bi bi-chevron-down rf-chevron" style="color:#fff;transition:transform .2s;"></i>
+        </div>
+        <div class="collapse" id="rf-main-collapse">
+          <div style="overflow-x:auto;">
+            <table id="rf-main-table" class="table table-hover mb-0" style="font-size:.83rem;">
+              <thead>
+                <tr style="background:#0d2244;color:#fff;">
+                  {% if data.header_cells %}
+                  {% for cell in data.header_cells %}
+                  <th style="padding:9px 14px;{% if cell.color %}background:{{ cell.color }};{% endif %}">{{ cell.label }}</th>
+                  {% endfor %}
+                  {% else %}
+                  {% for col in data.columns %}
+                  <th style="padding:9px 14px;">{{ col }}</th>
+                  {% endfor %}
+                  {% endif %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in data.rows %}
+                <tr>
+                  {% for cell in row %}
+                  <td style="padding:7px 14px;">{{ cell }}</td>
+                  {% endfor %}
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="{{ data.columns|length|default:1 }}" class="text-center text-muted py-4">
+                    Aucune donnée pour ce rapport avec les filtres actuels.
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {% for section in data.sections %}
+      <div class="card-section overflow-hidden mb-3">
+        <div class="card-section-header" data-bs-toggle="collapse" data-bs-target="#rf-sec-collapse-{{ forloop.counter }}"
+             aria-expanded="false" aria-controls="rf-sec-collapse-{{ forloop.counter }}"
+             style="cursor:pointer;background:{{ section.color|default:'#0d2244' }};border:none;">
+          <h6 class="card-section-title mb-0" style="color:#fff;">{{ section.title }}</h6>
+          <div class="d-flex align-items-center gap-2 no-print" onclick="event.stopPropagation();">
+            <a href="{% url 'accounting:rapports_financiers_export_excel' %}?report={{ selected_report }}&year={{ selected_year.pk|default:'' }}&section={{ forloop.counter0 }}"
+               class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="Excel"><i class="bi bi-file-earmark-excel"></i></a>
+            <a href="{% url 'accounting:rapports_financiers_export_pdf' %}?report={{ selected_report }}&year={{ selected_year.pk|default:'' }}&section={{ forloop.counter0 }}"
+               class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="PDF"><i class="bi bi-file-earmark-pdf"></i></a>
+            <a href="{% url 'accounting:rapports_financiers_export_word' %}?report={{ selected_report }}&year={{ selected_year.pk|default:'' }}&section={{ forloop.counter0 }}"
+               class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="Word"><i class="bi bi-file-earmark-word"></i></a>
+            <button type="button" class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;"
+                    onclick="rfPrintSection('rf-sec-table-{{ forloop.counter }}', '{{ section.title }}');" title="Imprimer"><i class="bi bi-printer"></i></button>
+          </div>
+          <i class="bi bi-chevron-down rf-chevron" style="color:#fff;transition:transform .2s;"></i>
+        </div>
+        <div class="collapse" id="rf-sec-collapse-{{ forloop.counter }}">
+          {% if section.summary %}
+          <div class="row g-2 p-3 mb-0">
+            {% for label, value in section.summary %}
+            <div class="col-md-4">
+              <div class="rf-summary-card">
+                <div class="rf-summary-value">{{ value }}</div>
+                <div class="rf-summary-label">{{ label }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div style="overflow-x:auto;">
+            <table id="rf-sec-table-{{ forloop.counter }}" class="table table-hover mb-0" style="font-size:.83rem;">
+              <thead>
+                <tr style="background:#0d2244;color:#fff;">
+                  {% for col in section.columns %}
+                  <th style="padding:9px 14px;">{{ col }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in section.rows %}
+                <tr>
+                  {% for cell in row %}
+                  <td style="padding:7px 14px;">{{ cell }}</td>
+                  {% endfor %}
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="{{ section.columns|length|default:1 }}" class="text-center text-muted py-4">
+                    Aucune donnée.
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+
+      {% else %}
+      <div style="overflow-x:auto;">
+        <table class="table table-hover mb-0" style="font-size:.83rem;">
+          <thead>
+            <tr style="background:#0d2244;color:#fff;">
+              {% for col in data.columns %}
+              <th style="padding:9px 14px;">{{ col }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in data.rows %}
+            <tr>
+              {% for cell in row %}
+              <td style="padding:7px 14px;">{{ cell }}</td>
+              {% endfor %}
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="{{ data.columns|length|default:1 }}" class="text-center text-muted py-4">
+                Aucune donnée pour ce rapport avec les filtres actuels.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% for section in data.sections %}
+      <hr class="my-4">
+      <h6 class="fw-bold mb-3" style="color:var(--navy);">{{ section.title }}</h6>
+
+      {% if section.summary %}
+      <div class="row g-2 mb-3">
+        {% for label, value in section.summary %}
+        <div class="col-md-4">
+          <div class="rf-summary-card">
+            <div class="rf-summary-value">{{ value }}</div>
+            <div class="rf-summary-label">{{ label }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div style="overflow-x:auto;">
+        <table class="table table-hover mb-0" style="font-size:.83rem;">
+          <thead>
+            <tr style="background:#0d2244;color:#fff;">
+              {% for col in section.columns %}
+              <th style="padding:9px 14px;">{{ col }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in section.rows %}
+            <tr>
+              {% for cell in row %}
+              <td style="padding:7px 14px;">{{ cell }}</td>
+              {% endfor %}
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="{{ section.columns|length|default:1 }}" class="text-center text-muted py-4">
+                Aucune donnée.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+      {% endif %}
+
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function rfPrintSection(tableId, title) {
+  var table = document.getElementById(tableId);
+  if (!table) return;
+  var win = window.open('', '_blank');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8">' +
+    '<title>' + title + '</title><style>' +
+    'body{font-family:Arial,sans-serif;font-size:11px;margin:16px;}' +
+    'h2{color:#0d2244;margin-bottom:4px;}' +
+    'p{color:#64748b;font-size:10px;margin:0 0 10px;}' +
+    'table{width:100%;border-collapse:collapse;}' +
+    'th{background:#0d2244;color:#fff;padding:5px 8px;text-align:center;font-size:9px;}' +
+    'td{padding:4px 8px;border-bottom:1px solid #e2e8f0;font-size:9px;text-align:center;}' +
+    'tr:nth-child(even) td{background:#f8fafc;}' +
+    '@media print{body{margin:8px;}}' +
+    '</style></head><body>' +
+    '<h2>' + title + '</h2>' +
+    '<p>Généré le ' + new Date().toLocaleDateString('fr-FR') + '</p>' +
+    table.outerHTML + '</body></html>');
+  win.document.close();
+  win.focus();
+  setTimeout(function () { win.print(); }, 400);
+}
+</script>
+{% if data.chart_labels %}
+<script>
+new Chart(document.getElementById('rfChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ data.chart_labels|safe }},
+    datasets: [{
+      label: 'Recette perçue (FCFA)',
+      data: {{ data.chart_data|safe }},
+      backgroundColor: '#0d2244',
+      borderRadius: 4,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true } },
+  }
+});
+</script>
+{% endif %}
+{% if data.main_table_title %}
+<script>
+document.querySelectorAll('.card-section-header[data-bs-toggle="collapse"]').forEach(function (header) {
+  var targetSel = header.getAttribute('data-bs-target');
+  var target = targetSel && document.querySelector(targetSel);
+  var chevron = header.querySelector('.rf-chevron');
+  if (!target || !chevron) return;
+  target.addEventListener('show.bs.collapse', function () { chevron.style.transform = 'rotate(180deg)'; });
+  target.addEventListener('hide.bs.collapse', function () { chevron.style.transform = ''; });
+});
+</script>
+{% endif %}
+{% endblock %}

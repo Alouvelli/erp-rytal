@@ -1,0 +1,170 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Cartes du Personnel{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+      <h4 class="mb-0 fw-bold"><i class="bi bi-credit-card-2-front me-2 text-primary"></i>Cartes du Personnel</h4>
+      <small class="text-muted">Générez et imprimez les cartes d'identité avec QR Code de présence</small>
+    </div>
+    <!-- Générer tous les matricules manquants -->
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="gen_all">
+      <button type="submit" class="btn btn-primary fw-semibold">
+        <i class="bi bi-magic me-2"></i>Générer les matricules manquants
+      </button>
+    </form>
+  </div>
+
+  <!-- Stats -->
+  <div class="row g-3 mb-4">
+    {% with total=staff_list|length %}
+    <div class="col-sm-6 col-lg-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="fw-bold fs-3 text-primary">{{ total }}</div>
+        <div class="text-muted" style="font-size:.82rem;">Total personnel</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        {% with cnt=staff_list %}
+        <div class="fw-bold fs-3 text-success" id="cnt-avec">—</div>
+        {% endwith %}
+        <div class="text-muted" style="font-size:.82rem;">Avec matricule</div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="fw-bold fs-3 text-warning" id="cnt-sans">—</div>
+        <div class="text-muted" style="font-size:.82rem;">Sans matricule</div>
+      </div>
+    </div>
+    {% endwith %}
+  </div>
+
+  <!-- Table -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between gap-3 flex-wrap">
+      <span class="fw-semibold">Liste du personnel</span>
+      <input type="search" id="search-input" class="form-control form-control-sm"
+             placeholder="Rechercher un employé…" style="max-width:260px;"
+             oninput="filterTable(this.value)">
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" id="staff-table">
+        <thead class="table-light">
+          <tr>
+            <th style="width:40px;"></th>
+            <th>Nom & Prénom</th>
+            <th>Rôle</th>
+            <th>Département / Direction</th>
+            <th>Matricule</th>
+            <th class="text-center">Statut</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for emp in staff_list %}
+          <tr data-search="{{ emp.get_full_name|lower }} {% if emp.role.name == 'INST_ADMIN' %}directeur général{% else %}{{ emp.role.get_name_display|lower }}{% endif %}">
+            <!-- Avatar -->
+            <td>
+              {% if emp.avatar %}
+              <img src="{{ emp.avatar.url }}" class="rounded-circle" width="36" height="36"
+                   style="object-fit:cover;border:2px solid #e2e8f0;">
+              {% else %}
+              <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold text-white"
+                   style="width:36px;height:36px;background:linear-gradient(135deg,#1565c0,#0d2244);font-size:.75rem;">
+                {{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}
+              </div>
+              {% endif %}
+            </td>
+            <!-- Nom -->
+            <td>
+              <div class="fw-semibold">{{ emp.get_full_name }}</div>
+              <small class="text-muted">{{ emp.email }}</small>
+            </td>
+            <!-- Rôle -->
+            <td><span class="badge bg-light text-dark border" style="font-size:.75rem;">{% if emp.role.name == 'INST_ADMIN' %}Directeur Général{% else %}{{ emp.role.get_name_display|default:'—' }}{% endif %}</span></td>
+            <!-- Dept -->
+            <td class="text-muted" style="font-size:.83rem;">
+              {% if emp.department %}{{ emp.department.name }}{% elif emp.direction %}{{ emp.direction.name }}{% elif emp.institut_config %}{{ emp.institut_config.nom }}{% else %}—{% endif %}
+            </td>
+            <!-- Matricule -->
+            <td>
+              {% if emp.matricule_employe %}
+              <code style="font-size:.8rem;color:#0d2244;font-weight:700;">{{ emp.matricule_employe }}</code>
+              {% else %}
+              <span class="text-danger" style="font-size:.8rem;"><i class="bi bi-x-circle me-1"></i>Non généré</span>
+              {% endif %}
+            </td>
+            <!-- Statut -->
+            <td class="text-center">
+              {% if emp.matricule_employe %}
+              <span class="badge bg-success-subtle text-success border border-success-subtle">
+                <i class="bi bi-check-circle-fill me-1"></i>Carte prête
+              </span>
+              {% else %}
+              <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                <i class="bi bi-exclamation-circle-fill me-1"></i>Sans matricule
+              </span>
+              {% endif %}
+            </td>
+            <!-- Actions -->
+            <td class="text-center">
+              <div class="d-flex gap-1 justify-content-center">
+                <a href="{% url 'hr:carte_employe' emp.pk %}"
+                   class="btn btn-sm btn-outline-primary" title="Voir la carte">
+                  <i class="bi bi-eye"></i>
+                </a>
+                <a href="{% url 'hr:carte_employe' emp.pk %}?print=1"
+                   target="_blank"
+                   class="btn btn-sm btn-outline-secondary" title="Imprimer">
+                  <i class="bi bi-printer"></i>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-5 text-muted">
+              <i class="bi bi-people fs-2 d-block mb-2"></i>
+              Aucun membre du personnel trouvé.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Compteurs
+(function() {
+  const rows = document.querySelectorAll('#staff-table tbody tr[data-search]');
+  let avec = 0, sans = 0;
+  rows.forEach(r => {
+    const mat = r.querySelector('code');
+    if (mat) avec++; else sans++;
+  });
+  document.getElementById('cnt-avec').textContent = avec;
+  document.getElementById('cnt-sans').textContent = sans;
+})();
+
+function filterTable(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('#staff-table tbody tr[data-search]').forEach(r => {
+    r.style.display = r.dataset.search.includes(q) ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

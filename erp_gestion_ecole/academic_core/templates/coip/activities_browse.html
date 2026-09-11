@@ -1,0 +1,39 @@
+{% extends 'base/base.html' %}
+{% block title %}Activités COIP{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Activités COIP</li>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-calendar-event-fill"></i></span>
+    Activités à venir
+  </h1>
+</div>
+
+<div class="row g-3">
+  {% for a in activities %}
+  <div class="col-lg-6">
+    <div class="card-section p-3">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <h6 class="mb-0" style="font-weight:700;">{{ a.titre }}</h6>
+        <span class="badge bg-secondary">{{ a.get_type_activite_display }}</span>
+      </div>
+      <div style="font-size:.83rem;color:#64748b;">{{ a.date_debut|date:"d/m/Y H:i" }} · {{ a.lieu|default:"—" }}</div>
+      {% if a.description %}<p class="mt-2 mb-2" style="font-size:.85rem;">{{ a.description|truncatewords:30 }}</p>{% endif %}
+      {% if a.pk in registered_ids %}
+      <form method="post" action="{% url 'coip:activity_unregister' a.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-x-lg me-1"></i>Se désinscrire</button>
+      </form>
+      {% else %}
+      <form method="post" action="{% url 'coip:activity_register' a.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>S'inscrire</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12"><div class="card-section p-4 text-center text-muted">Aucune activité planifiée pour le moment.</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

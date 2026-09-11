@@ -1,0 +1,61 @@
+{% extends "base/base.html" %}
+{% block title %}Salaire — {{ employe.get_full_name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{% url 'hr:salaire_list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <div>
+      <h5 class="mb-0 fw-bold">Configuration salariale — {{ employe.get_full_name }}</h5>
+      <small class="text-muted">Ce montant sert de base à la génération automatique des bulletins mensuels</small>
+    </div>
+  </div>
+
+  <form method="post" class="card border-0 shadow-sm">
+    {% csrf_token %}
+    <div class="card-body p-4">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Salaire de base (FCFA)</label>
+          <input type="number" step="1" name="salaire_base" value="{{ config.salaire_base|floatformat:0 }}" class="form-control" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Primes / Indemnités (FCFA)</label>
+          <input type="number" step="1" name="primes" value="{{ config.primes|floatformat:0 }}" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Retenues / Cotisations (FCFA)</label>
+          <input type="number" step="1" name="retenues" value="{{ config.retenues|floatformat:0 }}" class="form-control">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Date d'embauche</label>
+          <input type="date" name="date_embauche" value="{{ fiche.date_embauche|date:'Y-m-d' }}" class="form-control">
+        </div>
+        <div class="col-md-8">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Ancienneté</label>
+          <div class="form-control bg-light" style="font-size:.9rem;">{{ anciennete|default:"— (renseignez la date d'embauche)" }}</div>
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Détail des primes / retenues (notes)</label>
+          <textarea name="notes" rows="3" class="form-control" placeholder="Ex : Prime de transport 25 000, IPRES 6%…">{{ config.notes }}</textarea>
+        </div>
+        <div class="col-12 form-check">
+          <input type="checkbox" name="is_active" id="is_active" class="form-check-input" {% if config.is_active %}checked{% endif %}>
+          <label class="form-check-label" for="is_active" style="font-size:.85rem;">
+            Configuration active (prise en compte lors de la génération des bulletins)
+          </label>
+        </div>
+      </div>
+      <div class="alert alert-light border mt-3 mb-0" style="font-size:.83rem;">
+        <i class="bi bi-info-circle me-1"></i>
+        Net à payer estimé : <strong>{{ config.salaire_net|floatformat:0 }} FCFA</strong>
+      </div>
+    </div>
+    <div class="card-footer bg-white border-top d-flex justify-content-end gap-2 py-3">
+      <a href="{% url 'hr:salaire_list' %}" class="btn btn-outline-secondary">Annuler</a>
+      <button type="submit" class="btn btn-primary fw-semibold"><i class="bi bi-check2-circle me-1"></i>Enregistrer</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

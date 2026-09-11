@@ -1,0 +1,72 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if form.instance.pk %}Modifier{% else %}Nouvelle{% endif %} opportunité{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:opportunity_list' %}">Opportunités</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Modifier{% else %}Nouvelle{% endif %}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-megaphone-fill"></i></span>
+    {% if form.instance.pk %}Modifier l'opportunité{% else %}Nouvelle opportunité{% endif %}
+  </h1>
+</div>
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card-section">
+      <div class="p-4">
+        <form method="post">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Titre <span class="text-danger">*</span></label>
+              {{ form.titre }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Type</label>
+              {{ form.type_opportunite }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Description</label>
+              {{ form.description }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Partenaire</label>
+              {{ form.partner }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Lieu</label>
+              {{ form.lieu }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Filière ciblée</label>
+              {{ form.filiere_cible }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Niveau ciblé</label>
+              {{ form.niveau_cible }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Date limite</label>
+              {{ form.date_limite }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Rémunération</label>
+              {{ form.remuneration }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Statut</label>
+              {{ form.status }}
+            </div>
+          </div>
+          <div class="d-flex gap-2 justify-content-end border-top pt-3 mt-3">
+            <a href="{% url 'coip:opportunity_list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

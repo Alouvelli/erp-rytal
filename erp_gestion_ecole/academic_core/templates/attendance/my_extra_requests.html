@@ -1,0 +1,79 @@
+{% extends 'base/base.html' %}
+{% block title %}Mes demandes de séances supplémentaires{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_list' %}">Émargements</a></li>
+<li class="breadcrumb-item active">Mes demandes</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#b45309;"><i class="bi bi-clock-history"></i></span>
+    Mes demandes de séances supplémentaires
+  </h1>
+  <a href="{% url 'attendance:extra_request_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>Nouvelle demande
+  </a>
+</div>
+
+{% if extra_requests %}
+<div class="card-section">
+  <div class="table-responsive">
+    <table class="table" style="font-size:.85rem;">
+      <thead>
+        <tr>
+          <th>Module (EC)</th>
+          <th>Classe</th>
+          <th>Année</th>
+          <th class="text-center">Demandé</th>
+          <th class="text-center">Accordé</th>
+          <th class="text-center">Statut</th>
+          <th>Note admin</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in extra_requests %}
+        <tr>
+          <td style="font-weight:600;">{{ r.subject.title }}</td>
+          <td>{{ r.class_group.name }}</td>
+          <td style="font-size:.78rem;color:#64748b;">{{ r.academic_year }}</td>
+          <td class="text-center">{{ r.extra_hours_requested }}h</td>
+          <td class="text-center">
+            {% if r.extra_hours_approved %}
+              <span style="font-weight:700;color:#16a34a;">{{ r.extra_hours_approved }}h</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-center">
+            {% if r.status == 'PENDING' %}
+              <span style="background:#fef3c7;color:#92400e;border-radius:20px;padding:3px 10px;font-size:.75rem;font-weight:600;">
+                <i class="bi bi-hourglass-split me-1"></i>En attente
+              </span>
+            {% elif r.status == 'APPROVED' %}
+              <span style="background:#dcfce7;color:#166534;border-radius:20px;padding:3px 10px;font-size:.75rem;font-weight:600;">
+                <i class="bi bi-check-circle me-1"></i>Approuvée
+              </span>
+            {% else %}
+              <span style="background:#fee2e2;color:#991b1b;border-radius:20px;padding:3px 10px;font-size:.75rem;font-weight:600;">
+                <i class="bi bi-x-circle me-1"></i>Rejetée
+              </span>
+            {% endif %}
+          </td>
+          <td style="font-size:.78rem;color:#64748b;max-width:200px;">{{ r.admin_note|default:"-" }}</td>
+          <td style="font-size:.78rem;color:#94a3b8;white-space:nowrap;">{{ r.created_at|date:"d/m/Y" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card-section">
+  <div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+    <i class="bi bi-clock-history d-block mb-3" style="font-size:2.5rem;color:#cbd5e1;"></i>
+    <div style="font-size:.9rem;font-weight:600;">Aucune demande</div>
+    <div style="font-size:.8rem;margin-top:4px;">Vous n'avez pas encore soumis de demande de séances supplémentaires.</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base/base.html" %}
+
+{% block title %}Plans de Travail Annuels{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-journal-check me-2"></i>Plans de Travail Annuels
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Suivi institut — tous les titulaires</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'strategic_plan:pta_my_plan' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-journal-check me-1"></i>Mon PTA
+    </a>
+  </div>
+</div>
+
+<div class="card-section mb-3" style="padding:16px 20px;">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Année académique</label>
+      <select name="annee" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for y in academic_years %}
+        <option value="{{ y.pk }}" {% if selected_year.pk == y.pk %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+</div>
+
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Titulaire</th>
+          <th>Rôle</th>
+          <th>Direction</th>
+          <th class="text-center">Lignes</th>
+          <th style="width:200px;">Taux de réalisation</th>
+          <th class="text-center" style="width:120px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in plans %}
+        <tr>
+          <td style="padding:8px 16px;font-weight:700;color:var(--navy);">{{ p.titulaire.get_full_name }}</td>
+          <td style="font-size:.78rem;">{{ p.titulaire.role.get_name_display }}</td>
+          <td style="font-size:.78rem;">{{ p.direction.name|default:"—" }}</td>
+          <td class="text-center">{{ p.nb_lignes }}</td>
+          <td>
+            {% if p.nb_lignes %}
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height:8px;background:#e2e8f0;">
+                <div class="progress-bar" role="progressbar" style="width:{{ p.taux_realisation }}%;background:{% if p.taux_realisation >= 100 %}#16a34a{% elif p.taux_realisation >= 50 %}#1d4ed8{% elif p.taux_realisation > 0 %}#d97706{% else %}#94a3b8{% endif %};"></div>
+              </div>
+              <span class="fw-semibold" style="font-size:.75rem;min-width:34px;">{{ p.taux_realisation }}%</span>
+            </div>
+            {% else %}
+            <span class="text-muted" style="font-size:.75rem;">—</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            <a href="{% url 'strategic_plan:pta_plan_detail' p.pk %}" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 10px;font-size:.72rem;">
+              <i class="bi bi-eye me-1"></i>Voir
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:40px;">Aucun Plan de Travail Annuel pour cette année.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

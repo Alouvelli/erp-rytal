@@ -1,0 +1,120 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ indicateur.libelle }}{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-speedometer2 me-2"></i>{{ indicateur.code }} — {{ indicateur.libelle }}
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">{{ indicateur.get_periodicite_display }} · Responsable : {{ indicateur.responsable.get_full_name|default:"—" }}</p>
+  </div>
+  <a href="{% url 'indicators:indicateur_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:.72rem;color:#64748b;font-weight:700;">CIBLE</div>
+      <div style="font-size:1.1rem;font-weight:700;color:var(--navy);">{{ indicateur.valeur_cible|floatformat:2 }} {{ indicateur.unite }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:.72rem;color:#64748b;font-weight:700;">ACTUELLE</div>
+      <div style="font-size:1.1rem;font-weight:700;color:var(--navy);">{{ indicateur.valeur_actuelle|floatformat:2 }} {{ indicateur.unite }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:.72rem;color:#64748b;font-weight:700;">RÉALISATION</div>
+      <div style="font-size:1.1rem;font-weight:700;
+        {% if indicateur.etat == 'vert' %}color:#166534;{% elif indicateur.etat == 'orange' %}color:#92400e;{% else %}color:#991b1b;{% endif %}">
+        {{ indicateur.taux_realisation|floatformat:0 }}%
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section text-center" style="padding:16px;">
+      <div style="font-size:.72rem;color:#64748b;font-weight:700;">RESPONSABLE</div>
+      <div style="font-size:.95rem;font-weight:700;color:var(--navy);">{{ indicateur.responsable.get_full_name|default:"—" }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="card-section mb-3" style="padding:20px;">
+  <h6 class="fw-bold mb-3" style="color:var(--navy);"><i class="bi bi-graph-up me-2"></i>Évolution (24 dernières mesures)</h6>
+  {% if mesures %}
+  <div style="position:relative;height:300px;"><canvas id="chartHistorique"></canvas></div>
+  {% else %}
+  <p class="text-muted text-center" style="padding:20px;">Aucune mesure enregistrée.</p>
+  {% endif %}
+</div>
+
+<div class="card-section" style="padding:20px;">
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <h6 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-clipboard-data me-2"></i>Historique des mesures</h6>
+    <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('mesureModal')).show()"><i class="bi bi-plus-lg me-1"></i>Saisir une mesure</button>
+  </div>
+  <table class="table table-sm" style="font-size:.8rem;">
+    <thead><tr><th>Date</th><th class="text-end">Valeur</th><th>Commentaire</th><th>Saisi par</th></tr></thead>
+    <tbody>
+      {% for m in mesures reversed %}
+      <tr><td>{{ m.date_mesure|date:"d/m/Y" }}</td><td class="text-end">{{ m.valeur|floatformat:2 }}</td><td>{{ m.commentaire|truncatechars:60 }}</td><td>{{ m.saisi_par.get_full_name|default:"—" }}</td></tr>
+      {% empty %}<tr><td colspan="4" class="text-center text-muted py-3">Aucune mesure.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="modal fade" id="mesureModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Saisir une mesure</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'indicators:valeur_create' %}">
+        {% csrf_token %}
+        <input type="hidden" name="indicateur" value="{{ indicateur.pk }}">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Date de mesure <span class="text-danger">*</span></label>
+            <input type="date" name="date_mesure" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Valeur <span class="text-danger">*</span></label>
+            <input type="number" name="valeur" class="form-control" step="0.01" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Commentaire</label>
+            <textarea name="commentaire" class="form-control" rows="2"></textarea></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if mesures %}
+<script>
+new Chart(document.getElementById('chartHistorique'), {
+  type: 'line',
+  data: {
+    labels: {{ chart_labels_json|safe }},
+    datasets: [{
+      label: '{{ indicateur.libelle|escapejs }}',
+      data: {{ chart_values_json|safe }},
+      borderColor: '#1e3a5f',
+      backgroundColor: 'rgba(30,58,95,0.1)',
+      tension: 0.3,
+      fill: true,
+    }],
+  },
+  options: { responsive: true, maintainAspectRatio: false },
+});
+</script>
+{% endif %}
+{% endblock %}

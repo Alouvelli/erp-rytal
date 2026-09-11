@@ -1,0 +1,234 @@
+{% extends "base/base.html" %}
+
+{% block title %}Plan de Travail Annuel{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-journal-check me-2"></i>Plan de Travail Annuel
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">
+      {{ plan.titulaire.get_full_name }}{% if plan.direction %} — {{ plan.direction.name }}{% endif %} — {{ plan.academic_year }}
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap no-print">
+    {% if has_oversight %}
+    <a href="{% url 'strategic_plan:pta_all_plans' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>{% if is_owner %}Tous les PTA{% else %}Retour{% endif %}
+    </a>
+    {% else %}
+    <a href="{% url 'dashboard:index' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    {% endif %}
+    {% if is_owner %}
+    <a href="{% url 'strategic_plan:pta_import' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-file-earmark-arrow-up-fill me-1"></i>Importer
+    </a>
+    {% endif %}
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+      <i class="bi bi-printer-fill me-1"></i>Imprimer
+    </button>
+    <a href="{% url 'strategic_plan:pta_pdf' plan.pk %}" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>Télécharger PDF
+    </a>
+    {% if is_owner %}
+    <button type="button" class="btn btn-primary btn-sm" onclick="openPtaLigneModal('create')">
+      <i class="bi bi-plus-lg me-1"></i>Ajouter une ligne
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+{% if is_owner %}
+<div class="card-section mb-3 no-print" style="padding:16px 20px;">
+  <form method="get" action="{% url 'strategic_plan:pta_my_plan' %}" class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Année académique</label>
+      <select name="annee" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for y in academic_years %}
+        <option value="{{ y.pk }}" {% if selected_year.pk == y.pk %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+</div>
+{% endif %}
+
+{% for g in groupes %}
+<div class="card-section mb-3" style="padding:0;overflow:hidden;">
+  <div style="background:var(--navy);color:#fff;padding:10px 16px;font-weight:700;font-size:.88rem;">
+    {{ g.objectif.code }} — {{ g.objectif.libelle }}
+    {% if g.objectif.axe %}<span class="ms-2" style="font-size:.7rem;font-weight:400;opacity:.8;">(Axe : {{ g.objectif.axe.libelle }})</span>{% endif %}
+  </div>
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.82rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:8px 16px;">Activités</th>
+          <th style="width:100px;">Début</th>
+          <th style="width:100px;">Fin</th>
+          <th>Indicateur de performance</th>
+          <th>Élément de preuve</th>
+          <th class="text-center" style="width:110px;">Réalisations</th>
+          {% if is_owner %}<th class="text-center no-print" style="width:100px;">Actions</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in g.lignes %}
+        <tr>
+          <td style="padding:8px 16px;white-space:pre-line;font-size:.78rem;">{{ l.activites|default:"—" }}</td>
+          <td style="font-size:.78rem;">{{ l.date_debut_activite|date:"d/m/Y"|default:"—" }}</td>
+          <td style="font-size:.78rem;">{{ l.date_fin_activite|date:"d/m/Y"|default:"—" }}</td>
+          <td style="white-space:pre-line;font-size:.78rem;">{{ l.indicateur_performance|default:"—" }}</td>
+          <td style="white-space:pre-line;font-size:.78rem;">{{ l.element_preuve|default:"—" }}</td>
+          <td class="text-center">
+            <span class="badge" style="{% if l.realisations >= 100 %}background:#dcfce7;color:#166534;{% elif l.realisations >= 50 %}background:#eff6ff;color:#1d4ed8;{% elif l.realisations > 0 %}background:#fef3c7;color:#92400e;{% else %}background:#f1f5f9;color:#64748b;{% endif %}">
+              {{ l.realisations }}%
+            </span>
+          </td>
+          {% if is_owner %}
+          <td class="text-center no-print">
+            <div class="d-flex gap-1 justify-content-center">
+              <button type="button" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 8px;font-size:.72rem;"
+                onclick="openPtaLigneModal('edit', {{ l.pk }}, {{ l.objectif_strategique_id }}, {{ l.objectif_strategique.axe_id|default:'null' }}, '{{ l.activites|escapejs }}', '{{ l.date_debut_activite|date:"Y-m-d"|default:"" }}', '{{ l.date_fin_activite|date:"Y-m-d"|default:"" }}', '{{ l.indicateur_performance|escapejs }}', '{{ l.element_preuve|escapejs }}', {{ l.realisations }})">
+                <i class="bi bi-pencil-square"></i>
+              </button>
+              <form method="post" action="{% url 'strategic_plan:pta_line_delete' l.pk %}" onsubmit="return confirm('Supprimer cette ligne ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:3px 8px;font-size:.72rem;">
+                  <i class="bi bi-trash-fill"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% empty %}
+<div class="card-section text-center text-muted py-5">
+  <i class="bi bi-journal-check" style="font-size:2rem;opacity:.4;"></i>
+  <p class="mt-2 mb-0">Aucune ligne dans ce Plan de Travail Annuel.</p>
+</div>
+{% endfor %}
+
+{% if is_owner %}
+<!-- Modal ligne PTA (création / modification) -->
+<div class="modal fade" id="ptaLigneModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0" id="ptaLigneModalTitle"><i class="bi bi-plus-circle me-2"></i>Nouvelle ligne</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="ptaLigneForm" action="{% url 'strategic_plan:pta_line_create' %}">
+        {% csrf_token %}
+        <input type="hidden" name="academic_year" value="{{ selected_year.pk|default:plan.academic_year_id }}">
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Axe stratégique</label>
+            <select id="pta_axe" class="form-select" onchange="filterPtaObjectifsByAxe()">
+              <option value="">— Tous les axes —</option>
+              {% for a in axes %}
+              <option value="{{ a.pk }}">{{ a.code }} — {{ a.libelle }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Objectifs stratégiques <span class="text-danger">*</span></label>
+            <select name="objectif_strategique" id="pta_objectif" class="form-select" required>
+              <option value="">— Sélectionner —</option>
+              {% for o in objectifs %}
+              <option value="{{ o.pk }}" data-axe="{{ o.axe_id|default:'' }}">{{ o.code }} — {{ o.libelle }}{% if o.axe %} (Axe : {{ o.axe.code }}){% endif %}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Activités</label>
+            <textarea name="activites" id="pta_activites" class="form-control" rows="4" placeholder="Une activité par ligne"></textarea>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Date de début d'activité</label>
+              <input type="date" name="date_debut_activite" id="pta_date_debut" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Date de fin d'activité</label>
+              <input type="date" name="date_fin_activite" id="pta_date_fin" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Indicateur de performance</label>
+              <textarea name="indicateur_performance" id="pta_indicateur" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold" style="font-size:.82rem;">Élément de preuve</label>
+              <textarea name="element_preuve" id="pta_preuve" class="form-control" rows="2"></textarea>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Réalisations</label>
+            <select name="realisations" id="pta_realisations" class="form-select">
+              {% for val, label in realisation_choices %}
+              <option value="{{ val }}" {% if val == 0 %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <div class="form-text" style="font-size:.7rem;">Niveau de réalisation de l'activité.</div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function filterPtaObjectifsByAxe() {
+  const axeId = document.getElementById('pta_axe').value;
+  const select = document.getElementById('pta_objectif');
+  let currentStillVisible = false;
+  Array.from(select.options).forEach(function (opt) {
+    if (!opt.value) { return; }
+    const visible = !axeId || opt.getAttribute('data-axe') === axeId;
+    opt.hidden = !visible;
+    opt.disabled = !visible;
+    if (visible && opt.selected) { currentStillVisible = true; }
+  });
+  if (!currentStillVisible) { select.value = ''; }
+}
+
+function openPtaLigneModal(mode, pk, objectifId, axeId, activites, dateDebut, dateFin, indicateur, preuve, realisations) {
+  const form  = document.getElementById('ptaLigneForm');
+  const title = document.getElementById('ptaLigneModalTitle');
+  if (mode === 'edit') {
+    form.action = `/plan-strategique/pta/lignes/${pk}/modifier/`;
+    title.innerHTML = '<i class="bi bi-pencil me-2"></i>Modifier la ligne';
+    document.getElementById('pta_axe').value = axeId || '';
+    filterPtaObjectifsByAxe();
+    document.getElementById('pta_objectif').value = objectifId;
+    document.getElementById('pta_activites').value = activites || '';
+    document.getElementById('pta_date_debut').value = dateDebut || '';
+    document.getElementById('pta_date_fin').value = dateFin || '';
+    document.getElementById('pta_indicateur').value = indicateur || '';
+    document.getElementById('pta_preuve').value = preuve || '';
+    document.getElementById('pta_realisations').value = (realisations !== undefined && realisations !== null) ? realisations : 0;
+  } else {
+    form.action = "{% url 'strategic_plan:pta_line_create' %}";
+    title.innerHTML = '<i class="bi bi-plus-circle me-2"></i>Nouvelle ligne';
+    form.reset();
+    document.getElementById('pta_axe').value = '';
+    filterPtaObjectifsByAxe();
+    document.getElementById('pta_realisations').value = 0;
+  }
+  new bootstrap.Modal(document.getElementById('ptaLigneModal')).show();
+}
+</script>
+{% endif %}
+{% endblock %}

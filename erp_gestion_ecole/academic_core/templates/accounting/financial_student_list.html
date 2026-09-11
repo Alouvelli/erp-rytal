@@ -1,0 +1,484 @@
+{% extends "base/base.html" %}
+{% block title %}Liste des étudiants — Direction Financière{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Liste des étudiants</li>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+.fs-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 9px; border-radius: 20px; font-size: .7rem; font-weight: 600;
+}
+.fs-badge-success  { background: #dcfce7; color: #166534; }
+.fs-badge-warning  { background: #fef9c3; color: #854d0e; }
+.fs-badge-danger   { background: #fee2e2; color: #991b1b; }
+.fs-badge-secondary{ background: #f1f5f9; color: #475569; }
+
+.fs-accord-btn {
+  width: 100%; background: var(--navy); color: #fff;
+  border: none; padding: 14px 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  text-align: left; border-radius: 10px 10px 0 0;
+}
+.fs-accord-btn:hover { background: #1a3560; }
+.fs-accord-body { display: none; }
+.fs-accord-body.open { display: block; }
+
+.fs-stat { font-size: .72rem; opacity: .75; margin-top: 2px; }
+.fs-stat span { margin-right: 8px; }
+.fs-stat .ok  { color: #86efac; }
+.fs-stat .sus { color: #fde68a; }
+.fs-stat .abn { color: #fca5a5; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-people-fill me-2"></i>Liste des étudiants
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Vue financière — suspensions &amp; abandons par classe</p>
+  </div>
+</div>
+
+<!-- Filtre année -->
+<div class="card-section mb-4" style="padding:16px 20px;">
+  <form method="get" class="d-flex align-items-end gap-3 flex-wrap">
+    <div>
+      <label class="form-label fw-semibold mb-1" style="font-size:.78rem;">Année académique</label>
+      <select name="year_id" class="form-select form-select-sm" style="min-width:200px;">
+        <option value="">— Sélectionner une année —</option>
+        {% for yr in all_years %}
+        <option value="{{ yr.pk }}" {% if selected_year and selected_year.pk == yr.pk %}selected{% endif %}>
+          {{ yr.label }}{% if yr.is_current %} (en cours){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">
+      <i class="bi bi-search me-1"></i>Afficher
+    </button>
+    {% if selected_year %}
+    <a href="{% url 'accounting:financial_student_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-x-lg me-1"></i>Réinitialiser
+    </a>
+    {% endif %}
+  </form>
+</div>
+
+{% if selected_year %}
+  {% if class_groups %}
+
+  <!-- Recherche globale -->
+  <div class="mb-3" style="position:relative;max-width:360px;">
+    <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:.8rem;pointer-events:none;"></i>
+    <input type="text" id="fs-global-search"
+           placeholder="Rechercher un étudiant (nom, matricule)…"
+           class="form-control form-control-sm"
+           style="padding-left:32px;border-radius:8px;"
+           oninput="fsGlobalSearch(this.value)">
+  </div>
+
+  <div id="fs-accordions">
+  {% for grp in class_groups %}
+  <div class="card-section mb-3" style="padding:0;border-radius:10px;overflow:hidden;" id="fs-card-{{ forloop.counter }}">
+
+    <!-- En-tête classe -->
+    <div class="fs-accord-btn" id="fs-btn-{{ forloop.counter }}"
+         style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+      <div style="display:flex;align-items:flex-start;gap:12px;flex:1;cursor:pointer;"
+           onclick="fsToggle({{ forloop.counter }})">
+        <span style="width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.15);
+                     display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.85rem;">
+          <i class="bi bi-people-fill"></i>
+        </span>
+        <div>
+          <div style="font-weight:700;font-size:.95rem;">
+            {{ grp.cls.name }}
+            <span style="font-weight:400;font-size:.8rem;opacity:.8;margin-left:6px;">{{ grp.cls.program.name }}</span>
+          </div>
+          <div class="fs-stat">
+            <span>{{ grp.total }} étudiant{{ grp.total|pluralize }}</span>
+            <span class="ok"><i class="bi bi-circle-fill me-1" style="font-size:.5rem;"></i>{{ grp.actifs }} actif{{ grp.actifs|pluralize }}</span>
+            {% if grp.suspendus %}<span class="sus"><i class="bi bi-pause-circle-fill me-1" style="font-size:.6rem;"></i>{{ grp.suspendus }} suspendu{{ grp.suspendus|pluralize }}</span>{% endif %}
+            {% if grp.abandons %}<span class="abn"><i class="bi bi-person-x-fill me-1" style="font-size:.6rem;"></i>{{ grp.abandons }} abandon{{ grp.abandons|pluralize }}</span>{% endif %}
+          </div>
+        </div>
+      </div>
+      <!-- Boutons export -->
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;" onclick="event.stopPropagation()">
+        <a href="{% url 'accounting:financial_student_list_pdf' %}?class_pk={{ grp.cls.pk }}&year_id={{ selected_year.pk }}"
+           target="_blank" title="Télécharger PDF"
+           style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;
+                  background:rgba(255,255,255,.15);color:#fff;font-size:.74rem;font-weight:600;text-decoration:none;border:1px solid rgba(255,255,255,.25);">
+          <i class="bi bi-file-earmark-pdf-fill"></i> PDF
+        </a>
+        <a href="{% url 'accounting:financial_student_list_word' %}?class_pk={{ grp.cls.pk }}&year_id={{ selected_year.pk }}"
+           title="Télécharger Word"
+           style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;
+                  background:rgba(255,255,255,.15);color:#fff;font-size:.74rem;font-weight:600;text-decoration:none;border:1px solid rgba(255,255,255,.25);">
+          <i class="bi bi-file-earmark-word-fill"></i> Word
+        </a>
+        <button type="button" title="Imprimer cette classe"
+                onclick="fsPrint({{ forloop.counter }})"
+                style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;
+                       background:rgba(255,255,255,.15);color:#fff;font-size:.74rem;font-weight:600;border:1px solid rgba(255,255,255,.25);cursor:pointer;">
+          <i class="bi bi-printer-fill"></i> Imprimer
+        </button>
+      </div>
+      <i class="bi bi-chevron-down" id="fs-chev-{{ forloop.counter }}"
+         style="font-size:1rem;transition:transform .25s;flex-shrink:0;cursor:pointer;"
+         onclick="fsToggle({{ forloop.counter }})"></i>
+    </div>
+
+    <!-- Corps : table étudiants -->
+    <div class="fs-accord-body" id="fs-body-{{ forloop.counter }}">
+
+      <!-- Recherche dans la classe -->
+      <div style="padding:10px 16px 6px;background:#fafafa;border-bottom:1px solid #f1f5f9;">
+        <div style="position:relative;max-width:280px;">
+          <i class="bi bi-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:.72rem;pointer-events:none;"></i>
+          <input type="text"
+                 placeholder="Filtrer dans cette classe…"
+                 class="form-control form-control-sm fs-class-search"
+                 data-class="{{ forloop.counter }}"
+                 style="padding-left:26px;font-size:.76rem;border-radius:6px;"
+                 oninput="fsClassSearch({{ forloop.counter }}, this.value)">
+        </div>
+      </div>
+
+      {% if grp.rows %}
+      <div class="table-responsive">
+        <table class="table mb-0" style="font-size:.83rem;" id="fs-table-{{ forloop.counter }}">
+          <thead style="background:#f8fafc;">
+            <tr>
+              <th style="padding:9px 16px;font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.4px;">Matricule</th>
+              <th style="padding:9px 16px;font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.4px;">Nom complet</th>
+              <th style="padding:9px 16px;font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.4px;">Email</th>
+              <th class="text-center" style="padding:9px 16px;font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.4px;">Statut</th>
+              <th class="text-center" style="padding:9px 16px;font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.4px;">Représentant</th>
+              {% if user.is_tresorier %}
+              <th class="text-center" style="padding:9px 16px;font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.4px;">Actions</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in grp.rows %}
+            <tr class="fs-row" data-name="{{ row.student.full_name|lower }}" data-mat="{{ row.student.matricule|lower }}"
+                style="border-bottom:1px solid #f1f5f9;"
+                onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+              {% url 'students:dossier' row.student.pk as dossier_url %}
+              <td style="padding:10px 16px;font-weight:600;color:var(--navy);white-space:nowrap;cursor:pointer;"
+                  onclick="window.location='{{ dossier_url }}'" title="Voir le dossier complet">
+                {{ row.student.matricule }}
+              </td>
+              <td style="padding:10px 16px;cursor:pointer;" onclick="window.location='{{ dossier_url }}'" title="Voir le dossier complet">
+                <div style="font-weight:600;">{{ row.student.full_name }}</div>
+              </td>
+              <td style="padding:10px 16px;color:#64748b;font-size:.78rem;cursor:pointer;" onclick="window.location='{{ dossier_url }}'" title="Voir le dossier complet">
+                {{ row.student.user.email|default:"—" }}
+              </td>
+              <td class="text-center" style="padding:10px 16px;cursor:pointer;" onclick="window.location='{{ dossier_url }}'" title="Voir le dossier complet">
+                <span class="fs-badge fs-badge-{{ row.status_color }}">
+                  {% if row.status_color == 'warning' %}<i class="bi bi-pause-circle-fill me-1"></i>
+                  {% elif row.status_color == 'danger' %}<i class="bi bi-person-x-fill me-1"></i>
+                  {% else %}<i class="bi bi-circle-fill me-1" style="font-size:.5rem;"></i>{% endif %}
+                  {{ row.status_label }}
+                </span>
+              </td>
+              <td class="text-center" style="padding:10px 16px;" onclick="event.stopPropagation()">
+                {% if row.student.class_rep_role %}
+                <span class="fs-badge" style="background:#e0e7ff;color:#3730a3;">
+                  <i class="bi bi-star-fill me-1"></i>{{ row.student.get_class_rep_role_display }}
+                </span>
+                {% endif %}
+                {% if user.can_manage_dept %}
+                <div class="dropdown d-inline-block ms-1">
+                  <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown"
+                          title="Désigner un représentant de classe"
+                          style="padding:2px 6px;font-size:.7rem;border-radius:6px;">
+                    <i class="bi bi-three-dots"></i>
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end" style="font-size:.8rem;">
+                    <li><h6 class="dropdown-header">Désigner comme…</h6></li>
+                    <li>
+                      <form method="post" action="{% url 'students:set_class_rep' row.student.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <input type="hidden" name="role" value="RESPONSABLE">
+                        <button type="submit" class="dropdown-item" {% if row.student.class_rep_role == 'RESPONSABLE' %}disabled{% endif %}>
+                          <i class="bi bi-star me-2"></i>Responsable de classe
+                        </button>
+                      </form>
+                    </li>
+                    <li>
+                      <form method="post" action="{% url 'students:set_class_rep' row.student.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <input type="hidden" name="role" value="ADJOINT">
+                        <button type="submit" class="dropdown-item" {% if row.student.class_rep_role == 'ADJOINT' %}disabled{% endif %}>
+                          <i class="bi bi-star-half me-2"></i>Adjoint du responsable
+                        </button>
+                      </form>
+                    </li>
+                    {% if row.student.class_rep_role %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <form method="post" action="{% url 'students:set_class_rep' row.student.pk %}"
+                            onsubmit="return confirm('Révoquer la désignation de {{ row.student.full_name|escapejs }} ?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <input type="hidden" name="role" value="">
+                        <button type="submit" class="dropdown-item text-danger">
+                          <i class="bi bi-x-circle me-2"></i>Révoquer
+                        </button>
+                      </form>
+                    </li>
+                    {% endif %}
+                  </ul>
+                </div>
+                {% endif %}
+              </td>
+              {% if user.is_tresorier %}
+              <td class="text-center" style="padding:10px 16px;">
+                <div class="d-flex gap-1 justify-content-center">
+                  {% if row.enrollment.status == 'VALIDATED' %}
+                  <!-- Suspendre -->
+                  <button type="button"
+                          title="Suspendre l'inscription"
+                          onclick="openFsModal('suspend', {{ row.student.pk }}, '{{ row.student.full_name|escapejs }}')"
+                          style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;background:#fffbeb;color:#b45309;border:1px solid #fde68a;cursor:pointer;font-size:.75rem;">
+                    <i class="bi bi-pause-circle-fill"></i>
+                  </button>
+                  <!-- Abandon -->
+                  <button type="button"
+                          title="Marquer comme abandon"
+                          onclick="openFsModal('abandon', {{ row.student.pk }}, '{{ row.student.full_name|escapejs }}')"
+                          style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;background:#fff5f5;color:#b91c1c;border:1px solid #fecaca;cursor:pointer;font-size:.75rem;">
+                    <i class="bi bi-person-x-fill"></i>
+                  </button>
+                  {% elif row.enrollment.status == 'SUSPENDED' %}
+                  <!-- Réactiver -->
+                  <form method="post" action="{% url 'students:enrollment_reactivate' row.enrollment.pk %}"
+                        onsubmit="return confirm('Réactiver l\'inscription de {{ row.student.full_name|escapejs }} ?');"
+                        style="display:inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <button type="submit" title="Réactiver l'inscription"
+                            style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;cursor:pointer;font-size:.75rem;">
+                      <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                  </form>
+                  {% endif %}
+                </div>
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div id="fs-empty-{{ forloop.counter }}"
+           style="display:none;text-align:center;padding:20px;color:#94a3b8;font-size:.8rem;">
+        <i class="bi bi-search me-1"></i>Aucun étudiant ne correspond à la recherche.
+      </div>
+      {% else %}
+      <div style="text-align:center;padding:32px 20px;color:#94a3b8;font-size:.85rem;">
+        <i class="bi bi-inbox d-block mb-2" style="font-size:1.8rem;opacity:.4;"></i>
+        Aucun étudiant inscrit dans cette classe pour cette année.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="card-section" style="text-align:center;padding:60px 20px;color:#94a3b8;">
+    <i class="bi bi-people d-block mb-3" style="font-size:2.5rem;color:#cbd5e1;"></i>
+    <div style="font-size:.9rem;font-weight:600;">Aucune classe trouvée pour cette année académique.</div>
+  </div>
+  {% endif %}
+
+{% else %}
+<div class="card-section" style="text-align:center;padding:60px 20px;color:#94a3b8;">
+  <i class="bi bi-arrow-up-circle d-block mb-3" style="font-size:2.5rem;color:#cbd5e1;"></i>
+  <div style="font-size:.95rem;font-weight:600;color:#64748b;">Sélectionnez une année académique</div>
+  <div style="font-size:.82rem;margin-top:4px;">La liste des étudiants par classe s'affichera ici.</div>
+</div>
+{% endif %}
+
+<!-- Modal Suspend / Abandon -->
+{% if user.is_tresorier %}
+<div class="modal fade" id="fsActionModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" id="fsModalHeader" style="border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0" id="fsModalTitle"></h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="fsActionForm">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <div class="modal-body p-4">
+          <div id="fsModalWarn"
+               style="padding:12px 14px;border-radius:8px;font-size:.82rem;margin-bottom:12px;"></div>
+          <div id="fsSuspendReason">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Motif <span class="text-danger">*</span></label>
+            <textarea name="reason" rows="3" class="form-control"
+                      placeholder="Motif de la suspension…" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-sm" id="fsModalSubmit"></button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ── Accordéon ── */
+const _fsOpen = {};
+function fsToggle(idx) {
+  const isOpen = !!_fsOpen[idx];
+  // Fermer tous
+  document.querySelectorAll('[id^="fs-body-"]').forEach(function(el) {
+    const i = el.id.replace('fs-body-', '');
+    el.classList.remove('open');
+    const ch = document.getElementById('fs-chev-' + i);
+    if (ch) ch.style.transform = '';
+    _fsOpen[i] = false;
+  });
+  if (!isOpen) {
+    const body = document.getElementById('fs-body-' + idx);
+    const chev = document.getElementById('fs-chev-' + idx);
+    if (body) body.classList.add('open');
+    if (chev) chev.style.transform = 'rotate(180deg)';
+    _fsOpen[idx] = true;
+  }
+}
+
+// Ouvrir le premier par défaut
+document.addEventListener('DOMContentLoaded', function() {
+  const first = document.querySelector('[id^="fs-body-"]');
+  if (first) { const idx = first.id.replace('fs-body-', ''); fsToggle(idx); }
+});
+
+/* ── Filtre dans une classe ── */
+function fsClassSearch(idx, term) {
+  const table = document.getElementById('fs-table-' + idx);
+  const empty = document.getElementById('fs-empty-' + idx);
+  if (!table) return;
+  const q = term.trim().toLowerCase();
+  let vis = 0;
+  table.querySelectorAll('tbody .fs-row').forEach(function(row) {
+    const match = !q || row.dataset.name.indexOf(q) !== -1 || row.dataset.mat.indexOf(q) !== -1;
+    row.style.display = match ? '' : 'none';
+    if (match) vis++;
+  });
+  if (empty) empty.style.display = (q && vis === 0) ? '' : 'none';
+}
+
+/* ── Recherche globale ── */
+function fsGlobalSearch(term) {
+  const q = term.trim().toLowerCase();
+  document.querySelectorAll('[id^="fs-card-"]').forEach(function(card) {
+    const idx   = card.id.replace('fs-card-', '');
+    const rows  = card.querySelectorAll('tbody .fs-row');
+    let vis = 0;
+    rows.forEach(function(row) {
+      const match = !q || row.dataset.name.indexOf(q) !== -1 || row.dataset.mat.indexOf(q) !== -1;
+      row.style.display = match ? '' : 'none';
+      if (match) vis++;
+    });
+    // Ouvrir automatiquement si des résultats trouvés
+    if (q && vis > 0) {
+      const body = document.getElementById('fs-body-' + idx);
+      const chev = document.getElementById('fs-chev-' + idx);
+      if (body) body.classList.add('open');
+      if (chev) chev.style.transform = 'rotate(180deg)';
+      _fsOpen[idx] = true;
+    }
+    card.style.display = (q && vis === 0) ? 'none' : '';
+  });
+}
+
+/* ── Impression d'une classe ── */
+function fsPrint(idx) {
+  const body = document.getElementById('fs-body-' + idx);
+  const table = document.getElementById('fs-table-' + idx);
+  if (!table) return;
+  const btn = document.getElementById('fs-btn-' + idx);
+  const className = btn ? btn.querySelector('div > div > div:first-child')?.textContent?.trim() || '' : '';
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8">
+    <title>Liste étudiants</title>
+    <style>
+      body{font-family:Arial,sans-serif;font-size:12px;margin:20px;}
+      h2{color:#00173B;margin-bottom:4px;}
+      p{color:#64748b;font-size:11px;margin:0 0 12px;}
+      table{width:100%;border-collapse:collapse;}
+      th{background:#00173B;color:#fff;padding:7px 10px;text-align:left;font-size:11px;}
+      td{padding:6px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;}
+      tr:nth-child(even) td{background:#f8fafc;}
+      @media print{body{margin:10px;}}
+    </style></head><body>
+    <h2>${className}</h2>
+    <p>Généré le ${new Date().toLocaleDateString('fr-FR')}</p>
+    ${table.outerHTML}
+    </body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => { win.print(); }, 400);
+}
+
+{% if user.is_tresorier %}
+/* ── Modal suspend / abandon ── */
+function openFsModal(type, studentPk, name) {
+  const form   = document.getElementById('fsActionForm');
+  const header = document.getElementById('fsModalHeader');
+  const title  = document.getElementById('fsModalTitle');
+  const warn   = document.getElementById('fsModalWarn');
+  const submit = document.getElementById('fsModalSubmit');
+  const reasonWrap = document.getElementById('fsSuspendReason');
+  const reasonInput = reasonWrap.querySelector('textarea');
+
+  if (type === 'suspend') {
+    form.action = '/students/' + studentPk + '/suspendre/';
+    header.style.background = '#b45309';
+    title.innerHTML  = '<i class="bi bi-pause-circle-fill me-2"></i>Suspendre l\'inscription';
+    warn.style.background = '#fffbeb';
+    warn.style.border = '1px solid #fde68a';
+    warn.style.color  = '#92400e';
+    warn.innerHTML    = '<strong>' + name + '</strong> — Le compte sera désactivé temporairement. L\'étudiant pourra être réinscrit ultérieurement.';
+    submit.style.background = '#b45309';
+    submit.style.color = '#fff';
+    submit.textContent = 'Confirmer la suspension';
+    reasonWrap.style.display = '';
+    reasonInput.required = true;
+  } else {
+    form.action = '/students/' + studentPk + '/abandon/';
+    header.style.background = '#b91c1c';
+    title.innerHTML  = '<i class="bi bi-person-x-fill me-2"></i>Marquer comme abandon';
+    warn.style.background = '#fff5f5';
+    warn.style.border = '1px solid #fecaca';
+    warn.style.color  = '#991b1b';
+    warn.innerHTML    = '<strong>' + name + '</strong> — Le compte sera désactivé définitivement et l\'étudiant n\'apparaîtra plus dans les listes de classe.';
+    submit.style.background = '#b91c1c';
+    submit.style.color = '#fff';
+    submit.textContent = 'Confirmer l\'abandon';
+    reasonWrap.style.display = 'none';
+    reasonInput.required = false;
+  }
+  new bootstrap.Modal(document.getElementById('fsActionModal')).show();
+}
+{% endif %}
+</script>
+{% endblock %}

@@ -1,0 +1,109 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Configuration du bulletin{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="page-header-content">
+        <div class="page-title-section">
+            <h1 class="page-title">
+                <i class="fas fa-cog"></i>
+                Configuration du bulletin
+            </h1>
+            <p class="page-subtitle">Paramétrer le signataire affiché en bas des bulletins</p>
+        </div>
+        <div class="page-actions">
+            <a href="{% url 'grades:bulletin_class_list' %}" class="btn btn-outline">
+                <i class="fas fa-arrow-left"></i> Retour aux bulletins
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if messages %}
+    {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags }}">
+            <i class="fas fa-{% if msg.tags == 'success' %}check-circle{% else %}exclamation-circle{% endif %}"></i>
+            {{ msg }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card" style="max-width:600px; margin:0 auto;">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-signature"></i> Signataire du bulletin</h3>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label" for="director_title">Titre du signataire</label>
+                <input
+                    type="text"
+                    id="director_title"
+                    name="director_title"
+                    class="form-control"
+                    value="{{ config.director_title }}"
+                    placeholder="Ex : Directrice des études"
+                    required
+                >
+                <small class="form-hint">Affiché en gras sous le tampon (ex : "Directrice des études")</small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="director_name">Nom du signataire</label>
+                <input
+                    type="text"
+                    id="director_name"
+                    name="director_name"
+                    class="form-control"
+                    value="{{ config.director_name }}"
+                    placeholder="Ex : Aissatou Diaby GASSAMA"
+                >
+                <small class="form-hint">Nom complet affiché sous le titre</small>
+            </div>
+
+            {% if config.updated_at and config.updated_by %}
+            <p class="text-muted" style="font-size:0.85rem; margin-bottom:1rem;">
+                <i class="fas fa-clock"></i>
+                Dernière modification le {{ config.updated_at|date:"d/m/Y à H:i" }}
+                par {{ config.updated_by.get_full_name|default:config.updated_by.username }}
+            </p>
+            {% endif %}
+
+            <div style="display:flex; gap:1rem; justify-content:flex-end; margin-top:1.5rem;">
+                <a href="{% url 'grades:bulletin_class_list' %}" class="btn btn-outline">Annuler</a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card" style="max-width:600px; margin:1.5rem auto 0;">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-eye"></i> Aperçu</h3>
+    </div>
+    <div class="card-body">
+        <div style="border:1px solid #ddd; border-radius:4px; padding:1.5rem; background:#fafafa; text-align:center; font-family:serif;">
+            <div style="font-size:0.9rem; color:#555; margin-bottom:0.5rem;">— Signature —</div>
+            <div id="preview-title" style="font-weight:bold; font-size:1rem;">{{ config.director_title }}</div>
+            <div style="margin-top:0.5rem; border-top:1px dashed #ccc; padding-top:0.5rem;"></div>
+            <div id="preview-name" style="font-size:0.95rem;">{{ config.director_name }}</div>
+        </div>
+        <p class="text-muted" style="font-size:0.8rem; margin-top:0.5rem; text-align:center;">
+            Aperçu mis à jour en temps réel
+        </p>
+    </div>
+</div>
+
+<script>
+document.getElementById('director_title').addEventListener('input', function() {
+    document.getElementById('preview-title').textContent = this.value || '—';
+});
+document.getElementById('director_name').addEventListener('input', function() {
+    document.getElementById('preview-name').textContent = this.value;
+});
+</script>
+{% endblock %}

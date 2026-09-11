@@ -1,0 +1,96 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ form_title }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'grades:maquette_list' %}">Maquettes</a></li>
+<li class="breadcrumb-item active">{{ form_title }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#1e3a5f;"><i class="bi bi-diagram-3"></i></span>
+    {{ form_title }}
+  </h1>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-pencil-square"></i></span>
+          Informations de l'UE
+        </h6>
+      </div>
+      <div class="p-4">
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Code UE <span style="color:#dc2626;">*</span></label>
+            <input type="text" name="code" class="form-control form-control-sm"
+                   value="{{ ue.code|default:'' }}"
+                   placeholder="Ex: UE 1201" required>
+            <div style="font-size:.75rem;color:#64748b;margin-top:3px;">Format habituel : UE + numéro (ex: UE 1201)</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.85rem;">Intitulé <span style="color:#dc2626;">*</span></label>
+            <input type="text" name="title" class="form-control form-control-sm"
+                   value="{{ ue.title|default:'' }}"
+                   placeholder="Ex: Fondamentaux de l'informatique" required>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Filière <span style="color:#dc2626;">*</span></label>
+              <select name="program" class="form-select form-select-sm" {% if ue %}disabled{% endif %} required>
+                <option value="">— Choisir —</option>
+                {% for p in programs %}
+                <option value="{{ p.pk }}"
+                  {% if ue and ue.program_id == p.pk %}selected
+                  {% elif prog_id and prog_id == p.pk|stringformat:"s" %}selected
+                  {% endif %}>{{ p.name }}</option>
+                {% endfor %}
+              </select>
+              {% if ue %}
+              <input type="hidden" name="program" value="{{ ue.program_id }}">
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Semestre <span style="color:#dc2626;">*</span></label>
+              <select name="semester" class="form-select form-select-sm" {% if ue %}disabled{% endif %} required>
+                <option value="">— Choisir —</option>
+                {% for s in semesters %}
+                <option value="{{ s.pk }}"
+                  {% if ue and ue.semester_id == s.pk %}selected
+                  {% elif sem_id and sem_id == s.pk|stringformat:"s" %}selected
+                  {% endif %}>{{ s.name }}{% if s.level %} — {{ s.level.name }}{% endif %}</option>
+                {% endfor %}
+              </select>
+              {% if ue %}
+              <input type="hidden" name="semester" value="{{ ue.semester_id }}">
+              {% endif %}
+            </div>
+          </div>
+          <div class="row g-3 mt-1">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Crédits UE</label>
+              <input type="number" name="credits" class="form-control form-control-sm"
+                     value="{{ ue.credits|default:6 }}" min="1" max="30">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Ordre d'affichage</label>
+              <input type="number" name="order" class="form-control form-control-sm"
+                     value="{{ ue.order|default:1 }}" min="1" max="99">
+            </div>
+          </div>
+          <div class="d-flex gap-3 mt-4">
+            <button type="submit" class="btn btn-sm" style="background:var(--navy);color:#fff;border:none;padding:8px 20px;">
+              <i class="bi bi-check-lg me-1"></i>Enregistrer
+            </button>
+            <a href="{% url 'grades:maquette_list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

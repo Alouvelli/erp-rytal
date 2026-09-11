@@ -1,0 +1,111 @@
+{% extends 'base/base.html' %}
+{% block title %}Feuilles d'émargement{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Émargements</li>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-pencil-square"></i></span>
+    Feuilles d'émargement
+  </h1>
+</div>
+
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;">
+        <i class="bi bi-list-check"></i>
+      </span>
+      Liste des feuilles
+    </h6>
+    <div class="d-flex gap-2 align-items-center">
+      <select onchange="window.location='?status='+this.value" class="form-select form-select-sm" style="width:auto;">
+        <option value="">Tous les statuts</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if selected_status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table" id="tbl-sheets">
+      <thead>
+        <tr>
+          <th>Module (EC)</th>
+          <th>Classe</th>
+          <th>Enseignant</th>
+          <th>Date</th>
+          <th>Créneau</th>
+          <th>Cahier de texte</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sheet in sheets %}
+        <tr>
+          <td style="font-weight:600;font-size:.85rem;">
+            {{ sheet.timetable_entry.subject.code }}
+            <div style="font-size:.75rem;color:#64748b;font-weight:400;">{{ sheet.timetable_entry.subject.title }}</div>
+          </td>
+          <td style="font-size:.83rem;">{{ sheet.timetable_entry.class_group.name }}</td>
+          <td style="font-size:.83rem;">{{ sheet.timetable_entry.teacher.full_name }}</td>
+          <td style="font-size:.82rem;color:#64748b;white-space:nowrap;">{{ sheet.session_date|date:"d/m/Y" }}</td>
+          <td style="font-size:.82rem;color:#64748b;white-space:nowrap;">
+            {{ sheet.timetable_entry.start_time|time:"H:i" }} — {{ sheet.timetable_entry.end_time|time:"H:i" }}
+          </td>
+          <td>
+            {% if sheet.lesson_content %}
+            <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#dcfce7;color:#166534;border-radius:20px;font-size:.72rem;font-weight:600;">
+              <i class="bi bi-check-circle-fill"></i> Rempli
+            </span>
+            {% else %}
+            <span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#fef3c7;color:#92400e;border-radius:20px;font-size:.72rem;font-weight:600;">
+              <i class="bi bi-exclamation-circle"></i> En attente
+            </span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge-statut-{% if sheet.status == 'PENDING' %}nouveau{% elif sheet.status == 'SIGNED' %}en_cours{% elif sheet.status == 'VALIDATED' %}inscrit{% else %}inactif{% endif %}">
+              {{ sheet.get_status_display }}
+            </span>
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'attendance:sheet_detail' sheet.pk %}" class="btn-action view" title="Détail"><i class="bi bi-eye"></i></a>
+
+              {% if sheet.status == 'PENDING' and teacher_profile and sheet.timetable_entry.teacher == teacher_profile %}
+              <a href="{% url 'attendance:sign_sheet' sheet.pk %}" class="btn-action edit"
+                 title="{% if sheet.lesson_content %}Signer{% else %}Remplir le cahier de texte et signer{% endif %}">
+                <i class="bi bi-{% if sheet.lesson_content %}pen{% else %}journal-text{% endif %}"></i>
+              </a>
+              {% endif %}
+
+              {% if sheet.status == 'SIGNED' and user.can_manage_dept %}
+              <a href="{% url 'attendance:validate_sheet' sheet.pk %}" class="btn-action edit" title="Valider / Rejeter">
+                <i class="bi bi-check-lg"></i>
+              </a>
+              {% endif %}
+
+              {% if user.can_manage_dept %}
+              <a href="{% url 'attendance:sheet_edit' sheet.pk %}" class="btn-action edit" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'attendance:sheet_delete' sheet.pk %}" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+$(document).ready(function(){
+  $('#tbl-sheets').DataTable({
+    order: [[3, 'desc']],
+    language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json' }
+  });
+});
+</script>
+{% endblock %}

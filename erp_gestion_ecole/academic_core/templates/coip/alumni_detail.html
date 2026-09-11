@@ -1,0 +1,96 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ alumni.get_full_name }} — Alumni{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:alumni_list' %}">Alumni</a></li>
+<li class="breadcrumb-item active">{{ alumni.get_full_name }}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-mortarboard-fill"></i></span>
+    {{ alumni.get_full_name }}
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'coip:alumni_edit' alumni.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i>Modifier</a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">Profil</h6>
+      </div>
+      <div class="p-3" style="font-size:.85rem;">
+        <div class="mb-2"><strong>Email :</strong> {{ alumni.email|default:"—" }}</div>
+        <div class="mb-2"><strong>Téléphone :</strong> {{ alumni.phone|default:"—" }}</div>
+        <div class="mb-2"><strong>Promotion :</strong> {{ alumni.promotion|default:"—" }}</div>
+        <div class="mb-2"><strong>Diplôme :</strong> {{ alumni.diplome|default:"—" }}</div>
+        <div class="mb-2"><strong>Filière :</strong> {{ alumni.filiere.name|default:"—" }}</div>
+        <div class="mb-2"><strong>Année d'obtention :</strong> {{ alumni.annee_obtention|default:"—" }}</div>
+        <div class="mb-2"><strong>Ville/Pays :</strong> {{ alumni.ville|default:"—" }}{% if alumni.pays %}, {{ alumni.pays }}{% endif %}</div>
+        {% if alumni.linkedin %}<div class="mb-2"><strong>LinkedIn :</strong> <a href="{{ alumni.linkedin }}" target="_blank" rel="noopener">{{ alumni.linkedin }}</a></div>{% endif %}
+        <hr>
+        <div class="mb-2"><strong>Entreprise actuelle :</strong> {{ alumni.entreprise_actuelle|default:"—" }}</div>
+        <div class="mb-2"><strong>Poste :</strong> {{ alumni.poste_occupe|default:"—" }}</div>
+        <div class="mb-2"><strong>Secteur :</strong> {{ alumni.get_secteur_activite_display|default:"—" }}</div>
+        <div>{% if alumni.is_employed %}<span class="badge bg-success">En activité</span>{% else %}<span class="badge bg-secondary">Sans emploi</span>{% endif %}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">Parcours professionnel</h6>
+      </div>
+      <div class="p-3">
+        <table class="table table-sm mb-3">
+          <thead><tr><th>Date</th><th>Entreprise</th><th>Poste</th><th></th></tr></thead>
+          <tbody>
+            {% for e in career_events %}
+            <tr>
+              <td style="font-size:.82rem;">{{ e.date|date:"d/m/Y" }}</td>
+              <td style="font-size:.82rem;">{{ e.entreprise }}</td>
+              <td style="font-size:.82rem;">{{ e.poste }}</td>
+              <td>
+                <form method="post" action="{% url 'coip:alumni_career_event_delete' alumni.pk e.pk %}" onsubmit="return confirm('Supprimer cet événement ?');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></button>
+                </form>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Aucun événement enregistré.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <form method="post" action="{% url 'coip:alumni_career_event_add' alumni.pk %}" class="row g-2 border-top pt-3">
+          {% csrf_token %}
+          <div class="col-md-3">
+            <label class="form-label" style="font-size:.75rem;font-weight:600;">Date</label>
+            {{ career_event_form.date }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label" style="font-size:.75rem;font-weight:600;">Entreprise</label>
+            {{ career_event_form.entreprise }}
+          </div>
+          <div class="col-md-3">
+            <label class="form-label" style="font-size:.75rem;font-weight:600;">Poste</label>
+            {{ career_event_form.poste }}
+          </div>
+          <div class="col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-plus-lg me-1"></i>Ajouter</button>
+          </div>
+          <div class="col-12">
+            <label class="form-label" style="font-size:.75rem;font-weight:600;">Description</label>
+            {{ career_event_form.description }}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

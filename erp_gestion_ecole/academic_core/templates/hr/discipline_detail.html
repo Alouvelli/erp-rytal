@@ -1,0 +1,114 @@
+{% extends "base/base.html" %}
+{% block title %}Dossier disciplinaire{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-statut { display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:999px;font-size:.8rem;font-weight:600; }
+.bd-DEMANDE_EXPLICATION { background:#fef3c7;color:#92400e; }
+.bd-REPONSE_RECUE       { background:#e0f2fe;color:#0369a1; }
+.bd-CONSEIL             { background:#ede9fe;color:#5b21b6; }
+.bd-SANCTION            { background:#fee2e2;color:#b91c1c; }
+.bd-CLASSE              { background:#f1f5f9;color:#475569; }
+.info-row { display:flex;align-items:baseline;gap:8px;padding:10px 0;border-bottom:1px solid #f1f5f9; }
+.info-row:last-child { border-bottom:none; }
+.info-label { font-size:.78rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;min-width:140px;flex-shrink:0; }
+.info-val { font-size:.9rem;color:#1e293b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:700px;">
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{% url 'hr:discipline_list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <div>
+      <h5 class="mb-0 fw-bold">Dossier disciplinaire</h5>
+      <small class="text-muted">{{ case.user.get_full_name }}</small>
+    </div>
+    <span class="badge-statut bd-{{ case.statut }} ms-auto">{{ case.get_statut_display }}</span>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3 d-flex align-items-center gap-3">
+      <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#0d2244,#1a3a6b);
+                  display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span style="color:#fff;font-size:.9rem;font-weight:700;">
+          {{ case.user.first_name|first|upper }}{{ case.user.last_name|first|upper }}
+        </span>
+      </div>
+      <div>
+        <div class="fw-bold">{{ case.user.get_full_name }}</div>
+        <div style="font-size:.78rem;color:#64748b;">{{ case.user.role.get_name_display|default:'—' }}</div>
+      </div>
+    </div>
+    <div class="card-body px-4 py-2">
+      <div class="info-row"><span class="info-label">Motif</span><span class="info-val">{{ case.motif }}</span></div>
+      <div class="info-row"><span class="info-label">Initié par</span><span class="info-val">{{ case.initiated_by.get_full_name|default:'—' }}</span></div>
+      <div class="info-row"><span class="info-label">Ouvert le</span><span class="info-val">{{ case.created_at|date:"d/m/Y à H:i" }}</span></div>
+      {% if case.explication %}
+      <div class="info-row"><span class="info-label">Explication</span><span class="info-val">{{ case.explication }}</span></div>
+      {% endif %}
+      {% if case.sanction_type %}
+      <div class="info-row"><span class="info-label">Sanction</span><span class="info-val fw-bold" style="color:#b91c1c;">{{ case.get_sanction_type_display }}</span></div>
+      {% endif %}
+      {% if case.decision %}
+      <div class="info-row"><span class="info-label">Décision</span><span class="info-val">{{ case.decision }}</span></div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if is_manager and next_action %}
+  {% with action_code=next_action.0 action_label=next_action.1 %}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3 fw-bold">
+      <i class="bi bi-arrow-right-circle text-primary me-2"></i>{{ action_label }}
+    </div>
+    <div class="card-body p-4">
+      <form method="post" action="{% url 'hr:discipline_action' pk=case.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="{{ action_code }}">
+
+        {% if action_code == 'repondre' %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Explication de l'employé</label>
+          <textarea name="explication" class="form-control" rows="4" required></textarea>
+        </div>
+        {% elif action_code == 'sanctionner' %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Type de sanction</label>
+          <select name="sanction_type" class="form-select" required>
+            <option value="AVERTISSEMENT">Avertissement</option>
+            <option value="BLAME">Blâme</option>
+            <option value="MISE_A_PIED">Mise à pied</option>
+            <option value="LICENCIEMENT">Licenciement</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Décision</label>
+          <textarea name="decision" class="form-control" rows="3"></textarea>
+        </div>
+        {% endif %}
+
+        <div class="d-flex gap-2 justify-content-end">
+          {% if case.statut != 'SANCTION' %}
+          <button type="submit" name="action" value="classer" formnovalidate
+                  class="btn btn-outline-secondary fw-semibold"
+                  onclick="return confirm('Classer ce dossier sans suite ?')">
+            <i class="bi bi-archive me-1"></i>Classer sans suite
+          </button>
+          {% endif %}
+          <button type="submit" class="btn btn-primary fw-semibold px-4">
+            <i class="bi bi-check2 me-1"></i>{{ action_label }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endwith %}
+  {% elif is_manager %}
+  <form method="post" action="{% url 'hr:discipline_delete' pk=case.pk %}" onsubmit="return confirm('Supprimer ce dossier ?');" class="text-end">
+    {% csrf_token %}
+    <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash me-1"></i>Supprimer le dossier</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

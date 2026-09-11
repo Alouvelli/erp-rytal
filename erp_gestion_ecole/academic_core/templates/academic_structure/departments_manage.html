@@ -1,0 +1,269 @@
+{% extends 'base/base.html' %}
+{% block title %}Gestion des départements{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academic_structure:index' %}">Structure</a></li>
+<li class="breadcrumb-item active">Gestion des départements</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:var(--navy);"><i class="bi bi-building-gear"></i></span>Gestion des départements</h1>
+  {% if not institut_required %}
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalCreate">
+    <i class="bi bi-plus-lg me-1"></i>Nouveau département
+  </button>
+  {% endif %}
+</div>
+
+{% if institut_required %}
+<div class="alert alert-warning d-flex align-items-center gap-3" style="border-radius:12px;">
+  <i class="bi bi-buildings-fill" style="font-size:1.5rem;color:#ca8a04;flex-shrink:0;"></i>
+  <div>
+    <div class="fw-bold">Sélectionnez un institut</div>
+    <div style="font-size:.85rem;">Choisissez un institut dans la barre latérale pour voir et gérer ses départements.</div>
+  </div>
+</div>
+{% else %}
+
+<!-- ── Tableau des départements ──────────────────────────────────────────────── -->
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ul"></i></span>
+      Tous les départements
+    </h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table" id="tbl-departments">
+      <thead>
+        <tr>
+          <th>Code</th><th>Nom</th><th>Institut</th><th>Responsable</th>
+          <th>Filières</th><th>Utilisateurs</th><th>Statut</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for dept in departments %}
+        <tr>
+          <td>
+            <span style="font-weight:700;font-size:.8rem;background:#eff6ff;color:var(--navy);padding:3px 8px;border-radius:5px;">{{ dept.code }}</span>
+          </td>
+          <td>
+            <div style="font-weight:600;font-size:.86rem;">{{ dept.name }}</div>
+            {% if dept.description %}<div style="font-size:.74rem;color:#94a3b8;">{{ dept.description|truncatechars:50 }}</div>{% endif %}
+          </td>
+          <td style="font-size:.83rem;color:#64748b;">{{ dept.faculty.name|default:"—" }}</td>
+          <td>
+            {% if dept.admin %}
+            <div style="display:flex;align-items:center;gap:7px;">
+              <div style="width:28px;height:28px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.7rem;font-weight:700;flex-shrink:0;">
+                {{ dept.admin.get_full_name|slice:":1"|upper }}
+              </div>
+              <div>
+                <div style="font-weight:600;font-size:.82rem;">{{ dept.admin.get_full_name }}</div>
+                <div style="font-size:.72rem;color:#94a3b8;">{{ dept.admin.email }}</div>
+              </div>
+            </div>
+            {% else %}
+            <span style="font-size:.8rem;color:#fbbf24;font-weight:600;"><i class="bi bi-exclamation-triangle me-1"></i>Non assigné</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;font-weight:700;color:var(--navy);">{{ dept.programs.count }}</td>
+          <td style="text-align:center;font-weight:700;color:#16a34a;">{{ dept.users.count }}</td>
+          <td>
+            {% if dept.is_active %}
+            <span class="badge-statut-inscrit">Actif</span>
+            {% else %}
+            <span class="badge-statut-non_retenu">Inactif</span>
+            {% endif %}
+          </td>
+          <td>
+            <!-- Assigner admin -->
+            <button class="btn-action edit" title="Assigner un responsable"
+              onclick="openAssignModal({{ dept.pk }}, '{{ dept.name|escapejs }}', {{ dept.admin.pk|default:'null' }})">
+              <i class="bi bi-person-gear"></i>
+            </button>
+            <!-- Modifier -->
+            <button class="btn-action view" title="Modifier"
+              onclick="openEditModal({{ dept.pk }}, '{{ dept.code|escapejs }}', '{{ dept.name|escapejs }}', '{{ dept.description|escapejs }}', {{ dept.faculty.pk }})">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <!-- Activer/Désactiver -->
+            <form method="post" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="toggle">
+              <input type="hidden" name="dept_id" value="{{ dept.pk }}">
+              <button type="submit" class="btn-action {% if dept.is_active %}delete{% else %}view{% endif %}"
+                title="{% if dept.is_active %}Désactiver{% else %}Activer{% endif %}">
+                <i class="bi bi-{% if dept.is_active %}pause-circle{% else %}play-circle{% endif %}"></i>
+              </button>
+            </form>
+            <!-- Sélectionner comme département actif -->
+            <form method="post" action="{% url 'academic_structure:select_department' %}" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="department_id" value="{{ dept.pk }}">
+              <button type="submit" class="btn-action view" title="Sélectionner ce département"
+                style="{% if active_department.pk == dept.pk %}background:var(--navy);color:#fff;{% endif %}">
+                <i class="bi bi-arrow-right-circle"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Modal Créer département ────────────────────────────────────────────────── -->
+<div class="modal fade" id="modalCreate" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nouveau département</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create">
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label">Code <span class="text-danger">*</span></label>
+              <input type="text" name="code" class="form-control" placeholder="ex: INFO" required style="text-transform:uppercase;">
+            </div>
+            <div class="col-md-9">
+              <label class="form-label">Nom <span class="text-danger">*</span></label>
+              <input type="text" name="name" class="form-control" placeholder="Département d'Informatique" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Institut <span class="text-danger">*</span></label>
+              <select name="faculty" class="form-select" required>
+                <option value="">— Sélectionner —</option>
+                {% for fac in faculties %}<option value="{{ fac.pk }}">{{ fac.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Administrateur</label>
+              <select name="admin_user" class="form-select">
+                <option value="">— Assigner plus tard —</option>
+                {% for u in responsables %}<option value="{{ u.pk }}">{{ u.get_full_name }} ({{ u.username }})</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea name="description" class="form-control" rows="2"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Créer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Modifier département ─────────────────────────────────────────────── -->
+<div class="modal fade" id="modalEdit" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:#475569;color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-pencil me-2"></i>Modifier le département</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit">
+        <input type="hidden" name="dept_id" id="editDeptId">
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label">Nom <span class="text-danger">*</span></label>
+            <input type="text" name="name" id="editName" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Institut</label>
+            <select name="faculty" id="editFaculty" class="form-select">
+              {% for fac in faculties %}<option value="{{ fac.pk }}">{{ fac.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea name="description" id="editDescription" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Assigner responsable ────────────────────────────────────────────── -->
+<div class="modal fade" id="modalAssign" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:#7c3aed;color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0" id="assignModalTitle"><i class="bi bi-person-gear me-2"></i>Assigner un responsable</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="assign_admin">
+        <input type="hidden" name="dept_id" id="assignDeptId">
+        <div class="modal-body p-4">
+          <p style="font-size:.84rem;color:#64748b;margin-bottom:16px;">
+            Sélectionnez l'utilisateur qui administrera ce département — un enseignant
+            sélectionné ici sera automatiquement promu Chef de Département (rôle Responsable).
+            Il pourra gérer toutes les fonctionnalités du département.
+          </p>
+          <label class="form-label">Administrateur de département</label>
+          <select name="admin_user" class="form-select" id="assignAdminUser">
+            <option value="">— Retirer le responsable actuel —</option>
+            {% for u in responsables %}
+            <option value="{{ u.pk }}">{{ u.get_full_name }} — {{ u.role.get_name_display }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm" style="background:#7c3aed;border-color:#7c3aed;">
+            <i class="bi bi-check-lg me-1"></i>Assigner
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endif %}{# institut_required #}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openEditModal(id, code, name, desc, facId) {
+  document.getElementById('editDeptId').value = id;
+  document.getElementById('editName').value = name;
+  document.getElementById('editDescription').value = desc;
+  const sel = document.getElementById('editFaculty');
+  if (sel) sel.value = facId;
+  new bootstrap.Modal(document.getElementById('modalEdit')).show();
+}
+function openAssignModal(id, name, currentAdminId) {
+  document.getElementById('assignDeptId').value = id;
+  document.getElementById('assignModalTitle').innerHTML =
+    '<i class="bi bi-person-gear me-2"></i>Responsable — ' + name;
+  const sel = document.getElementById('assignAdminUser');
+  if (currentAdminId && sel) sel.value = currentAdminId;
+  new bootstrap.Modal(document.getElementById('modalAssign')).show();
+}
+$(document).ready(function () {
+  $('#tbl-departments').DataTable({
+    language: { url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json' },
+    columnDefs: [{ targets: -1, orderable: false }]
+  });
+});
+</script>
+{% endblock %}

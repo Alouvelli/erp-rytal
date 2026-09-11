@@ -1,0 +1,72 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ archive.titre }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:archive_list' %}">Archives</a></li>
+<li class="breadcrumb-item active">{{ archive.titre }}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-archive-fill"></i></span>
+    {{ archive.titre }}
+  </h1>
+  <a href="{% url 'coip:archive_edit' archive.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i>Modifier</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card-section p-3" style="font-size:.85rem;">
+      <div class="mb-2"><strong>Catégorie :</strong> {{ archive.get_categorie_display }}</div>
+      <div class="mb-2"><strong>Version actuelle :</strong> v{{ archive.version }}</div>
+      <div class="mb-2"><strong>Déposé par :</strong> {{ archive.depose_par.get_full_name|default:"—" }}</div>
+      {% if archive.fichier %}<div class="mb-2"><a href="{{ archive.fichier.url }}" target="_blank"><i class="bi bi-download me-1"></i>Télécharger la version actuelle</a></div>{% endif %}
+      {% if archive.tags %}<div class="mb-2"><strong>Tags :</strong> {% for t in archive.tag_list %}<span class="badge bg-secondary me-1">{{ t }}</span>{% endfor %}</div>{% endif %}
+      {% if archive.description %}<div class="mb-2"><strong>Description :</strong><br>{{ archive.description|linebreaksbr }}</div>{% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title">Historique des versions</h6></div>
+      <div class="p-3">
+        <table class="table table-sm mb-3">
+          <thead><tr><th>Version</th><th>Date</th><th>Par</th><th>Commentaire</th><th></th></tr></thead>
+          <tbody>
+            {% for v in versions %}
+            <tr>
+              <td style="font-size:.82rem;">v{{ v.version }}</td>
+              <td style="font-size:.82rem;">{{ v.uploaded_at|date:"d/m/Y H:i" }}</td>
+              <td style="font-size:.82rem;color:#64748b;">{{ v.uploaded_by.get_full_name|default:"—" }}</td>
+              <td style="font-size:.82rem;">{{ v.commentaire|default:"—" }}</td>
+              <td>{% if v.fichier %}<a href="{{ v.fichier.url }}" target="_blank"><i class="bi bi-download"></i></a>{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-3">Aucune version antérieure.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        <form method="post" enctype="multipart/form-data" class="row g-2 border-top pt-3">
+          {% csrf_token %}
+          <div class="col-md-4">
+            <label class="form-label" style="font-size:.75rem;font-weight:600;">Nouvelle version</label>
+            {{ form.version }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" style="font-size:.75rem;font-weight:600;">Fichier</label>
+            {{ form.fichier }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label" style="font-size:.75rem;font-weight:600;">Commentaire</label>
+            {{ form.commentaire }}
+          </div>
+          <div class="col-12 text-end">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-upload me-1"></i>Déposer cette version</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

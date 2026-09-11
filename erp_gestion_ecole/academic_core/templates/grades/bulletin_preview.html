@@ -1,0 +1,714 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% block title %}Bulletin — {{ data.student.user.get_full_name }}{% if is_sr %} (SR){% endif %}{% endblock %}
+{% block breadcrumb %}
+{% if is_sr %}
+<li class="breadcrumb-item"><a href="{% url 'grades:rattrapage_class_list' %}">Rattrapages</a></li>
+<li class="breadcrumb-item"><a href="{{ back_url }}">{{ class_group.name }}</a></li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'grades:bulletin_class_list' %}">Bulletins</a></li>
+<li class="breadcrumb-item"><a href="{% url 'grades:bulletin_list' class_group.pk data.semester.pk %}">{{ class_group.name }}</a></li>
+{% endif %}
+<li class="breadcrumb-item active">{{ data.student.user.get_full_name }}</li>
+{% endblock %}
+
+{% block content %}
+{% with student=data.student semester=data.semester program=data.program %}
+
+<!-- Barre d'actions -->
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <h1 class="page-title">
+    {% if is_sr %}
+    <span class="icon" style="background:#b45309;"><i class="bi bi-arrow-repeat"></i></span>Bulletin SR — Session de Rattrapage
+    {% else %}
+    <span class="icon" style="background:#003D82;"><i class="bi bi-journal-text"></i></span>Bulletin de notes
+    {% endif %}
+  </h1>
+  <div class="d-flex gap-2 align-items-center">
+    <span id="save-indicator" style="display:none;font-size:.8rem;color:#16a34a;font-weight:600;">
+      <i class="bi bi-check-circle-fill me-1"></i>Enregistré
+    </span>
+    {% if is_sr %}
+    <a href="{{ back_url }}" class="btn btn-sm" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;padding:7px 14px;">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    <a href="{{ pdf_url }}" class="btn btn-sm" style="background:#b45309;color:#fff;border:none;padding:7px 16px;">
+      <i class="bi bi-file-earmark-pdf me-1"></i>PDF (SR)
+    </a>
+    {% else %}
+    <a href="{% url 'grades:bulletin_pdf' class_group.pk semester.pk student.pk %}"
+       class="btn btn-sm" style="background:#dc2626;color:#fff;border:none;padding:7px 16px;">
+      <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+{% if is_sr %}
+<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:9px 16px;margin-bottom:12px;font-size:.82rem;color:#92400e;display:flex;align-items:center;gap:8px;">
+  <i class="bi bi-pencil-square" style="font-size:1rem;flex-shrink:0;"></i>
+  <span><strong>Session de Rattrapage (SR)</strong> — Saisissez la note de rattrapage dans la colonne <strong>Rattrap</strong> puis appuyez sur <kbd>Entrée</kbd> pour enregistrer. Les UEs validées via rattrapage afficheront <strong>« Validée en SR »</strong>.</span>
+</div>
+{% else %}
+<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 16px;margin-bottom:12px;font-size:.8rem;color:#92400e;">
+  <i class="bi bi-pencil-square me-1"></i>
+  <b>Saisie directe :</b> cliquez sur une note MCC (D1/D2) ou Examen → saisissez (0–20) → <kbd>Entrée</kbd> pour enregistrer.
+</div>
+{% endif %}
+
+<!-- ══ BULLETIN ══ -->
+<div style="background:#fff;border:1.5px solid #003D82;border-radius:10px;overflow:hidden;margin-bottom:16px;">
+
+  <!-- 1. EN-TÊTE : logo | titre | semestre -->
+  <table style="width:100%;border-collapse:collapse;border-bottom:1.5px solid #003D82;">
+    <tr>
+      <td style="width:15%;padding:8px 12px;vertical-align:middle;text-align:center;border-right:1px solid #cbd5e1;">
+        {% if institut_config and institut_config.logo %}
+          <img src="{{ institut_config.logo.url }}" alt="{{ institut_config.sigle|default:'Logo' }}"
+               style="max-height:52px;max-width:100%;object-fit:contain;">
+        {% else %}
+          <img src="{% static 'img/logo_isi.png' %}" alt="Logo"
+               style="max-height:52px;max-width:100%;object-fit:contain;"
+               onerror="this.style.display='none'">
+        {% endif %}
+      </td>
+      <td style="text-align:center;padding:8px 16px;vertical-align:middle;border-right:1px solid #cbd5e1;">
+        <div style="font-weight:800;font-size:.95rem;color:#003D82;letter-spacing:.02em;">
+          BULLETIN DE NOTES{% if is_sr %} — SESSION DE RATTRAPAGE{% endif %}
+        </div>
+        <div style="font-size:.8rem;color:#64748b;margin-top:2px;">Année académique : {{ semester.academic_year }}</div>
+      </td>
+      <td style="width:15%;padding:8px 12px;text-align:center;vertical-align:middle;">
+        <div style="font-weight:800;font-size:1rem;color:#003D82;">Semestre {{ semester.number }}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- 2. INFO ÉTUDIANT -->
+  <table style="width:100%;border-collapse:collapse;border-bottom:1px solid #e2e8f0;">
+    <tr>
+      <td style="width:14%;padding:5px 10px;font-size:.72rem;color:#64748b;font-weight:600;border-right:1px solid #e2e8f0;">Matricule :</td>
+      <td style="width:30%;padding:5px 10px;font-weight:700;font-size:.82rem;color:#1e293b;border-right:1px solid #e2e8f0;">{{ student.matricule|default:"—" }}</td>
+      <td style="width:14%;padding:5px 10px;font-size:.72rem;color:#64748b;font-weight:600;border-right:1px solid #e2e8f0;">NOM et Prénom :</td>
+      <td style="padding:5px 10px;font-weight:700;font-size:.82rem;color:#1e293b;">{{ student.user.last_name|upper }} {{ student.user.first_name|title }}</td>
+    </tr>
+    <tr style="border-top:1px solid #f1f5f9;">
+      <td style="padding:5px 10px;font-size:.72rem;color:#64748b;font-weight:600;border-right:1px solid #e2e8f0;">Sexe :</td>
+      <td style="padding:5px 10px;font-weight:600;font-size:.82rem;border-right:1px solid #e2e8f0;">
+        {% if student.gender == 'M' or student.gender == 'MALE' %}Masculin{% elif student.gender == 'F' or student.gender == 'FEMALE' %}Féminin{% else %}—{% endif %}
+      </td>
+      <td style="padding:5px 10px;font-size:.72rem;color:#64748b;font-weight:600;border-right:1px solid #e2e8f0;">Date et lieu de naissance :</td>
+      <td style="padding:5px 10px;font-size:.82rem;">
+        {{ student.date_of_birth|date:"d/m/Y"|default:"—" }}{% if student.place_of_birth %} à {{ student.place_of_birth }}{% endif %}
+      </td>
+    </tr>
+    <tr style="border-top:1px solid #f1f5f9;">
+      <td style="padding:5px 10px;font-size:.72rem;color:#64748b;font-weight:600;border-right:1px solid #e2e8f0;">Nb. absences :</td>
+      <td style="padding:5px 10px;font-weight:600;font-size:.82rem;border-right:1px solid #e2e8f0;">{{ absence_count }} séance(s)</td>
+      <td style="border-right:1px solid #e2e8f0;"></td>
+      <td></td>
+    </tr>
+  </table>
+
+  <!-- 3. DOMAINE / MENTION / SPÉCIALITÉ / GRADE -->
+  <table style="width:100%;border-collapse:collapse;border-bottom:1.5px solid #003D82;font-size:.78rem;">
+    <tr style="background:#f8fafc;">
+      <td style="width:25%;padding:4px 10px;text-align:center;border-right:1px solid #e2e8f0;">
+        <div style="color:#94a3b8;font-size:.68rem;font-weight:600;">Domaine</div>
+        <div style="font-weight:700;color:#1e293b;">{{ class_group.domaine|default:"Sciences & Technologies" }}</div>
+      </td>
+      <td style="width:25%;padding:4px 10px;text-align:center;border-right:1px solid #e2e8f0;">
+        <div style="color:#94a3b8;font-size:.68rem;font-weight:600;">Mention</div>
+        <div style="font-weight:700;color:#1e293b;">{{ class_group.mention|default:"—" }}</div>
+      </td>
+      <td style="width:35%;padding:4px 10px;text-align:center;border-right:1px solid #e2e8f0;">
+        <div style="color:#94a3b8;font-size:.68rem;font-weight:600;">Spécialité</div>
+        <div style="font-weight:700;color:#1e293b;">{{ program.name|default:"—" }}</div>
+      </td>
+      <td style="width:15%;padding:4px 10px;text-align:center;">
+        <div style="color:#94a3b8;font-size:.68rem;font-weight:600;">Grade</div>
+        <div style="font-weight:700;color:#1e293b;">Licence</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- 4. TABLEAU DES NOTES (10 colonnes, identiques au PDF) -->
+  <div class="table-responsive">
+    <table id="notes-table" style="width:100%;border-collapse:collapse;font-size:.75rem;">
+      <thead>
+        <!-- Ligne 1 en-têtes -->
+        <tr style="background:#003D82;color:#fff;">
+          <th rowspan="2" style="padding:6px 8px;text-align:left;min-width:200px;border-right:1px solid #1d4ed8;">UE / Éléments constitutifs</th>
+          <th style="padding:6px 4px;text-align:center;border-right:1px solid #1d4ed8;min-width:80px;">MCC</th>
+          <th style="padding:6px 4px;text-align:center;border-right:1px solid #1d4ed8;min-width:75px;">Examen</th>
+          <th style="padding:6px 4px;text-align:center;border-right:1px solid #1d4ed8;min-width:75px;">Rattrap</th>
+          <th style="padding:6px 4px;text-align:center;border-right:1px solid #1d4ed8;min-width:55px;">Moy</th>
+          <th style="padding:6px 4px;text-align:center;border-right:1px solid #1d4ed8;min-width:40px;">Coef</th>
+          <th style="padding:6px 4px;text-align:center;border-right:1px solid #1d4ed8;min-width:55px;">Moyenne</th>
+          <th style="padding:6px 4px;text-align:center;border-right:1px solid #1d4ed8;min-width:45px;">Crédit</th>
+          <th style="padding:6px 4px;text-align:center;border-right:1px solid #1d4ed8;min-width:55px;">Moyenne</th>
+          <th rowspan="2" style="padding:6px 4px;text-align:center;min-width:90px;">Appréciation</th>
+        </tr>
+        <!-- Ligne 2 sous-en-têtes -->
+        <tr style="background:#003D82;color:#bfdbfe;font-size:.68rem;">
+          <th style="padding:3px 4px;text-align:center;border-right:1px solid #1d4ed8;border-top:1px solid #1d4ed8;">40%</th>
+          <th style="padding:3px 4px;text-align:center;border-right:1px solid #1d4ed8;border-top:1px solid #1d4ed8;">60%</th>
+          <th style="padding:3px 4px;text-align:center;border-right:1px solid #1d4ed8;border-top:1px solid #1d4ed8;">60%</th>
+          <th style="padding:3px 4px;text-align:center;border-right:1px solid #1d4ed8;border-top:1px solid #1d4ed8;">EC</th>
+          <th style="padding:3px 4px;text-align:center;border-right:1px solid #1d4ed8;border-top:1px solid #1d4ed8;">EC</th>
+          <th style="padding:3px 4px;text-align:center;border-right:1px solid #1d4ed8;border-top:1px solid #1d4ed8;">Coef</th>
+          <th style="padding:3px 4px;text-align:center;border-right:1px solid #1d4ed8;border-top:1px solid #1d4ed8;">EC</th>
+          <th style="padding:3px 4px;text-align:center;border-right:1px solid #1d4ed8;border-top:1px solid #1d4ed8;">UE</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ue_entry in data.ue_list %}
+        {% with n_ec=ue_entry.ec_list|length %}
+
+        <!-- Ligne en-tête UE (col 0-6 fusionnées horizontalement ; cols 7-8 en rowspan) -->
+        <tr class="ue-row" data-ue-id="{{ ue_entry.ue.pk }}"
+            style="background:#eff6ff;border-bottom:1px solid #bfdbfe;">
+          <td colspan="7" style="padding:6px 10px;font-weight:700;font-size:.8rem;color:#003D82;border-right:1px solid #cbd5e1;">
+            {{ ue_entry.ue.code }} — {{ ue_entry.ue.title }}
+          </td>
+          <td class="ue-cred-cell" rowspan="{{ n_ec|add:2 }}"
+              style="padding:5px 4px;text-align:center;font-weight:700;border-right:1px solid #cbd5e1;vertical-align:middle;
+                     color:{% if ue_entry.credits_obtained %}#15803D{% else %}#DC2626{% endif %};">
+            {{ ue_entry.credits_obtained }}
+          </td>
+          <td class="ue-avg-cell" rowspan="{{ n_ec|add:2 }}"
+              style="padding:5px 4px;text-align:center;font-weight:800;font-size:.88rem;border-right:1px solid #cbd5e1;vertical-align:middle;
+                     color:{% if ue_entry.average %}{% if ue_entry.is_validated %}#15803D{% else %}#DC2626{% endif %}{% else %}#94a3b8{% endif %};">
+            {% if ue_entry.average %}{{ ue_entry.average|floatformat:3 }}{% else %}—{% endif %}
+          </td>
+          <td style="padding:6px 4px;"></td>
+        </tr>
+
+        <!-- Lignes EC -->
+        {% for ec in ue_entry.ec_list %}
+        <tr class="ec-row"
+            data-subject-id="{{ ec.subject.pk }}"
+            data-ue-id="{{ ue_entry.ue.pk }}"
+            data-student-id="{{ student.pk }}"
+            data-semester-id="{{ semester.pk }}"
+            data-class-id="{{ class_group.pk }}"
+            style="background:{% cycle '#fff' '#f8fafc' %};border-bottom:1px solid #f1f5f9;">
+
+          <!-- Col 0 : Intitulé EC -->
+          <td style="padding:4px 8px 4px 20px;color:#1e293b;border-right:1px solid #e2e8f0;">{{ ec.subject.title }}</td>
+
+          <!-- Col 1 : MCC 40% (D1 + D2 + CC calculé) -->
+          <td style="padding:3px 4px;text-align:center;border-right:1px solid #e2e8f0;">
+            {% if is_sr %}
+            <span class="ec-cc-cell" style="font-weight:600;color:{% if ec.cc_average %}{% if ec.cc_average >= 10 %}#15803D{% else %}#DC2626{% endif %}{% else %}#94a3b8{% endif %};">
+              {% if ec.cc_average %}{{ ec.cc_average|floatformat:2 }}{% endif %}
+            </span>
+            {% else %}
+            <div style="display:flex;flex-direction:column;gap:2px;align-items:center;">
+              <input type="number" class="grade-input" data-type="DEVOIR1" min="0" max="20" step="0.01"
+                     value="{% if ec.d1_score %}{{ ec.d1_score }}{% endif %}" placeholder="D1"
+                     style="width:54px;text-align:center;border:1px solid #cbd5e1;border-radius:4px;padding:2px 3px;font-size:.72rem;font-weight:600;
+                            color:{% if ec.d1_score %}{% if ec.d1_score >= 10 %}#15803D{% else %}#DC2626{% endif %}{% else %}#64748b{% endif %};background:#f0fdf4;">
+              <input type="number" class="grade-input" data-type="DEVOIR2" min="0" max="20" step="0.01"
+                     value="{% if ec.d2_score %}{{ ec.d2_score }}{% endif %}" placeholder="D2"
+                     style="width:54px;text-align:center;border:1px solid #cbd5e1;border-radius:4px;padding:2px 3px;font-size:.72rem;font-weight:600;
+                            color:{% if ec.d2_score %}{% if ec.d2_score >= 10 %}#15803D{% else %}#DC2626{% endif %}{% else %}#64748b{% endif %};background:#f0fdf4;">
+              <span class="ec-cc-cell" style="font-size:.68rem;font-weight:700;color:{% if ec.cc_average %}{% if ec.cc_average >= 10 %}#15803D{% else %}#DC2626{% endif %}{% else %}#94a3b8{% endif %};">
+                {% if ec.cc_average %}{{ ec.cc_average|floatformat:2 }}{% endif %}
+              </span>
+            </div>
+            {% endif %}
+          </td>
+
+          <!-- Col 2 : Examen 60% -->
+          <td style="padding:3px 4px;text-align:center;border-right:1px solid #e2e8f0;">
+            {% if is_sr %}
+            <span style="font-weight:600;color:{% if ec.exam_score %}{% if ec.exam_score >= 10 %}#15803D{% else %}#DC2626{% endif %}{% else %}#94a3b8{% endif %};">
+              {% if ec.exam_score %}{{ ec.exam_score|floatformat:2 }}{% endif %}
+            </span>
+            {% else %}
+            <input type="number" class="grade-input" data-type="EXAM" min="0" max="20" step="0.01"
+                   value="{% if ec.exam_score %}{{ ec.exam_score }}{% endif %}" placeholder="—"
+                   style="width:60px;text-align:center;border:1px solid #cbd5e1;border-radius:4px;padding:2px 3px;font-size:.75rem;font-weight:600;
+                          color:{% if ec.exam_score %}{% if ec.exam_score >= 10 %}#15803D{% else %}#DC2626{% endif %}{% else %}#64748b{% endif %};background:#f0fdf4;">
+            {% endif %}
+          </td>
+
+          <!-- Col 3 : Rattrapage -->
+          <td style="padding:3px 4px;text-align:center;border-right:1px solid #e2e8f0;">
+            <input type="number" class="grade-input" data-type="RATTRAPAGE" min="0" max="20" step="0.01"
+                   value="{% if ec.rattrapage_score %}{{ ec.rattrapage_score }}{% endif %}" placeholder="—"
+                   style="width:60px;text-align:center;border:1.5px solid {% if is_sr %}#fcd34d{% else %}#e2e8f0{% endif %};border-radius:4px;padding:2px 3px;font-size:.75rem;
+                          font-weight:{% if ec.rattrapage_score %}700{% else %}400{% endif %};
+                          color:{% if ec.rattrapage_score %}{% if ec.rattrapage_score >= 10 %}#15803D{% else %}#DC2626{% endif %}{% else %}#94a3b8{% endif %};
+                          background:{% if is_sr %}#fefce8{% else %}#f8fafc{% endif %};">
+          </td>
+
+          <!-- Col 4 : Moy EC -->
+          <td class="ec-final-cell" style="padding:4px;text-align:center;font-weight:800;font-size:.85rem;border-right:1px solid #e2e8f0;
+              color:{% if ec.final_average %}{% if ec.final_average >= 10 %}#15803D{% else %}#DC2626{% endif %}{% else %}#94a3b8{% endif %};">
+            {% if ec.final_average %}{{ ec.final_average|floatformat:2 }}{% endif %}
+          </td>
+
+          <!-- Col 5 : Coef -->
+          <td style="padding:4px;text-align:center;font-size:.76rem;border-right:1px solid #e2e8f0;">{{ ec.coeff }}</td>
+
+          <!-- Col 6 : Moy × Coef -->
+          <td style="padding:4px;text-align:center;font-size:.76rem;border-right:1px solid #e2e8f0;color:#475569;">
+            {% if ec.moy_x_coef %}{{ ec.moy_x_coef|floatformat:2 }}{% endif %}
+          </td>
+
+          <!-- Cols 7 (Crédit EC) et 8 (Moy UE) sont dans le rowspan de la ligne UE -->
+
+          <!-- Col 9 : Appréciation EC (identique PDF) -->
+          <td class="ec-val-cell" style="padding:4px 6px;text-align:center;font-size:.72rem;font-weight:700;">
+            {% if ec.validated_by_rattrapage %}
+            <span style="color:#D97706;">Admis en SR</span>
+            {% elif ec.appreciation == 'Validé' %}
+            <span style="color:#15803D;">Validé</span>
+            {% elif ec.appreciation == 'A faire' %}
+            <span style="color:#64748B;">A faire</span>
+            {% else %}
+            <span style="color:#DC2626;">Non Validé</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+
+        <!-- Ligne totaux UE (cols 7 et 8 dans rowspan) -->
+        <tr style="background:#DBEAFE;border-top:1px solid #bfdbfe;border-bottom:2px solid #003D82;">
+          <td style="padding:4px 10px;"></td>
+          <td style="padding:4px;"></td>
+          <td style="padding:4px;"></td>
+          <td style="padding:4px;"></td>
+          <td style="padding:4px;"></td>
+          <td style="padding:4px;text-align:center;font-weight:700;font-size:.78rem;border-right:1px solid #cbd5e1;">
+            {{ ue_entry.coeff_sum|floatformat:2 }}
+          </td>
+          <td style="padding:4px;text-align:center;font-size:.78rem;border-right:1px solid #cbd5e1;"></td>
+          <!-- cols 7 et 8 : dans le rowspan -->
+          <td class="ue-val-cell" style="padding:4px 6px;text-align:center;font-size:.72rem;font-weight:700;">
+            {% if ue_entry.validated_by_rattrapage %}
+            <span style="color:#b45309;">Validée en SR</span>
+            {% elif ue_entry.is_validated %}
+            <span style="color:#15803D;">Validée</span>
+            {% elif ue_entry.appreciation == "EC à composer" %}
+            <span style="color:#64748b;">EC à composer</span>
+            {% else %}
+            <span style="color:#DC2626;">Non Validée</span>
+            {% endif %}
+          </td>
+        </tr>
+
+        {% endwith %}
+        {% empty %}
+        <tr>
+          <td colspan="10" style="padding:20px;text-align:center;color:#94a3b8;">
+            Aucune UE définie. Veuillez configurer la maquette de formation.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 5. RÉSUMÉ CRÉDITS / MOYENNES (identique PDF) -->
+<div style="background:#fff;border:1.5px solid #003D82;border-radius:10px;overflow:hidden;margin-bottom:12px;">
+  {% if is_first_of_pair %}
+  <!-- S1/S3/S5 : Crédits + Moyenne du semestre -->
+  <table style="width:100%;border-collapse:collapse;font-size:.82rem;">
+    <tr style="background:#f8fafc;">
+      <td style="padding:8px 16px;font-weight:700;color:#003D82;border-right:1px solid #e2e8f0;width:75%;">Crédits Semestre {{ s1_num }} :</td>
+      <td style="padding:8px 16px;font-weight:800;font-size:.95rem;text-align:right;
+          color:{% if s1_cr_obt %}#15803D{% else %}#DC2626{% endif %};">
+        {% if s1_cr_obt is not None %}{{ s1_cr_obt }} / {% if s1_cr_pos %}{{ s1_cr_pos }}{% else %}30{% endif %}{% else %}— / {% if s1_cr_pos %}{{ s1_cr_pos }}{% else %}30{% endif %}{% endif %}
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:8px 16px;font-weight:700;color:#003D82;border-right:1px solid #e2e8f0;border-top:1px solid #e2e8f0;">Moyenne Semestre {{ s1_num }} :</td>
+      <td style="padding:8px 16px;font-weight:800;font-size:.95rem;text-align:right;border-top:1px solid #e2e8f0;
+          color:{% if s1_avg %}{% if s1_avg >= 10 %}#15803D{% else %}#DC2626{% endif %}{% else %}#94a3b8{% endif %};">
+        {% if s1_avg %}{{ s1_avg|floatformat:2 }} / 20{% else %}— / 20{% endif %}
+      </td>
+    </tr>
+  </table>
+  {% else %}
+  <!-- S2 : S1 + S2 + Total + Moyennes (identique PDF) -->
+  <table style="width:100%;border-collapse:collapse;font-size:.8rem;text-align:center;">
+    <tr style="background:#f8fafc;">
+      <td style="padding:7px 8px;font-weight:700;color:#003D82;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">Crédits<br>Semestre {{ s1_num }}</td>
+      <td style="padding:7px 8px;font-weight:700;color:#003D82;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">Crédits<br>Semestre {{ s2_num }}</td>
+      <td style="padding:7px 8px;font-weight:700;color:#003D82;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">Total crédits</td>
+      <td style="padding:7px 8px;font-weight:700;color:#003D82;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">Moyenne<br>Semestre {{ s1_num }}</td>
+      <td style="padding:7px 8px;font-weight:700;color:#003D82;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">Moyenne<br>Semestre {{ s2_num }}</td>
+      <td style="padding:7px 8px;font-weight:700;color:#003D82;border-bottom:1px solid #e2e8f0;background:#eff6ff;">Moy Générale</td>
+    </tr>
+    <tr>
+      <td style="padding:10px 8px;font-weight:800;font-size:.95rem;border-right:1px solid #e2e8f0;
+          color:{% if s1_cr_obt %}#15803D{% else %}#94a3b8{% endif %};">
+        {% if s1_cr_obt is not None %}{{ s1_cr_obt }} / {% if s1_cr_pos %}{{ s1_cr_pos }}{% else %}30{% endif %}{% else %}— / {% if s1_cr_pos %}{{ s1_cr_pos }}{% else %}30{% endif %}{% endif %}
+      </td>
+      <td style="padding:10px 8px;font-weight:800;font-size:.95rem;border-right:1px solid #e2e8f0;
+          color:{% if s2_cr_obt %}#15803D{% else %}#DC2626{% endif %};">
+        {% if s2_cr_obt is not None %}{{ s2_cr_obt }} / {% if s2_cr_pos %}{{ s2_cr_pos }}{% else %}30{% endif %}{% else %}— / {% if s2_cr_pos %}{{ s2_cr_pos }}{% else %}30{% endif %}{% endif %}
+      </td>
+      <td style="padding:10px 8px;font-weight:800;font-size:.95rem;color:#003D82;border-right:1px solid #e2e8f0;">
+        {{ total_cr_obt_global }} / 60
+      </td>
+      <td style="padding:10px 8px;font-weight:800;font-size:.95rem;border-right:1px solid #e2e8f0;
+          color:{% if s1_avg %}{% if s1_avg >= 10 %}#15803D{% else %}#DC2626{% endif %}{% else %}#94a3b8{% endif %};">
+        {% if s1_avg %}{{ s1_avg|floatformat:2 }} / 20{% else %}— / 20{% endif %}
+      </td>
+      <td style="padding:10px 8px;font-weight:800;font-size:.95rem;border-right:1px solid #e2e8f0;
+          color:{% if s2_avg %}{% if s2_avg >= 10 %}#15803D{% else %}#DC2626{% endif %}{% else %}#94a3b8{% endif %};">
+        {% if s2_avg %}{{ s2_avg|floatformat:2 }} / 20{% else %}— / 20{% endif %}
+      </td>
+      <td style="padding:10px 8px;font-weight:800;font-size:1rem;background:#eff6ff;
+          color:{% if moy_gen %}{% if moy_gen >= 10 %}#15803D{% else %}#DC2626{% endif %}{% else %}#94a3b8{% endif %};">
+        {% if moy_gen %}{{ moy_gen|floatformat:2 }} / 20{% else %}— / 20{% endif %}
+      </td>
+    </tr>
+  </table>
+  {% endif %}
+</div>
+
+<!-- 6. DÉCISION CONSEIL DE CLASSE -->
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:9px 16px;margin-bottom:12px;font-size:.82rem;color:#1e3a5f;">
+  <strong>Décision conseil de classe :</strong>
+  {% if data.jury_decision %}{{ data.jury_decision }}{% else %}Mention : {{ data.mention|default:"—" }}{% endif %}
+</div>
+
+<!-- 7. RÉCAPITULATIF UE PAR SEMESTRE (identique PDF) -->
+{% comment %}Macro récap réutilisable{% endcomment %}
+<div style="background:#fff;border:1.5px solid #003D82;border-radius:10px;overflow:hidden;margin-bottom:12px;">
+  {% if is_first_of_pair %}
+  <!-- S1/S3/S5 uniquement : pleine largeur -->
+  <!-- En-tête + moyenne fusionnés dans une seule ligne (« UE X » puis sa
+       moyenne juste en dessous, dans la même cellule) plutôt que deux
+       lignes séparées — demande explicite pour tous les bulletins. -->
+  <table style="width:100%;border-collapse:collapse;font-size:.76rem;">
+    <thead>
+      <tr style="background:#003D82;color:#fff;">
+        <th style="padding:6px 10px;text-align:left;min-width:130px;">Récap du semestre {{ s1_num }}</th>
+        {% for u in s1_ue_list %}
+        <th style="padding:6px 4px;text-align:center;">
+          UE {{ forloop.counter }}<br>
+          <span style="font-weight:800;">{% if u.average %}{{ u.average|floatformat:2 }}{% else %}—{% endif %}</span>
+        </th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:5px 10px;font-size:.72rem;color:#64748b;border-right:1px solid #e2e8f0;">Validations</td>
+        {% for u in s1_ue_list %}
+        <td style="padding:5px 4px;text-align:center;font-size:.72rem;font-weight:700;border-right:1px solid #e2e8f0;
+            color:{% if u.validated_by_rattrapage %}#D97706{% elif u.is_validated %}#15803D{% else %}#DC2626{% endif %};">
+          {% if u.validated_by_rattrapage %}Val. SR{% elif u.is_validated %}Validée{% else %}Non Validée{% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      <tr style="background:#f8fafc;">
+        <td style="padding:5px 10px;font-size:.72rem;color:#64748b;border-right:1px solid #e2e8f0;">Crédits obtenus</td>
+        {% for u in s1_ue_list %}
+        <td style="padding:5px 4px;text-align:center;font-weight:700;color:#003D82;border-right:1px solid #e2e8f0;">
+          {% if u.credits_obtained is not None %}{{ u.credits_obtained }}{% else %}—{% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+    </tbody>
+  </table>
+  {% else %}
+  <!-- S2 : récap S1 (gauche) + récap S2 (droite) -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
+    <!-- Récap S1 -->
+    <div style="border-right:2px solid #003D82;">
+      <table style="width:100%;border-collapse:collapse;font-size:.74rem;">
+        <thead><tr style="background:#003D82;color:#fff;">
+          <th style="padding:5px 8px;text-align:left;min-width:110px;">Récap du semestre {{ s1_num }}</th>
+          {% for u in s1_ue_list %}
+          <th style="padding:5px 4px;text-align:center;">
+            UE {{ forloop.counter }}<br>
+            <span style="font-weight:800;">{% if u.average %}{{ u.average|floatformat:2 }}{% else %}—{% endif %}</span>
+          </th>
+          {% empty %}
+          {% for u in s2_ue_list %}<th style="padding:5px 4px;text-align:center;">UE {{ forloop.counter }}<br><span style="font-weight:800;">—</span></th>{% endfor %}
+          {% endfor %}
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td style="padding:4px 8px;color:#64748b;font-size:.68rem;border-right:1px solid #e2e8f0;">Validations</td>
+            {% for u in s1_ue_list %}
+            <td style="padding:4px;text-align:center;font-size:.68rem;font-weight:700;border-right:1px solid #e2e8f0;
+                color:{% if u.validated_by_rattrapage %}#D97706{% elif u.is_validated %}#15803D{% else %}#DC2626{% endif %};">
+              {% if u.validated_by_rattrapage %}Val. SR{% elif u.is_validated %}Validée{% else %}Non Val.{% endif %}
+            </td>
+            {% empty %}
+            {% for u in s2_ue_list %}<td style="padding:4px;text-align:center;color:#94a3b8;">—</td>{% endfor %}
+            {% endfor %}
+          </tr>
+          <tr style="background:#f8fafc;">
+            <td style="padding:4px 8px;color:#64748b;font-size:.68rem;border-right:1px solid #e2e8f0;">Crédits obtenus</td>
+            {% for u in s1_ue_list %}
+            <td style="padding:4px;text-align:center;font-weight:700;color:#003D82;border-right:1px solid #e2e8f0;">
+              {% if u.credits_obtained is not None %}{{ u.credits_obtained }}{% else %}—{% endif %}
+            </td>
+            {% empty %}
+            {% for u in s2_ue_list %}<td style="padding:4px;text-align:center;color:#94a3b8;">—</td>{% endfor %}
+            {% endfor %}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <!-- Récap S2 -->
+    <div>
+      <table style="width:100%;border-collapse:collapse;font-size:.74rem;">
+        <thead><tr style="background:#003D82;color:#fff;">
+          <th style="padding:5px 8px;text-align:left;min-width:110px;">Récap du semestre {{ s2_num }}</th>
+          {% for u in s2_ue_list %}
+          <th style="padding:5px 4px;text-align:center;">
+            UE {{ forloop.counter }}<br>
+            <span style="font-weight:800;">{% if u.average %}{{ u.average|floatformat:2 }}{% else %}—{% endif %}</span>
+          </th>
+          {% endfor %}
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td style="padding:4px 8px;color:#64748b;font-size:.68rem;border-right:1px solid #e2e8f0;">Validations</td>
+            {% for u in s2_ue_list %}
+            <td style="padding:4px;text-align:center;font-size:.68rem;font-weight:700;border-right:1px solid #e2e8f0;
+                color:{% if u.validated_by_rattrapage %}#D97706{% elif u.is_validated %}#15803D{% else %}#DC2626{% endif %};">
+              {% if u.validated_by_rattrapage %}Val. SR{% elif u.is_validated %}Validée{% else %}Non Val.{% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          <tr style="background:#f8fafc;">
+            <td style="padding:4px 8px;color:#64748b;font-size:.68rem;border-right:1px solid #e2e8f0;">Crédits obtenus</td>
+            {% for u in s2_ue_list %}
+            <td style="padding:4px;text-align:center;font-weight:700;color:#003D82;border-right:1px solid #e2e8f0;">
+              {% if u.credits_obtained is not None %}{{ u.credits_obtained }}{% else %}—{% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- 8. LÉGENDE + SIGNATURE + PIED DE PAGE -->
+<div style="background:#fff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;margin-bottom:8px;">
+  <table style="width:100%;border-collapse:collapse;font-size:.72rem;">
+    <tr>
+      <td style="padding:8px 12px;border-right:1px solid #e2e8f0;width:15%;font-weight:600;color:#64748b;vertical-align:top;">Légende</td>
+      <td style="padding:8px 8px;border-right:1px solid #e2e8f0;width:18%;color:#64748b;">
+        <span style="color:#64748b;font-weight:700;">●</span> Examen(s) à faire
+      </td>
+      <td style="padding:8px 8px;border-right:1px solid #e2e8f0;width:15%;color:#DC2626;">
+        <span style="font-weight:700;">●</span> UE invalidée
+      </td>
+      <td style="padding:8px 8px;border-right:1px solid #e2e8f0;width:15%;color:#15803D;">
+        <span style="font-weight:700;">●</span> UE validée
+      </td>
+      <td style="padding:8px 8px;border-right:1px solid #e2e8f0;width:17%;color:#b45309;">
+        <span style="font-weight:700;">●</span> Validée en SR
+      </td>
+      <td rowspan="2" style="padding:10px;text-align:center;width:20%;vertical-align:middle;background:#f8fafc;">
+        <div style="font-size:.72rem;font-weight:700;color:#003D82;">
+          {% if bulletin_config.director_title %}{{ bulletin_config.director_title }}{% else %}Directeur/rice des études{% endif %}
+        </div>
+        <div style="font-size:.7rem;color:#1e293b;margin-top:4px;margin-bottom:24px;">
+          {% if bulletin_config.director_name %}{{ bulletin_config.director_name }}{% endif %}
+        </div>
+        <div style="font-size:.7rem;color:#475569;border-top:1px solid #cbd5e1;padding-top:4px;">Signature et Cachet</div>
+      </td>
+    </tr>
+    <tr style="background:#f8fafc;border-top:1px solid #e2e8f0;">
+      <td colspan="5" style="padding:6px 12px;font-size:.68rem;color:#94a3b8;">
+        <b>MCC</b>=Moy. contrôles &nbsp;|&nbsp; <b>EC</b>=Élément constitutif &nbsp;|&nbsp; <b>Rattrap</b>=note rattrapage &nbsp;|&nbsp; <b>Moy</b>=moyenne EC
+      </td>
+    </tr>
+  </table>
+  <div style="padding:6px 12px;text-align:center;font-size:.68rem;color:#94a3b8;border-top:1px solid #e2e8f0;background:#fafafa;">
+    {% if institut_config %}
+      {{ institut_config.nom }}{% if institut_config.adresse %} · {{ institut_config.adresse }}{% endif %}{% if institut_config.telephone %} · Tél : {{ institut_config.telephone }}{% endif %}{% if institut_config.email %} · {{ institut_config.email }}{% endif %}
+    {% else %}
+      Km1, avenue Cheikh Anta DIOP · Tél : +221 33 822 19 81 · contact@groupeisi.com · www.groupeisi.com
+    {% endif %}
+  </div>
+</div>
+
+{% endwith %}
+
+<style>
+.grade-input:focus { outline:2px solid #3b82f6;border-color:#3b82f6 !important;background:#eff6ff !important;color:#1e293b !important; }
+.grade-input.saving { opacity:.6;pointer-events:none; }
+.grade-input.saved  { border-color:#16a34a !important; }
+.grade-input.error  { border-color:#dc2626 !important;background:#fef2f2 !important; }
+kbd { background:#e2e8f0;border:1px solid #cbd5e1;border-radius:3px;padding:1px 5px;font-size:.75rem; }
+</style>
+
+<script>
+(function () {
+  const INLINE_URL = "{% url 'grades:grade_inline_update' %}";
+  const CSRF       = "{{ csrf_token }}";
+
+  function fmt(v) {
+    if (v === null || v === undefined) return '—';
+    return parseFloat(v).toFixed(2).replace('.', ',');
+  }
+  function gradeColor(v, na_color) {
+    if (v === null || v === undefined) return na_color || '#94a3b8';
+    return parseFloat(v) >= 10 ? '#15803D' : '#DC2626';
+  }
+  function applyInputStyle(input, v) {
+    input.classList.remove('saving', 'error', 'saved');
+    input.classList.add('saved');
+    input.style.color = gradeColor(v, '#64748b');
+    setTimeout(() => input.classList.remove('saved'), 1500);
+  }
+
+  async function saveGrade(input) {
+    const row = input.closest('tr.ec-row');
+    if (!row) return;
+
+    const subjectId  = row.dataset.subjectId;
+    const studentId  = row.dataset.studentId;
+    const semesterId = row.dataset.semesterId;
+    const classId    = row.dataset.classId;
+    const ueId       = row.dataset.ueId;
+    const gradeType  = input.dataset.type;
+    const scoreRaw   = input.value.trim().replace(',', '.');
+    const score      = scoreRaw === '' ? '' : parseFloat(scoreRaw);
+
+    if (scoreRaw !== '' && (isNaN(score) || score < 0 || score > 20)) {
+      input.classList.add('error');
+      input.title = 'Note invalide (0–20)';
+      return;
+    }
+
+    input.classList.add('saving');
+
+    try {
+      const resp = await fetch(INLINE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({
+          student_id:  parseInt(studentId),
+          subject_id:  parseInt(subjectId),
+          semester_id: parseInt(semesterId),
+          class_id:    parseInt(classId),
+          grade_type:  gradeType,
+          score:       scoreRaw === '' ? null : score,
+        }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json();
+        input.classList.remove('saving');
+        input.classList.add('error');
+        input.title = err.error || 'Erreur serveur';
+        return;
+      }
+
+      const d = await resp.json();
+      applyInputStyle(input, score === '' ? null : score);
+
+      // Mettre à jour les autres inputs de la ligne
+      const allInputs = row.querySelectorAll('.grade-input');
+      allInputs.forEach(inp => {
+        if (inp === input) return;
+        const t = inp.dataset.type;
+        let val;
+        if (t === 'DEVOIR1') val = d.d1;
+        else if (t === 'DEVOIR2') val = d.d2;
+        else if (t === 'EXAM') val = d.exam;
+        else if (t === 'RATTRAPAGE') val = d.ratt;
+        inp.value = val !== null && val !== undefined ? parseFloat(val).toFixed(2) : '';
+        inp.style.color = gradeColor(val, '#64748b');
+      });
+
+      // CC (span dans la colonne MCC)
+      const ccEl = row.querySelector('.ec-cc-cell');
+      if (ccEl) {
+        ccEl.textContent = d.cc !== null && d.cc !== undefined ? parseFloat(d.cc).toFixed(2) : '—';
+        ccEl.style.color = gradeColor(d.cc);
+      }
+
+      // Moy EC
+      const finalCell = row.querySelector('.ec-final-cell');
+      if (finalCell) {
+        finalCell.textContent = d.final !== null ? parseFloat(d.final).toFixed(2) : '—';
+        finalCell.style.color = gradeColor(d.final);
+      }
+
+      // Appréciation EC
+      const valCell = row.querySelector('.ec-val-cell');
+      if (valCell) {
+        if (d.validated_by_rattrapage) {
+          valCell.innerHTML = '<span style="color:#b45309;font-weight:700;">Admis SR</span>';
+        } else if (d.ec_validated) {
+          valCell.innerHTML = '<span style="color:#15803D;"><i class="bi bi-check-circle-fill"></i> Validé</span>';
+        } else {
+          valCell.innerHTML = '<span style="color:#94a3b8;">A faire</span>';
+        }
+      }
+
+      // Moy UE et Appréciation UE
+      const ueRow = document.querySelector(`tr.ue-row[data-ue-id="${ueId}"]`);
+      if (ueRow && d.ue_avg !== undefined) {
+        const ueAvgCell = ueRow.closest('tbody').querySelector(`td.ue-avg-cell`);
+        // Chercher dans le groupe UE (rowspan)
+        const allUeAvg = document.querySelectorAll(`tr.ue-row[data-ue-id="${ueId}"] .ue-avg-cell`);
+        allUeAvg.forEach(c => {
+          c.textContent = d.ue_avg !== null ? parseFloat(d.ue_avg).toFixed(3) : '—';
+          c.style.color = gradeColor(d.ue_avg);
+        });
+
+        const ueValCells = document.querySelectorAll(`tr.ue-row[data-ue-id="${ueId}"] ~ tr .ue-val-cell`);
+        // Mettre à jour la cellule validation UE dans la ligne totaux
+        const tbody = ueRow.closest('tbody');
+        let found = false;
+        let next = ueRow.nextElementSibling;
+        while (next && !found) {
+          const vc = next.querySelector('.ue-val-cell');
+          if (vc) {
+            found = true;
+            if (d.ue_validated_by_rattrapage) {
+              vc.innerHTML = '<span style="color:#b45309;font-weight:700;">Validée en SR</span>';
+            } else if (d.ue_validated) {
+              vc.innerHTML = '<span style="color:#15803D;font-weight:700;">Validée</span>';
+            } else {
+              vc.innerHTML = '<span style="color:#DC2626;font-weight:700;">Non Validée</span>';
+            }
+          }
+          next = next.nextElementSibling;
+        }
+      }
+
+      const ind = document.getElementById('save-indicator');
+      if (ind) {
+        ind.style.display = 'inline';
+        clearTimeout(ind._t);
+        ind._t = setTimeout(() => { ind.style.display = 'none'; }, 2500);
+      }
+
+    } catch (e) {
+      input.classList.remove('saving');
+      input.classList.add('error');
+      input.title = 'Erreur réseau';
+    }
+  }
+
+  document.querySelectorAll('#notes-table .grade-input').forEach(input => {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); saveGrade(input); input.blur(); }
+      if (e.key === 'Escape') { input.blur(); }
+    });
+    input.addEventListener('focus', () => { input.select(); });
+  });
+})();
+</script>
+{% endblock %}

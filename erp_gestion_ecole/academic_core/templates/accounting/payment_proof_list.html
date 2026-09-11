@@ -1,0 +1,36 @@
+{% extends 'base/base.html' %}
+{% block title %}Preuves de paiement à valider{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003d82;"><i class="bi bi-receipt"></i></span>
+    Preuves de paiement en attente
+  </h1>
+</div>
+
+<div class="card-section">
+  {% if proofs %}
+  <div class="table-responsive">
+    <table class="table" style="margin:0;font-size:.85rem;">
+      <thead>
+        <tr><th>Étudiant</th><th>Classe</th><th>Moyen</th><th>Montant déclaré</th><th>Déposée le</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for p in proofs %}
+        <tr>
+          <td>{{ p.enrollment.student.full_name }}</td>
+          <td>{{ p.enrollment.class_group }}</td>
+          <td>{{ p.get_moyen_paiement_display }}</td>
+          <td>{{ p.montant_declare }} FCFA</td>
+          <td>{{ p.submitted_at|date:"d/m/Y H:i" }}</td>
+          <td><a href="{% url 'accounting:payment_proof_detail' p.pk %}" class="btn btn-sm btn-outline-primary">Examiner</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted p-3 mb-0">Aucune preuve de paiement en attente.</p>
+  {% endif %}
+</div>
+{% endblock %}

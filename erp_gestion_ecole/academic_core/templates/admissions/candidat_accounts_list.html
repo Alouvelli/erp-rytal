@@ -1,0 +1,69 @@
+{% extends 'base/base.html' %}
+{% block title %}Comptes candidats — Portail d'admission{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003d82;"><i class="bi bi-people-fill"></i></span>
+    Comptes candidats — Portail d'admission
+  </h1>
+</div>
+
+<div class="card-section">
+  {% if rows %}
+  <div class="table-responsive">
+    <table class="table" style="margin:0;font-size:.85rem;">
+      <thead>
+        <tr>
+          <th>Candidat</th><th>Email</th><th>Téléphone</th><th>Filière</th>
+          <th>Étape</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.user.get_full_name }}</td>
+          <td>{{ row.user.email }}</td>
+          <td>{{ row.user.phone|default:"—" }}</td>
+          <td>{% if row.candidature %}{{ row.candidature.program.name }}{% else %}<span class="text-muted fst-italic">— aucune —</span>{% endif %}</td>
+          <td>
+            {% if row.stage_code == 'rejetee' %}<span class="badge bg-danger">{{ row.stage_label }}</span>
+            {% elif row.stage_code == 'finalise' %}<span class="badge bg-success">{{ row.stage_label }}</span>
+            {% elif row.stage_code == 'non_verifie' or row.stage_code == 'sans_candidature' %}<span class="badge bg-secondary">{{ row.stage_label }}</span>
+            {% else %}<span class="badge bg-warning text-dark">{{ row.stage_label }}</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1 flex-wrap">
+              {% if row.candidature and row.candidature.status == 'PENDING' %}
+              <form method="post" action="{% url 'admissions:candidature_detail' row.candidature.pk %}" class="d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="validate">
+                <button type="submit" class="btn btn-sm btn-success">Valider</button>
+              </form>
+              <a href="{% url 'admissions:candidature_detail' row.candidature.pk %}" class="btn btn-sm btn-outline-secondary">Voir / Rejeter</a>
+              {% endif %}
+              <a href="{% url 'admissions:candidat_account_edit' row.user.pk %}" class="btn btn-sm btn-outline-primary">Modifier</a>
+              {% if row.enrollment and row.enrollment.status == 'VALIDATED' %}
+              <a href="{% url 'accounting:inscription_recu_pdf' row.enrollment.pk %}" class="btn btn-sm btn-outline-success" target="_blank">
+                <i class="bi bi-file-earmark-pdf me-1"></i>Télécharger (PDF)
+              </a>
+              {% endif %}
+              {% if row.can_resend %}
+              <form method="post" action="{% url 'admissions:candidat_account_resend' row.user.pk %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-secondary">Renvoyer un rappel</button>
+              </form>
+              {% endif %}
+              <a href="{% url 'admissions:candidat_account_delete' row.user.pk %}" class="btn btn-sm btn-outline-danger">Supprimer</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted p-3 mb-0">Aucun compte candidat à afficher pour le moment.</p>
+  {% endif %}
+</div>
+{% endblock %}

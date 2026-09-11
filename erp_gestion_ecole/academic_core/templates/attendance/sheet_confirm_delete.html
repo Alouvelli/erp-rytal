@@ -1,0 +1,39 @@
+{% extends 'base/base.html' %}
+{% block title %}Supprimer la fiche d'émargement{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_list' %}">Émargements</a></li>
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_detail' sheet.pk %}">Détail</a></li>
+<li class="breadcrumb-item active">Supprimer</li>
+{% endblock %}
+{% block content %}
+<div class="row justify-content-center mt-4">
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#ef4444;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-trash"></i></span>
+          Confirmer la suppression
+        </h6>
+      </div>
+      <div class="p-4">
+        <p style="font-size:.9rem;color:#475569;">
+          Êtes-vous sûr de vouloir supprimer cette fiche d'émargement ?<br>
+          Cette action est <strong>irréversible</strong> et supprimera également toutes les présences associées.
+        </p>
+        <div class="p-3 mb-4" style="background:#f8fafc;border-radius:8px;border:1px solid var(--border);font-size:.84rem;">
+          <div><strong>Module (EC) :</strong> {{ sheet.timetable_entry.subject.title }}</div>
+          <div><strong>Enseignant :</strong> {{ sheet.timetable_entry.teacher.full_name }}</div>
+          <div><strong>Classe :</strong> {{ sheet.timetable_entry.class_group.name }}</div>
+          <div><strong>Date :</strong> {{ sheet.session_date|date:"d/m/Y" }}</div>
+          <div><strong>Statut :</strong> {{ sheet.get_status_display }}</div>
+        </div>
+        <form method="post" class="d-flex gap-2">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash me-1"></i>Supprimer définitivement</button>
+          <a href="{% url 'attendance:sheet_detail' sheet.pk %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x me-1"></i>Annuler</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

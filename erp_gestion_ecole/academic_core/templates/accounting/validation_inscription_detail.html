@@ -1,0 +1,1139 @@
+{% extends 'base/base.html' %}
+{% block title %}Inscription — {{ enrollment.student.full_name }}{% endblock %}
+
+{% block breadcrumb %}
+{% if user.is_caissier %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:caisse_dashboard' %}">La Caisse</a></li>
+{% else %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:validation_inscription_list' %}">Inscriptions</a></li>
+{% endif %}
+<li class="breadcrumb-item active">{{ enrollment.student.matricule }}</li>
+{% endblock %}
+
+{% block content %}
+{% with s=enrollment.student c=enrollment.class_group %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <div>
+    <h4 class="mb-0 fw-bold" style="color:var(--navy);">
+      <i class="bi bi-person-check-fill me-2" style="color:var(--accent);"></i>{{ s.full_name }}
+      <span class="ms-2" style="font-size:.85rem;font-weight:400;color:#64748b;">{{ s.matricule }}</span>
+    </h4>
+    <p class="text-muted mb-0" style="font-size:.82rem;">{{ c.name }} — {{ enrollment.academic_year.label }}</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if enrollment.status == STATUS_VALIDATED %}
+    <a href="{% url 'accounting:certificat_inscription_pdf' enrollment.pk %}" target="_blank" class="btn btn-sm" style="background:#166534;color:#fff;border-radius:8px;">
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>Certificat d'inscription
+    </a>
+    {% if enrollment.is_reinscription %}
+    <a href="{% url 'accounting:attestation_passage_pdf' enrollment.pk %}" target="_blank" class="btn btn-sm" style="background:#7c3aed;color:#fff;border-radius:8px;">
+      <i class="bi bi-file-earmark-check-fill me-1"></i>Attestation de passage
+    </a>
+    {% endif %}
+    {% with level_lower=enrollment.class_group.level.name|lower %}
+    {% if 'licence 3' in level_lower or 'l3' in level_lower or 'master 2' in level_lower or 'm2' in level_lower %}
+    <a href="{% url 'accounting:attestation_fin_cycle_pdf' enrollment.student.pk %}" target="_blank" class="btn btn-sm" style="background:#0f766e;color:#fff;border-radius:8px;">
+      <i class="bi bi-award-fill me-1"></i>Attestation de fin de cycle
+    </a>
+    {% endif %}
+    {% endwith %}
+    {% endif %}
+    {% if user.is_caissier %}
+    <a href="{% url 'accounting:caisse_dashboard' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    {% else %}
+    <a href="{% url 'accounting:validation_inscription_list' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3">
+  <!-- Colonne gauche : infos + statut -->
+  <div class="col-lg-5">
+
+    <!-- Badge statut -->
+    <div class="card border-0 shadow-sm mb-3 text-center py-3" style="border-radius:14px;">
+      {% if enrollment.status == STATUS_VALIDATED %}
+      <div><i class="bi bi-check-circle-fill" style="font-size:2.5rem;color:#16a34a;"></i></div>
+      <div class="fw-bold mt-2" style="font-size:1.1rem;color:#16a34a;">Inscription VALIDÉE</div>
+      {% if enrollment.validated_at %}
+      <div style="font-size:.78rem;color:#64748b;">le {{ enrollment.validated_at|date:"d/m/Y à H:i" }}{% if validated_by_user %} par {{ validated_by_user.get_full_name|default:validated_by_user.email }}{% endif %}</div>
+      {% endif %}
+      {% elif enrollment.status == STATUS_PENDING %}
+      <div><i class="bi bi-hourglass-split" style="font-size:2.5rem;color:#d97706;"></i></div>
+      <div class="fw-bold mt-2" style="font-size:1.1rem;color:#d97706;">En attente de validation</div>
+      {% elif enrollment.status == STATUS_PENDING_CAISSE %}
+      <div><i class="bi bi-cash-coin" style="font-size:2.5rem;color:#059669;"></i></div>
+      <div class="fw-bold mt-2" style="font-size:1.1rem;color:#059669;">En attente d'encaissement (à la caisse)</div>
+      {% elif enrollment.status == STATUS_REJECTED %}
+      <div><i class="bi bi-x-circle-fill" style="font-size:2.5rem;color:#dc2626;"></i></div>
+      <div class="fw-bold mt-2" style="font-size:1.1rem;color:#dc2626;">Inscription REJETÉE</div>
+      {% if enrollment.validated_at %}
+      <div style="font-size:.78rem;color:#64748b;">le {{ enrollment.validated_at|date:"d/m/Y" }}</div>
+      {% endif %}
+      {% else %}
+      <div><i class="bi bi-question-circle-fill" style="font-size:2.5rem;color:#94a3b8;"></i></div>
+      <div class="fw-bold mt-2" style="font-size:1.1rem;color:#64748b;">{{ enrollment.get_status_display }}</div>
+      {% endif %}
+    </div>
+
+    <!-- Infos étudiant -->
+    <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
+      <div class="card-header border-0 py-2 px-3" style="background:var(--navy);border-radius:14px 14px 0 0;">
+        <span class="fw-bold text-white" style="font-size:.82rem;"><i class="bi bi-person-fill me-1"></i>Étudiant</span>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0" style="font-size:.82rem;">
+          <tr><td class="fw-semibold text-muted ps-3" style="width:45%;">Matricule</td><td class="fw-bold" style="color:var(--navy);">{{ s.matricule }}</td></tr>
+          <tr><td class="fw-semibold text-muted ps-3">Nom complet</td><td>{{ s.full_name }}</td></tr>
+          <tr><td class="fw-semibold text-muted ps-3">Date de naissance</td><td>{{ s.date_of_birth|date:"d/m/Y"|default:"—" }}</td></tr>
+          <tr><td class="fw-semibold text-muted ps-3">Lieu de naissance</td><td>{{ s.place_of_birth|default:"—" }}</td></tr>
+          <tr><td class="fw-semibold text-muted ps-3">Téléphone</td><td>{{ s.phone|default:"—" }}</td></tr>
+          <tr><td class="fw-semibold text-muted ps-3">Email</td><td>{{ s.email|default:"—" }}</td></tr>
+          <tr>
+            <td class="fw-semibold text-muted ps-3">Bourse</td>
+            <td>
+              {% if s.is_boursier %}
+                <span class="badge" style="background:#7c3aed;font-size:.72rem;">
+                  <i class="bi bi-award-fill me-1"></i>Boursier{% if s.partenaire_bourse %} — {{ s.partenaire_bourse.intitule }}{% endif %}
+                </span>
+              {% else %}
+                <span class="text-muted">Non boursier</span>
+              {% endif %}
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- Infos inscription -->
+    <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
+      <div class="card-header border-0 py-2 px-3" style="background:#1e3a5f;border-radius:14px 14px 0 0;">
+        <span class="fw-bold text-white" style="font-size:.82rem;"><i class="bi bi-building me-1"></i>Inscription</span>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0" style="font-size:.82rem;">
+          <tr><td class="fw-semibold text-muted ps-3" style="width:45%;">Classe</td><td class="fw-bold">{{ c.name }}</td></tr>
+          <tr><td class="fw-semibold text-muted ps-3">Département</td><td>{{ c.program.department.name }}</td></tr>
+          <tr><td class="fw-semibold text-muted ps-3">Filière</td><td>{{ c.program.name }}</td></tr>
+          <tr><td class="fw-semibold text-muted ps-3">Niveau</td><td>{{ c.level|default:"—" }}</td></tr>
+          <tr><td class="fw-semibold text-muted ps-3">Année académique</td><td>{{ enrollment.academic_year.label }}</td></tr>
+          <tr><td class="fw-semibold text-muted ps-3">Type</td>
+              <td>
+                {% if enrollment.is_reinscription %}
+                <span class="badge" style="background:#ede9fe;color:#7c3aed;font-size:.7rem;">Réinscription</span>
+                {% if enrollment.previous_class %}<div style="font-size:.73rem;color:#64748b;margin-top:2px;">Depuis : {{ enrollment.previous_class.name }}</div>{% endif %}
+                {% elif enrollment.is_change_filiere %}
+                <span class="badge" style="background:#ffedd5;color:#c2410c;font-size:.7rem;">Changement de filière</span>
+                {% if enrollment.previous_class %}<div style="font-size:.73rem;color:#64748b;margin-top:2px;">Depuis : {{ enrollment.previous_class.name }}{% if enrollment.previous_class.program %} ({{ enrollment.previous_class.program.name }}){% endif %}</div>{% endif %}
+                {% else %}
+                <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:.7rem;">Nouvelle inscription</span>
+                {% endif %}
+              </td>
+          </tr>
+          <tr><td class="fw-semibold text-muted ps-3">Date d'inscription</td><td>{{ enrollment.enrollment_date|date:"d/m/Y" }}</td></tr>
+        </table>
+      </div>
+    </div>
+
+    {% if enrollment.credit_report %}
+    <div class="alert d-flex align-items-center gap-2 mt-3 mb-0" style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:12px;font-size:.83rem;color:#065f46;">
+      <i class="bi bi-piggy-bank-fill" style="font-size:1.1rem;"></i>
+      <div>
+        <strong>Crédit reporté : {{ enrollment.credit_report|floatformat:0 }} FCFA</strong><br>
+        <span style="font-size:.76rem;">Frais et mensualités déjà réglés lors d'une inscription suspendue ou dans l'ancienne filière — pris en compte automatiquement lors de la validation (réduit le solde restant dû, sans modifier le montant réellement encaissé).</span>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Récapitulatif financier (si validée) -->
+    {% if enrollment.status == STATUS_VALIDATED %}
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-header border-0 py-2 px-3" style="background:#166534;border-radius:14px 14px 0 0;">
+        <span class="fw-bold text-white" style="font-size:.82rem;"><i class="bi bi-cash-coin me-1"></i>Récapitulatif financier</span>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0" style="font-size:.82rem;">
+          {% if enrollment.student.is_boursier %}
+          <tr><td class="fw-semibold text-muted ps-3" style="width:55%;">
+                Frais totaux
+                <span class="badge ms-1" style="background:#ede9fe;color:#6d28d9;font-size:.6rem;font-weight:600;border-radius:6px;padding:1px 5px;">Boursier — {{ enrollment.bourse_pourcentage|floatformat:0|default:"—" }}%</span>
+              </td>
+              <td class="fw-bold">{% if enrollment.bourse_montant_etudiant is not None %}{{ enrollment.bourse_montant_etudiant|floatformat:0 }} FCFA{% else %}—{% endif %}</td></tr>
+          {% else %}
+          <tr><td class="fw-semibold text-muted ps-3" style="width:55%;">Frais totaux</td>
+              <td class="fw-bold">{% if enrollment.total_fees %}{{ enrollment.total_fees|floatformat:0 }} FCFA{% else %}—{% endif %}</td></tr>
+          {% if enrollment.frais_generaux %}
+          {% if enrollment.net_fees is not None %}
+          <tr style="background:#e0f2fe;border-top:1px solid #bae6fd;">
+            <td class="fw-bold ps-3" style="color:#075985;">Net à payer</td>
+            <td class="fw-bold" style="color:#075985;">{{ enrollment.net_fees|floatformat:0 }} FCFA</td>
+          </tr>
+          {% endif %}
+          {% endif %}
+          {% endif %}
+          <tr><td class="fw-semibold text-muted ps-3">Montant versé</td>
+              <td class="fw-bold" style="color:#166534;">{% if enrollment.payment_amount %}{{ enrollment.payment_amount|floatformat:0 }} FCFA{% else %}—{% endif %}</td></tr>
+          <tr><td class="fw-semibold text-muted ps-3">Date du versement</td>
+              <td>{{ enrollment.payment_date|date:"d/m/Y"|default:"—" }}</td></tr>
+          <tr><td class="fw-semibold text-muted ps-3">Référence</td>
+              <td>{{ enrollment.payment_reference|default:"—" }}</td></tr>
+          {% if enrollment.student.is_boursier %}
+          {% if enrollment.bourse_remaining_amount is not None %}
+          <tr style="background:{% if enrollment.bourse_remaining_amount > 0 %}#fff7ed{% else %}#f0fdf4{% endif %};">
+            <td class="fw-semibold ps-3" style="color:{% if enrollment.bourse_remaining_amount > 0 %}#c2410c{% else %}#166534{% endif %};">Restant dû</td>
+            <td class="fw-bold" style="color:{% if enrollment.bourse_remaining_amount > 0 %}#c2410c{% else %}#166534{% endif %};">
+              {{ enrollment.bourse_remaining_amount|floatformat:0 }} FCFA
+              {% if enrollment.bourse_remaining_amount == 0 %}<i class="bi bi-check-circle-fill ms-1"></i>{% endif %}
+            </td>
+          </tr>
+          {% endif %}
+          {% else %}
+          {% if enrollment.remaining_amount is not None %}
+          <tr style="background:{% if enrollment.remaining_amount > 0 %}#fff7ed{% else %}#f0fdf4{% endif %};">
+            <td class="fw-semibold ps-3" style="color:{% if enrollment.remaining_amount > 0 %}#c2410c{% else %}#166534{% endif %};">Restant dû</td>
+            <td class="fw-bold" style="color:{% if enrollment.remaining_amount > 0 %}#c2410c{% else %}#166534{% endif %};">
+              {{ enrollment.remaining_amount|floatformat:0 }} FCFA
+              {% if enrollment.remaining_amount == 0 %}<i class="bi bi-check-circle-fill ms-1"></i>{% endif %}
+            </td>
+          </tr>
+          {% if enrollment.remaining_amount > 0 and enrollment.monthly_installment %}
+          <tr><td class="fw-semibold text-muted ps-3">Versement mensuel</td>
+              <td>{{ enrollment.monthly_installment|floatformat:0 }} FCFA / mois</td></tr>
+          {% endif %}
+          {% endif %}
+          {% endif %}
+        </table>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Colonne droite : actions -->
+  <div class="col-lg-7">
+
+    {% if enrollment.status == STATUS_PENDING %}
+    <!-- ── Formulaire Trésorier : Envoyer à la caisse ── -->
+    <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;border:2px solid #fef3c7;">
+      <div class="card-header border-0 py-2 px-3" style="background:#d97706;border-radius:14px 14px 0 0;">
+        <span class="fw-bold text-white" style="font-size:.82rem;"><i class="bi bi-cash-stack me-1"></i>Définir les frais et envoyer à la caisse</span>
+      </div>
+      <div class="card-body">
+        <form method="post" id="caisse-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="send_to_caisse">
+
+          <!-- Montant global de la formation (tout en haut) -->
+          <div class="row g-2 mb-2">
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.8rem;">
+                Montant global de la formation (FCFA) <span class="text-danger">*</span>
+                {% if montant_global_config is not None %}
+                <span class="badge ms-1" style="background:#ede9fe;color:#6d28d9;font-size:.65rem;font-weight:600;border-radius:6px;padding:2px 6px;">
+                  <i class="bi bi-building me-1"></i>Classe
+                </span>
+                {% endif %}
+              </label>
+              <input type="number" name="total_fees" id="total_fees"
+                     class="form-control"
+                     value="{% if enrollment.total_fees %}{{ enrollment.total_fees|floatformat:0 }}{% elif frais_totaux_config is not None %}{{ frais_totaux_config|floatformat:0 }}{% endif %}"
+                     min="0" step="500" placeholder="Ex : 450 000"
+                     style="border-radius:8px;text-align:center;font-size:1.4rem;font-weight:800;color:#6d28d9;padding:12px;" oninput="recalculate()">
+              <div class="form-text" style="font-size:.7rem;">
+                {% if montant_global_config is not None %}Prérempli avec le montant global défini à la création de la classe. Modifiable.{% else %}Aucun montant global défini pour cette classe — saisir manuellement.{% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- Frais d'inscription / Droit d'inscription — non pertinents pour un
+               étudiant boursier : ni le calcul JS (recalculate()) ni le montant à
+               encaisser côté serveur (send_to_caisse) ne les utilisent dans ce cas,
+               le montant dû étant entièrement piloté par le pourcentage de bourse. -->
+          {% if not enrollment.student.is_boursier %}
+          <div class="row g-2 mb-2">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.8rem;">
+                Frais d'inscription (FCFA)
+                <span class="badge ms-1" style="background:#e0f2fe;color:#0369a1;font-size:.65rem;font-weight:600;border-radius:6px;padding:2px 6px;">
+                  <i class="bi bi-magic me-1"></i>Auto
+                </span>
+              </label>
+              <input type="number" name="frais_generaux" id="frais_generaux"
+                     class="form-control form-control-sm"
+                     value="{% if enrollment.frais_generaux %}{{ enrollment.frais_generaux|floatformat:0 }}{% elif frais_generaux_config %}{{ frais_generaux_config|floatformat:0 }}{% endif %}"
+                     min="0" step="500" placeholder="—"
+                     style="border-radius:8px;background:#f0f9ff;" oninput="recalculate()">
+              <div class="form-text" style="font-size:.7rem;">Prérempli avec le frais d'inscription défini à la création de la classe (ou, à défaut, selon le niveau). Modifiable.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.8rem;">
+                Droit d'inscription (FCFA)
+                <span class="badge ms-1" style="background:#dcfce7;color:#166534;font-size:.65rem;font-weight:600;border-radius:6px;padding:2px 6px;">
+                  <i class="bi bi-calculator me-1"></i>Calculé
+                </span>
+              </label>
+              <input type="number" id="droit_inscription" readonly
+                     class="form-control form-control-sm"
+                     value="{% if droit_initial is not None %}{{ droit_initial|floatformat:0 }}{% endif %}"
+                     placeholder="—"
+                     style="border-radius:8px;background:#f0fdf4;color:#166534;font-weight:700;cursor:default;">
+              <div class="form-text" style="font-size:.7rem;">Frais d'inscription − (Tenue + Amicale + Assurance + Bibliothèque)</div>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Frais mensuel (masqué — défini à la création de la classe, non modifiable ici) -->
+          <input type="hidden" name="monthly_installment" id="monthly_installment"
+                 value="{% if enrollment.monthly_installment %}{{ enrollment.monthly_installment|floatformat:0 }}{% elif frais_mensuel_config %}{{ frais_mensuel_config|floatformat:0 }}{% endif %}">
+
+          <!-- Date du paiement -->
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.8rem;">
+                Date du paiement <span class="text-danger">*</span>
+              </label>
+              <input type="date" name="payment_date"
+                     class="form-control form-control-sm"
+                     value="{{ enrollment.payment_date|date:'Y-m-d'|default:'' }}{% if not enrollment.payment_date %}{% now "Y-m-d" %}{% endif %}"
+                     required style="border-radius:8px;">
+            </div>
+          </div>
+
+          <!-- Étudiant Boursier -->
+          {% if enrollment.student.is_boursier %}
+          <div class="mb-3 p-3 rounded" style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:10px;">
+            <label class="form-label fw-semibold d-block mb-2" style="font-size:.8rem;color:#5b21b6;">
+              <i class="bi bi-award-fill me-1"></i>Étudiant Boursier
+              <span class="badge ms-1" style="background:#7c3aed;font-size:.65rem;font-weight:700;border-radius:6px;padding:2px 8px;">OUI</span>
+            </label>
+            <div class="row g-2">
+              <div class="col-md-4">
+                <label class="form-label" style="font-size:.74rem;">Partenaire</label>
+                <select name="partenaire_bourse" id="partenaire_bourse" class="form-select form-select-sm" style="border-radius:8px;">
+                  <option value="">— Sélectionner —</option>
+                  {% for p in partenaires_bourse %}
+                  <option value="{{ p.pk }}" {% if enrollment.student.partenaire_bourse_id == p.pk %}selected{% endif %}>{{ p.intitule }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" style="font-size:.74rem;">Pourcentage à payer (%)</label>
+                <input type="number" name="bourse_pourcentage" id="bourse_pourcentage" class="form-control form-control-sm"
+                       value="{% if enrollment.bourse_pourcentage is not None %}{{ enrollment.bourse_pourcentage|floatformat:0 }}{% endif %}"
+                       min="0" max="100" step="1" placeholder="Ex : 50" style="border-radius:8px;" oninput="recalculate()">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" style="font-size:.74rem;">Montant à payer par l'étudiant (FCFA)</label>
+                <input type="number" id="montant_boursier" readonly class="form-control form-control-sm"
+                       placeholder="—" style="border-radius:8px;background:#f0fdf4;color:#166534;font-weight:700;cursor:default;">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" style="font-size:.74rem;">Échéance de régularisation (partenaire)</label>
+                <input type="date" name="bourse_deadline" class="form-control form-control-sm"
+                       value="{{ enrollment.bourse_deadline|date:'Y-m-d'|default:'' }}" style="border-radius:8px;">
+                <div class="form-text" style="font-size:.68rem;">Date limite pour la régularisation du solde avec le partenaire (modifiable aussi depuis Suivi des boursiers).</div>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Frais annexes (définis à la création de la classe, informatifs) -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold d-block" style="font-size:.8rem;">
+              <i class="bi bi-bag-check me-1 text-secondary"></i>Frais annexes
+              <span class="badge ms-1" style="background:#ede9fe;color:#6d28d9;font-size:.65rem;font-weight:600;border-radius:6px;padding:2px 6px;">
+                <i class="bi bi-building me-1"></i>Classe
+              </span>
+              <span class="text-muted fw-normal" style="font-size:.7rem;">— non inclus dans le montant à payer, informatif</span>
+            </label>
+            <div class="row g-2">
+              <div class="col-md-4">
+                <label class="form-label" style="font-size:.74rem;">Tenue (FCFA)</label>
+                <input type="number" name="frais_tenue" id="frais_tenue" class="form-control form-control-sm"
+                       value="{% if enrollment.frais_tenue is not None %}{{ enrollment.frais_tenue|floatformat:0 }}{% elif frais_tenue_config is not None %}{{ frais_tenue_config|floatformat:0 }}{% endif %}"
+                       min="0" step="500" style="border-radius:8px;" oninput="recalculate()">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" style="font-size:.74rem;">Assurance (FCFA)</label>
+                <input type="number" name="frais_assurance" id="frais_assurance" class="form-control form-control-sm"
+                       value="{% if enrollment.frais_assurance is not None %}{{ enrollment.frais_assurance|floatformat:0 }}{% elif frais_assurance_config is not None %}{{ frais_assurance_config|floatformat:0 }}{% endif %}"
+                       min="0" step="500" style="border-radius:8px;" oninput="recalculate()">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" style="font-size:.74rem;">Amicale (FCFA)</label>
+                <input type="number" name="frais_amea" id="frais_amea" class="form-control form-control-sm"
+                       value="{% if enrollment.frais_amea is not None %}{{ enrollment.frais_amea|floatformat:0 }}{% elif frais_amea_config is not None %}{{ frais_amea_config|floatformat:0 }}{% endif %}"
+                       min="0" step="500" style="border-radius:8px;" oninput="recalculate()">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" style="font-size:.74rem;">Bibliothèque (FCFA)</label>
+                <input type="number" name="frais_bibliotheque" id="frais_bibliotheque" class="form-control form-control-sm"
+                       value="{% if enrollment.frais_bibliotheque is not None %}{{ enrollment.frais_bibliotheque|floatformat:0 }}{% elif frais_bibliotheque_config is not None %}{{ frais_bibliotheque_config|floatformat:0 }}{% endif %}"
+                       min="0" step="500" style="border-radius:8px;" oninput="recalculate()">
+              </div>
+              {% if is_l3_m2 %}
+              <div class="col-md-4">
+                <label class="form-label" style="font-size:.74rem;">Frais de Soutenance normal (FCFA)</label>
+                <input type="number" name="frais_soutenance" class="form-control form-control-sm"
+                       value="{% if enrollment.frais_soutenance is not None %}{{ enrollment.frais_soutenance|floatformat:0 }}{% elif frais_soutenance_config is not None %}{{ frais_soutenance_config|floatformat:0 }}{% endif %}"
+                       min="0" step="500" style="border-radius:8px;">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" style="font-size:.74rem;">Frais de Soutenance spéciale (FCFA)</label>
+                <input type="number" name="frais_soutenance_speciale" class="form-control form-control-sm"
+                       value="{% if enrollment.frais_soutenance_speciale is not None %}{{ enrollment.frais_soutenance_speciale|floatformat:0 }}{% elif frais_soutenance_speciale_config is not None %}{{ frais_soutenance_speciale_config|floatformat:0 }}{% endif %}"
+                       min="0" step="500" style="border-radius:8px;">
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Mois à payer en avance -->
+          {% if academic_months %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold d-flex align-items-center flex-wrap gap-2" style="font-size:.8rem;">
+              <span><i class="bi bi-calendar-check me-1 text-primary"></i>Mois à payer en avance</span>
+              {% if enrollment.student.is_boursier %}
+              <span class="badge" style="background:#ede9fe;color:#6d28d9;font-size:.65rem;font-weight:600;border-radius:6px;padding:2px 6px;">
+                <i class="bi bi-award-fill me-1"></i>Étudiant boursier : montant à répartir librement sur les mois (0 par défaut)
+              </span>
+              {% else %}
+              <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.65rem;font-weight:600;border-radius:6px;padding:2px 6px;">
+                <i class="bi bi-lock-fill me-1"></i>Le dernier mois est obligatoire
+              </span>
+              {% endif %}
+              <span class="form-check form-check-inline mb-0 ms-auto" style="font-size:.75rem;">
+                <input class="form-check-input" type="checkbox" id="check-all-months" onchange="toggleAllMonths(this)">
+                <label class="form-check-label fw-semibold" for="check-all-months" style="cursor:pointer;">
+                  Tout cocher
+                </label>
+              </span>
+            </label>
+            <input type="hidden" name="required_month" value="{{ last_month_num }}">
+            <div class="p-2 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+              <div class="row row-cols-2 row-cols-md-3 g-1">
+                {% for m in academic_months %}
+                {% with is_last=forloop.last is_checked=m.num|stringformat:"s" %}
+                <div class="col">
+                  <label class="d-flex flex-column px-2 py-1 rounded month-cb-label"
+                         style="cursor:pointer;border:1px solid {% if is_last %}#bbf7d0{% else %}#e2e8f0{% endif %};border-radius:8px;font-size:.8rem;{% if is_last %}background:#f0fdf4;{% endif %}">
+                    <div class="d-flex align-items-center gap-2">
+                      <input type="checkbox" name="advance_months" value="{{ m.num }}"
+                             class="month-cb form-check-input"
+                             {% if is_checked in advance_months_selected %}checked{% endif %}
+                             {% if is_last %}data-required="true"{% endif %}
+                             onchange="onMonthChange(this)">
+                      <span>{{ m.label }}{% if is_last %} <i class="bi bi-lock-fill ms-1" style="color:#059669;font-size:.65rem;" title="Mois obligatoire"></i>{% endif %}</span>
+                    </div>
+                    {% if is_last %}
+                    <span class="month-amount" style="font-size:.7rem;font-weight:700;color:#059669;margin-left:22px;">Inclus</span>
+                    {% else %}
+                    <input type="number" name="month_amount_{{ m.num }}" class="month-amount-input form-control form-control-sm"
+                           data-month="{{ m.num }}" min="0" step="500" placeholder="Montant"
+                           value="{% if enrollment.student.is_boursier %}0{% endif %}"
+                           style="margin-left:22px;width:calc(100% - 22px);font-size:.75rem;font-weight:700;color:#0891b2;padding:2px 6px;"
+                           oninput="recalculate()">
+                    {% endif %}
+                  </label>
+                </div>
+                {% endwith %}
+                {% endfor %}
+              </div>
+              <div class="mt-1" style="font-size:.72rem;color:#6b7280;">
+                {% if enrollment.student.is_boursier %}
+                <i class="bi bi-info-circle me-1"></i>Étudiant boursier : le dernier mois reste inclus (coût nul). Le montant à payer par l'étudiant
+                (ci-dessus) peut être librement réparti sur les autres mois — chaque mois est à 0 FCFA par défaut, modifiable individuellement.
+                Toute part non affectée à un mois reste à recouvrer auprès du partenaire.
+                {% else %}
+                <i class="bi bi-info-circle me-1"></i>Le dernier mois de l'année académique est toujours inclus. Cochez les mois supplémentaires si l'étudiant souhaite payer en avance
+                — le montant de chaque mois est modifiable individuellement.
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Récapitulatif total -->
+          <div class="p-3 rounded mb-3" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+              <div style="font-size:.82rem;color:#1e40af;">
+                <i class="bi bi-receipt me-1"></i>
+                <span id="recap-months-count">0</span> mois sélectionné(s)
+              </div>
+              <div class="fw-bold text-white px-3 py-1 rounded" style="background:#1d4ed8;font-size:.95rem;">
+                Montant à encaisser : <span id="recap-total">—</span> FCFA
+              </div>
+            </div>
+            <div class="mt-2" style="font-size:.75rem;color:#3b82f6;">
+              <span id="recap-detail">—</span>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.8rem;">Observations</label>
+            <textarea name="notes" class="form-control form-control-sm" rows="2" style="border-radius:8px;">{{ enrollment.notes }}</textarea>
+          </div>
+
+          <button type="submit" class="btn btn-sm w-100" style="background:#d97706;color:#fff;border-radius:9px;font-weight:700;"
+                  onclick="return confirm('Envoyer ce dossier à la caisse ?')">
+            <i class="bi bi-send-fill me-1"></i>Envoyer à la caisse
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Rejeter -->
+    <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;border:2px solid #fee2e2;">
+      <div class="card-header border-0 py-2 px-3" style="background:#dc2626;border-radius:14px 14px 0 0;">
+        <span class="fw-bold text-white" style="font-size:.82rem;"><i class="bi bi-x-circle me-1"></i>Rejeter l'inscription</span>
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="reject">
+          <div class="mb-2">
+            <label class="form-label fw-semibold" style="font-size:.8rem;">Motif du rejet</label>
+            <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="Motif obligatoire…" style="border-radius:8px;" required></textarea>
+          </div>
+          <button type="submit" class="btn btn-sm w-100" style="background:#dc2626;color:#fff;border-radius:9px;font-weight:700;"
+                  onclick="return confirm('Confirmer le rejet de cette inscription ?')">
+            <i class="bi bi-x-circle-fill me-1"></i>Rejeter l'inscription
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if enrollment.status == STATUS_PENDING_CAISSE %}
+    <!-- ── Vue Caissier : confirmer le paiement ── -->
+    <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;border:2px solid #d1fae5;">
+      <div class="card-header border-0 py-2 px-3" style="background:#059669;border-radius:14px 14px 0 0;">
+        <span class="fw-bold text-white" style="font-size:.82rem;"><i class="bi bi-cash-coin me-1"></i>Encaissement — En attente de paiement</span>
+      </div>
+      <div class="card-body">
+        <!-- Récapitulatif préparé par le Trésorier -->
+        <div class="p-2 rounded mb-3" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+          <div class="row g-2">
+            {% if enrollment.student.is_boursier %}
+            <div class="col-12">
+              <div style="font-size:.75rem;color:#6b7280;">
+                Montant à payer par l'étudiant
+                <span class="badge ms-1" style="background:#ede9fe;color:#6d28d9;font-size:.65rem;font-weight:600;border-radius:6px;padding:2px 6px;">
+                  <i class="bi bi-award-fill me-1"></i>Boursier — {{ enrollment.bourse_pourcentage|floatformat:0|default:"—" }} %
+                </span>
+              </div>
+              <div class="fw-bold" style="color:#065f46;font-size:1.05rem;">
+                {% with montant=enrollment.bourse_montant_etudiant %}
+                  {% if montant is not None %}{{ montant|floatformat:0 }} FCFA{% else %}—{% endif %}
+                {% endwith %}
+              </div>
+            </div>
+            {% else %}
+            <div class="col-6">
+              <div style="font-size:.75rem;color:#6b7280;">Droit d'inscription</div>
+              <div class="fw-bold" style="color:#065f46;">
+                {% with droit=enrollment.net_fees %}
+                  {% if droit is not None %}{{ droit|floatformat:0 }} FCFA{% else %}—{% endif %}
+                {% endwith %}
+              </div>
+            </div>
+            <div class="col-6">
+              <div style="font-size:.75rem;color:#6b7280;">Frais mensuel</div>
+              <div class="fw-bold" style="color:#065f46;">
+                {{ enrollment.monthly_installment|floatformat:0|default:"—" }} FCFA/mois
+              </div>
+            </div>
+            {% endif %}
+            {% if advance_months_detail %}
+            <div class="col-12">
+              <div style="font-size:.75rem;color:#6b7280;" class="mb-1">Montant à payer par mois (saisi par le Trésorier)</div>
+              <div class="d-flex flex-column gap-1">
+                {% for md in advance_months_detail %}
+                <div class="d-flex align-items-center justify-content-between px-2 py-1 rounded" style="background:#ffffff;border:1px solid #bbf7d0;">
+                  <span style="font-size:.78rem;color:#065f46;font-weight:600;">
+                    {{ md.label }}
+                    {% if md.is_required %}<i class="bi bi-lock-fill ms-1" style="font-size:.65rem;" title="Mois obligatoire"></i>{% endif %}
+                  </span>
+                  <span class="badge" style="background:#059669;font-size:.75rem;">{{ md.amount|floatformat:0|default:"—" }} FCFA</span>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endif %}
+            <div class="col-12">
+              <div class="d-flex align-items-center justify-content-between p-2 rounded" style="background:#dcfce7;border-radius:8px;">
+                <span style="font-size:.82rem;color:#166534;font-weight:600;"><i class="bi bi-cash me-1"></i>Montant total à encaisser</span>
+                <span class="fw-bold" style="font-size:1.05rem;color:#166534;">{{ enrollment.payment_amount|floatformat:0|default:"—" }} FCFA</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preuve(s) de paiement en ligne — affichées automatiquement, pas
+             seulement un lien, pour que le caissier vérifie avant d'encaisser -->
+        {% if payment_proofs %}
+        <div class="mb-3">
+          <h6 class="fw-bold mb-2" style="font-size:.82rem;color:var(--navy);">
+            <i class="bi bi-file-earmark-image me-1"></i>Preuve(s) de paiement transmise(s) en ligne
+          </h6>
+          {% for p in payment_proofs %}
+          <div class="mb-2 p-2" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-2" style="font-size:.78rem;">
+              <span>
+                <strong>{{ p.proof.get_moyen_paiement_display }}</strong>
+                — Montant déclaré : <strong>{{ p.proof.montant_declare }} FCFA</strong>
+                {% if p.proof.reference_paiement %} — Réf. {{ p.proof.reference_paiement }}{% endif %}
+              </span>
+              <span class="badge" style="background:{% if p.proof.status == 'VALIDATED' %}#dcfce7;color:#166534{% elif p.proof.status == 'REJECTED' %}#fee2e2;color:#991b1b{% else %}#fef3c7;color:#92400e{% endif %};">
+                {{ p.proof.get_status_display }}
+              </span>
+            </div>
+            {% if p.is_image %}
+            <img src="{{ p.proof.piece_justificative.url }}" alt="Justificatif de paiement" class="img-fluid" style="max-height:360px;display:block;margin:0 auto;border-radius:6px;">
+            {% elif p.is_pdf %}
+            <iframe src="{{ p.proof.piece_justificative.url }}" style="width:100%;height:360px;border:0;border-radius:6px;"></iframe>
+            {% else %}
+            <p class="text-muted mb-0" style="font-size:.8rem;">Aperçu indisponible pour ce type de fichier.</p>
+            {% endif %}
+            <div class="text-end mt-1">
+              <a href="{{ p.proof.piece_justificative.url }}" target="_blank" style="font-size:.76rem;">
+                Ouvrir dans un nouvel onglet <i class="bi bi-box-arrow-up-right"></i>
+              </a>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" id="caisse-validate-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="validate">
+          <input type="hidden" name="total_fees" value="{{ enrollment.total_fees|default:frais_totaux_config|default:'' }}">
+          <input type="hidden" name="frais_generaux" value="{{ enrollment.frais_generaux|default:frais_generaux_config|default:'' }}">
+          <input type="hidden" name="monthly_installment" value="{{ enrollment.monthly_installment|default:frais_mensuel_config|default:'' }}">
+          <div class="row g-2 mb-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.8rem;">
+                Date du paiement <span class="text-danger">*</span>
+              </label>
+              <input type="date" name="payment_date" id="caisse-validate-date"
+                     class="form-control form-control-sm"
+                     value="{{ enrollment.payment_date|date:'Y-m-d'|default:'' }}{% if not enrollment.payment_date %}{% now "Y-m-d" %}{% endif %}"
+                     required style="border-radius:8px;">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.8rem;">Observations</label>
+              <textarea name="notes" class="form-control form-control-sm" rows="2" style="border-radius:8px;">{{ enrollment.notes }}</textarea>
+            </div>
+          </div>
+          {% if has_pending_proof %}
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="checkbox" id="caisse-proof-reviewed-check" onchange="onCaisseProofReviewedChange()">
+            <label class="form-check-label fw-semibold" for="caisse-proof-reviewed-check" style="font-size:.82rem;">
+              J'ai vérifié la/les preuve(s) de paiement en ligne ci-dessus et je confirme que l'argent a bien été reçu.
+            </label>
+          </div>
+          {% endif %}
+          <button type="submit" id="open-caisse-validate-confirm" class="btn btn-sm w-100" style="background:#059669;color:#fff;border-radius:9px;font-weight:700;" {% if has_pending_proof %}disabled{% endif %} onclick="return onCaisseValidateSubmitClick(this)">
+            <i class="bi bi-check-circle-fill me-1"></i>Confirmer le paiement et valider l'inscription
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Retourner le dossier au Trésorier pour correction -->
+    <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;border:2px solid #fef3c7;">
+      <div class="card-header border-0 py-2 px-3" style="background:#d97706;border-radius:14px 14px 0 0;">
+        <span class="fw-bold text-white" style="font-size:.82rem;"><i class="bi bi-arrow-counterclockwise me-1"></i>Corriger le dossier</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:.82rem;color:#78350f;">
+          Renvoie ce dossier au Trésorier (statut « En attente ») pour corriger les frais, les mois
+          ou les informations de bourse avant l'encaissement. Les montants déjà saisis sont conservés.
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="return_to_pending">
+          <button type="submit" class="btn btn-sm w-100" style="background:#d97706;color:#fff;border-radius:9px;font-weight:700;"
+                  onclick="return confirm('Retourner ce dossier en attente pour correction ?')">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>Retourner en attente (corriger)
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if enrollment.status == STATUS_VALIDATED %}
+    <!-- Modifier infos paiement -->
+    <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
+      <div class="card-header border-0 py-2 px-3" style="background:#475569;border-radius:14px 14px 0 0;">
+        <span class="fw-bold text-white" style="font-size:.82rem;"><i class="bi bi-pencil me-1"></i>Modifier les informations</span>
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="update">
+          <div class="row g-2">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.8rem;">Frais totaux (FCFA)</label>
+              <input type="number" name="total_fees" class="form-control form-control-sm" value="{{ enrollment.total_fees|default:'' }}" style="border-radius:8px;">
+            </div>
+            <div class="col-md-6">
+              {% if enrollment.student.is_boursier %}
+              <label class="form-label fw-semibold" style="font-size:.8rem;">Montant à payer par l'étudiant (FCFA)</label>
+              <input type="text" readonly class="form-control form-control-sm"
+                     value="{% with montant=enrollment.bourse_montant_etudiant %}{% if montant is not None %}{{ montant|floatformat:0 }}{% else %}—{% endif %}{% endwith %}"
+                     style="border-radius:8px;background:#f0fdf4;color:#166534;font-weight:700;cursor:default;"
+                     title="Calculé à partir des Frais totaux et du pourcentage de bourse — modifiable via ces deux champs, pas directement ici.">
+              {% else %}
+              <label class="form-label fw-semibold" style="font-size:.8rem;">Frais généraux (FCFA)</label>
+              <input type="number" name="frais_generaux" class="form-control form-control-sm" value="{{ enrollment.frais_generaux|default:'' }}" style="border-radius:8px;background:#f0f9ff;">
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.8rem;">Montant versé (FCFA)</label>
+              <input type="number" name="payment_amount" class="form-control form-control-sm" value="{{ enrollment.payment_amount|default:'' }}" style="border-radius:8px;">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.8rem;">Date paiement</label>
+              <input type="date" name="payment_date" class="form-control form-control-sm" value="{{ enrollment.payment_date|date:'Y-m-d'|default:'' }}{% if not enrollment.payment_date %}{% now "Y-m-d" %}{% endif %}" style="border-radius:8px;">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.8rem;">Référence</label>
+              <input type="text" name="payment_reference" class="form-control form-control-sm" value="{{ enrollment.payment_reference }}" style="border-radius:8px;">
+            </div>
+            {% if not enrollment.student.is_boursier %}
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.8rem;">Versement mensuel (FCFA)</label>
+              <input type="number" name="monthly_installment" class="form-control form-control-sm" value="{{ enrollment.monthly_installment|default:'' }}" style="border-radius:8px;">
+            </div>
+            {% endif %}
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.8rem;">Observations</label>
+              <textarea name="notes" class="form-control form-control-sm" rows="2" style="border-radius:8px;">{{ enrollment.notes }}</textarea>
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn btn-sm" style="background:#475569;color:#fff;border-radius:8px;">
+                <i class="bi bi-save me-1"></i>Mettre à jour
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    {% if enrollment.notes %}
+    <div class="card border-0 shadow-sm mb-3" style="border-radius:14px;">
+      <div class="card-body py-2 px-3">
+        <div class="fw-semibold mb-1" style="font-size:.8rem;color:var(--navy);"><i class="bi bi-chat-text me-1"></i>Observations</div>
+        <p class="mb-0" style="font-size:.82rem;white-space:pre-wrap;">{{ enrollment.notes }}</p>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Échéancier de paiement -->
+    {% if installments %}
+    <div class="card border-0 shadow-sm" style="border-radius:14px;">
+      <div class="card-header border-0 py-2 px-3 d-flex align-items-center justify-content-between" style="background:#1e40af;border-radius:14px 14px 0 0;">
+        <span class="fw-bold text-white" style="font-size:.82rem;"><i class="bi bi-calendar-check me-1"></i>Échéancier de paiement</span>
+        <span class="badge" style="background:rgba(255,255,255,.2);font-size:.72rem;">{{ installments|length }} échéance{{ installments|length|pluralize }}</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 align-middle" style="font-size:.8rem;">
+            <thead style="background:#f8fafc;">
+              <tr style="font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:#64748b;">
+                <th class="ps-3 py-2">N°</th>
+                <th>Échéance</th>
+                <th class="text-end">Montant dû</th>
+                <th class="text-center">Statut</th>
+                <th class="text-end pe-3">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for inst in installments %}
+              <tr style="{% if inst.is_paid %}background:#f0fdf4;{% elif inst.due_date < today %}background:#fff7ed;{% endif %}">
+                <td class="ps-3 fw-bold" style="color:var(--navy);">{{ inst.installment_number }}</td>
+                <td>{{ inst.due_date|date:"F Y" }}</td>
+                <td class="text-end fw-semibold">{{ inst.amount_expected|floatformat:0 }} FCFA</td>
+                <td class="text-center">
+                  {% if inst.is_paid %}
+                  <span class="badge" style="background:#dcfce7;color:#166534;font-size:.7rem;">
+                    <i class="bi bi-check-circle-fill me-1"></i>Réglée
+                    {% if inst.paid_date %}<br><span style="font-weight:400;">{{ inst.paid_date|date:"d/m/Y" }}</span>{% endif %}
+                  </span>
+                  {% elif inst.due_date < today %}
+                  <span class="badge" style="background:#fee2e2;color:#dc2626;font-size:.7rem;"><i class="bi bi-exclamation-circle me-1"></i>En retard</span>
+                  {% else %}
+                  <span class="badge" style="background:#fef3c7;color:#b45309;font-size:.7rem;"><i class="bi bi-hourglass me-1"></i>En attente</span>
+                  {% endif %}
+                </td>
+                <td class="text-end pe-3">
+                  {% if not inst.is_paid %}
+                  <button class="btn btn-sm" style="background:#166534;color:#fff;border-radius:7px;padding:2px 10px;font-size:.72rem;"
+                          onclick="openPayModal({{ inst.pk }}, '{{ inst.due_date|date:'F Y' }}', '{{ inst.amount_expected|floatformat:0 }}')">
+                    <i class="bi bi-check2"></i> Régler
+                  </button>
+                  {% else %}
+                  <span style="font-size:.72rem;color:#94a3b8;">{{ inst.amount_paid|floatformat:0|default:inst.amount_expected|floatformat:0 }} FCFA</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+            <tfoot style="background:#f8fafc;font-size:.78rem;">
+              <tr>
+                <td colspan="2" class="ps-3 py-2 fw-semibold text-muted">Total échéances</td>
+                <td class="text-end fw-bold" style="color:var(--navy);">
+                  {{ installments_total|floatformat:0 }} FCFA
+                </td>
+                <td colspan="2"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if user.is_tresorier and enrollment.status == STATUS_VALIDATED and academic_months %}
+    <div class="card border-0 shadow-sm mt-3" style="border-radius:14px;">
+      <div class="card-header border-0 py-2 px-3" style="background:#7c3aed;border-radius:14px 14px 0 0;">
+        <span class="fw-bold text-white" style="font-size:.82rem;"><i class="bi bi-pie-chart-fill me-1"></i>Répartir le solde restant</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:.78rem;color:#6b7280;">
+          Remplace les échéances <strong>non réglées</strong> par la répartition ci-dessous — les échéances déjà
+          réglées ne sont jamais modifiées.
+          Solde restant actuel :
+          <strong>
+            {% if enrollment.student.is_boursier %}{{ enrollment.bourse_remaining_amount|floatformat:0|default:"—" }}
+            {% else %}{{ enrollment.remaining_amount|floatformat:0|default:"—" }}{% endif %} FCFA
+          </strong>
+        </p>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="repartir_solde">
+          <div class="row row-cols-2 row-cols-md-3 g-2 mb-2">
+            {% for m in academic_months %}
+            {% if m.num not in paid_months %}
+            <div class="col">
+              <label class="d-flex flex-column px-2 py-1 rounded" style="cursor:pointer;border:1px solid #e2e8f0;border-radius:8px;font-size:.8rem;">
+                <div class="d-flex align-items-center gap-2">
+                  <input type="checkbox" name="repartition_months" value="{{ m.num }}"
+                         class="repart-cb form-check-input" onchange="recalcRepartition()">
+                  <span>{{ m.label }}</span>
+                </div>
+                <input type="number" name="repartition_amount_{{ m.num }}" class="repart-amount form-control form-control-sm"
+                       min="0" step="500" placeholder="Montant"
+                       style="margin-left:22px;width:calc(100% - 22px);font-size:.75rem;font-weight:700;color:#7c3aed;padding:2px 6px;"
+                       oninput="onRepartAmountInput(this)">
+              </label>
+            </div>
+            {% endif %}
+            {% endfor %}
+          </div>
+          <div class="p-2 rounded mb-3" style="background:#f5f3ff;border:1px solid #ddd6fe;">
+            <span style="font-size:.8rem;color:#5b21b6;">Total réparti : <strong id="repart-total">0</strong> FCFA</span>
+          </div>
+          <button type="submit" class="btn btn-sm w-100" style="background:#7c3aed;color:#fff;border-radius:9px;font-weight:700;"
+                  onclick="return confirm('Remplacer les échéances non réglées par cette répartition ?')">
+            <i class="bi bi-check-lg me-1"></i>Mettre à jour la répartition
+          </button>
+        </form>
+      </div>
+    </div>
+    <script>
+      function recalcRepartition() {
+        var total = 0;
+        document.querySelectorAll('.repart-cb').forEach(function (cb) {
+          if (!cb.checked) return;
+          var label = cb.closest('label');
+          var amtEl = label ? label.querySelector('.repart-amount') : null;
+          var v = amtEl ? parseFloat((amtEl.value || '0').replace(',', '.')) : 0;
+          total += isNaN(v) ? 0 : v;
+        });
+        var el = document.getElementById('repart-total');
+        if (el) el.textContent = total.toLocaleString('fr-FR');
+      }
+
+      // Saisir un montant inclut automatiquement le mois dans la répartition
+      // (coche la case) — plus besoin de cocher manuellement pour le cas
+      // courant, "Total réparti" reflète alors directement la somme des
+      // montants saisis dans le tableau. Vider le champ décoche le mois
+      // (exclu de la répartition). Pour valider explicitement un mois à
+      // 0 FCFA (pris en charge à 100% par la bourse), cocher la case à la
+      // main en laissant le montant vide.
+      function onRepartAmountInput(input) {
+        var label = input.closest('label');
+        var cb = label ? label.querySelector('.repart-cb') : null;
+        if (cb) {
+          var v = parseFloat((input.value || '').replace(',', '.'));
+          if (!isNaN(v) && v > 0) cb.checked = true;
+          else if (input.value === '') cb.checked = false;
+        }
+        recalcRepartition();
+      }
+    </script>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Modal règlement échéance -->
+<div class="modal fade" id="payModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content" style="border-radius:14px;border:0;">
+      <div class="modal-header border-0 py-3" style="background:#166534;border-radius:14px 14px 0 0;">
+        <h6 class="modal-title fw-bold text-white mb-0"><i class="bi bi-cash-coin me-2"></i>Régler l'échéance</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="pay_installment">
+        <input type="hidden" name="installment_id" id="modal-inst-id">
+        <div class="modal-body">
+          <p class="mb-2" style="font-size:.82rem;">Échéance : <strong id="modal-period"></strong></p>
+          <div class="mb-2">
+            <label class="form-label fw-semibold" style="font-size:.8rem;">Montant reçu (FCFA)</label>
+            <input type="number" name="amount_paid" id="modal-amount" class="form-control form-control-sm" min="0" step="500" style="border-radius:8px;">
+          </div>
+          <div>
+            <label class="form-label fw-semibold" style="font-size:.8rem;">Date de paiement</label>
+            <input type="date" name="paid_date" class="form-control form-control-sm" style="border-radius:8px;" value="{{ today|date:'Y-m-d' }}">
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-sm" style="background:#166534;color:#fff;border-radius:8px;">
+            <i class="bi bi-check-circle me-1"></i>Confirmer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endwith %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Fonctions globales appelées via onclick/onchange (plutôt que addEventListener
+// au chargement) — évite tout souci d'ordre d'exécution avec les autres scripts
+// de la page (jQuery, DataTables, FullCalendar, Chart.js, chatbot), même
+// pattern que openPayModal() plus bas dans ce fichier.
+function onCaisseProofReviewedChange() {
+  const proofCheck = document.getElementById('caisse-proof-reviewed-check');
+  const openBtn = document.getElementById('open-caisse-validate-confirm');
+  if (proofCheck && openBtn) openBtn.disabled = !proofCheck.checked;
+}
+
+// Le bouton valide directement l'inscription (pas de fenêtre de
+// confirmation intermédiaire) — la date reste vérifiée nativement par le
+// navigateur (attribut HTML "required"), et la case de vérification de
+// preuve de paiement (si affichée) est déjà ce qui active/désactive ce
+// bouton via onCaisseProofReviewedChange().
+function onCaisseValidateSubmitClick(btn) {
+  const form       = document.getElementById('caisse-validate-form');
+  const proofCheck = document.getElementById('caisse-proof-reviewed-check');
+  if (proofCheck && proofCheck.checked) {
+    const hidden = document.createElement('input');
+    hidden.type  = 'hidden';
+    hidden.name  = 'proof_reviewed';
+    hidden.value = '1';
+    form.appendChild(hidden);
+  }
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Validation…';
+  return true;
+}
+</script>
+<script>
+// ── Valeurs serveur injectées directement ────────────────────────────────────
+var _TOTAL    = parseFloat("{{ enrollment.total_fees|default:frais_totaux_config|default:0 }}") || 0;
+var _FG       = parseFloat("{{ enrollment.frais_generaux|default:frais_generaux_config|default:0 }}") || 0;
+var _MENSUEL  = parseFloat("{{ enrollment.monthly_installment|default:frais_mensuel_config|default:0 }}") || 0;
+var _MONTH_AMOUNTS = JSON.parse('{{ advance_months_amounts_json|escapejs }}');
+var IS_BOURSIER = {% if enrollment.student.is_boursier %}true{% else %}false{% endif %};
+
+function fmt(n) {
+  return Math.round(n).toLocaleString('fr-FR');
+}
+
+// Lit un champ numérique (enlève espaces/séparateurs de milliers FR)
+function getVal(id, fallback) {
+  var el = document.getElementById(id);
+  if (el && el.value !== '') {
+    var cleaned = el.value.replace(/[\s ]/g, '').replace(',', '.');
+    var v = parseFloat(cleaned);
+    if (!isNaN(v)) return v;
+  }
+  return (typeof fallback === 'number') ? fallback : 0;
+}
+
+function onMonthChange(cb) {
+  // Empêche de décocher le mois obligatoire
+  if (cb.dataset.required === 'true' && !cb.checked) cb.checked = true;
+  syncCheckAllState();
+  recalculate();
+}
+
+function toggleAllMonths(masterCb) {
+  document.querySelectorAll('.month-cb').forEach(function(cb) {
+    // Le mois obligatoire reste toujours coché, quel que soit l'état du "Tout cocher"
+    cb.checked = (cb.dataset.required === 'true') ? true : masterCb.checked;
+  });
+  recalculate();
+}
+
+function syncCheckAllState() {
+  var master = document.getElementById('check-all-months');
+  if (!master) return;
+  var boxes = document.querySelectorAll('.month-cb');
+  var allChecked = boxes.length > 0 && Array.prototype.every.call(boxes, function(cb) { return cb.checked; });
+  master.checked = allChecked;
+}
+
+function recalculate() {
+  var total   = getVal('total_fees',          _TOTAL);
+  var fg      = getVal('frais_generaux',      _FG);
+  var mensuel = getVal('monthly_installment', _MENSUEL);
+  var annexes = getVal('frais_tenue', 0) + getVal('frais_assurance', 0)
+              + getVal('frais_amea', 0) + getVal('frais_bibliotheque', 0);
+
+  // Forcer le dernier mois toujours coché
+  var requiredCb = document.querySelector('.month-cb[data-required="true"]');
+  if (requiredCb && !requiredCb.checked) requiredCb.checked = true;
+
+  // Droit d'inscription = Frais d'inscription − (Tenue + Amicale + Assurance + Bibliothèque)
+  var droit = fg > 0 ? Math.max(fg - annexes, 0) : 0;
+  var droitEl = document.getElementById('droit_inscription');
+  if (droitEl) droitEl.value = fg > 0 ? droit : '';
+
+  // Montant à payer par l'étudiant boursier = Montant global × pourcentage
+  var pctEl = document.getElementById('bourse_pourcentage');
+  var montantBoursierEl = document.getElementById('montant_boursier');
+  if (pctEl && montantBoursierEl) {
+    var pct = parseFloat(pctEl.value);
+    montantBoursierEl.value = (total > 0 && !isNaN(pct)) ? Math.round(total * pct / 100) : '';
+  }
+
+  // Compter les mois cochés (0 si aucune case n'est présente dans le DOM)
+  var nbMonths = document.querySelectorAll('.month-cb:checked').length;
+
+  // Mois payés en avance : seuls les mois AUTRES que le mois obligatoire ont
+  // un coût additionnel (celui-ci est déjà inclus dans les frais d'inscription,
+  // ou pour un boursier "Inclus" sans coût propre). Chaque mois a un montant
+  // modifiable individuellement — préremplu avec la mensualité courante tant
+  // qu'il n'a pas été édité (0 par défaut pour un boursier, qui peut ainsi
+  // répartir librement le montant à sa charge sur les mois de son choix).
+  var monthsTotal = 0;
+  document.querySelectorAll('.month-cb').forEach(function(cb) {
+    if (cb.dataset.required === 'true') return;
+    var label  = cb.closest('.month-cb-label');
+    var amtEl  = label ? label.querySelector('.month-amount-input') : null;
+    if (!amtEl) return;
+    if (amtEl.value === '' && !IS_BOURSIER && mensuel > 0) amtEl.value = mensuel;
+    if (cb.checked) {
+      var cleaned = amtEl.value.replace(/[\s ]/g, '').replace(',', '.');
+      var v = parseFloat(cleaned);
+      var fallback = IS_BOURSIER ? 0 : mensuel;
+      monthsTotal += !isNaN(v) ? v : fallback;
+    }
+  });
+
+  // Affichage récapitulatif
+  var elCount  = document.getElementById('recap-months-count');
+  var elTotal  = document.getElementById('recap-total');
+  var elDetail = document.getElementById('recap-detail');
+
+  if (elCount) elCount.textContent = nbMonths;
+
+  if (IS_BOURSIER) {
+    // Boursier : le mois obligatoire reste "Inclus" (coût nul) — le montant à
+    // encaisser à l'inscription est la somme des mois cochés, librement
+    // répartie par le Trésorier Général (0 par défaut sur chaque mois). Le
+    // montant à payer par l'étudiant boursier (Montant global × pourcentage,
+    // champ ci-dessus) reste une référence indicative du total dû sur
+    // l'année, pas une exigence immédiate.
+    var montantAEncaisser = monthsTotal;
+    if (elTotal) elTotal.textContent = fmt(montantAEncaisser);
+    if (elDetail) {
+      elDetail.textContent = 'Réparti sur les mois cochés : ' + fmt(montantAEncaisser) + ' FCFA';
+    }
+    return;
+  }
+
+  // Montant à encaisser = Frais d'inscription + mois payés en avance
+  // (hors mois obligatoire, déjà inclus dans les frais d'inscription)
+  var montantAEncaisser = fg + monthsTotal;
+
+  // Déterminer si les frais d'inscription ont été saisis (champ rempli ou valeur serveur)
+  var fgInputEl = document.getElementById('frais_generaux');
+  var hasFg     = (fgInputEl && fgInputEl.value !== '') || _FG > 0;
+
+  if (elTotal) {
+    elTotal.textContent = hasFg ? fmt(montantAEncaisser) : '—';
+  }
+
+  if (elDetail) {
+    if (hasFg) {
+      elDetail.textContent =
+        fmt(fg) + ' + ' + fmt(monthsTotal) + ' = ' + fmt(montantAEncaisser) + ' FCFA';
+    } else {
+      elDetail.textContent = 'Saisissez les frais d\'inscription pour calculer le montant.';
+    }
+  }
+}
+
+function openPayModal(id, period, amount) {
+  document.getElementById('modal-inst-id').value = id;
+  document.getElementById('modal-period').textContent = period;
+  document.getElementById('modal-amount').value = amount.replace(/\s/g, '');
+  new bootstrap.Modal(document.getElementById('payModal')).show();
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  var totalInput   = document.getElementById('total_fees');
+  var fgInput      = document.getElementById('frais_generaux');
+  var mensuelInput = document.getElementById('monthly_installment');
+
+  // Pré-remplir les champs vides avec les valeurs serveur
+  if (totalInput   && !totalInput.value   && _TOTAL   > 0) totalInput.value   = _TOTAL;
+  if (fgInput      && !fgInput.value      && _FG      > 0) fgInput.value      = _FG;
+  if (mensuelInput && !mensuelInput.value && _MENSUEL > 0) mensuelInput.value  = _MENSUEL;
+
+  // Forcer le dernier mois coché avec style visuel
+  var requiredCb = document.querySelector('.month-cb[data-required="true"]');
+  if (requiredCb) {
+    requiredCb.checked = true;
+    var lbl = requiredCb.closest('label');
+    if (lbl) { lbl.style.borderColor = '#059669'; lbl.style.background = '#f0fdf4'; }
+  }
+
+  // Préremplir les montants déjà personnalisés pour chaque mois (sinon
+  // laissés vides — recalculate() les initialisera avec la mensualité courante)
+  document.querySelectorAll('.month-amount-input').forEach(function(el) {
+    var saved = _MONTH_AMOUNTS[el.dataset.month];
+    if (saved !== undefined && saved !== null) el.value = saved;
+    el.addEventListener('input',  recalculate);
+    el.addEventListener('change', recalculate);
+  });
+
+  // Écouter les changements de champs
+  [totalInput, fgInput, mensuelInput].forEach(function(el) {
+    if (!el) return;
+    el.addEventListener('input',  recalculate);
+    el.addEventListener('change', recalculate);
+  });
+
+  // Calcul immédiat
+  syncCheckAllState();
+  recalculate();
+});
+</script>
+{% endblock %}

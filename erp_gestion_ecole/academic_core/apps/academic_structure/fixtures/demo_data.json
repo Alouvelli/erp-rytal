@@ -1,0 +1,170 @@
+[
+  {"model": "accounts.role", "pk": 1, "fields": {"name": "ADMIN",        "description": "Administrateur système"}},
+  {"model": "accounts.role", "pk": 2, "fields": {"name": "RESPONSABLE",  "description": "Responsable pédagogique"}},
+  {"model": "accounts.role", "pk": 3, "fields": {"name": "ENSEIGNANT",   "description": "Enseignant"}},
+  {"model": "accounts.role", "pk": 4, "fields": {"name": "ETUDIANT",     "description": "Étudiant"}},
+
+  {"model": "accounts.user", "pk": 1, "fields": {
+    "username": "admin", "first_name": "Admin", "last_name": "Système",
+    "email": "admin@university.edu", "is_staff": true, "is_superuser": true,
+    "password": "pbkdf2_sha256$720000$demo$hashedpassword",
+    "role": 1, "is_active": true, "phone": "+221770000001"
+  }},
+  {"model": "accounts.user", "pk": 2, "fields": {
+    "username": "responsable1", "first_name": "Fatou", "last_name": "Diallo",
+    "email": "f.diallo@university.edu", "is_staff": false, "is_superuser": false,
+    "password": "pbkdf2_sha256$720000$demo$hashedpassword",
+    "role": 2, "is_active": true, "phone": "+221770000002"
+  }},
+  {"model": "accounts.user", "pk": 3, "fields": {
+    "username": "prof_ndoye", "first_name": "Ibrahima", "last_name": "Ndoye",
+    "email": "i.ndoye@university.edu", "is_staff": false, "is_superuser": false,
+    "password": "pbkdf2_sha256$720000$demo$hashedpassword",
+    "role": 3, "is_active": true, "phone": "+221770000003"
+  }},
+  {"model": "accounts.user", "pk": 4, "fields": {
+    "username": "prof_sow", "first_name": "Aminata", "last_name": "Sow",
+    "email": "a.sow@university.edu", "is_staff": false, "is_superuser": false,
+    "password": "pbkdf2_sha256$720000$demo$hashedpassword",
+    "role": 3, "is_active": true, "phone": "+221770000004"
+  }},
+  {"model": "accounts.user", "pk": 5, "fields": {
+    "username": "etudiant_ba", "first_name": "Moussa", "last_name": "Ba",
+    "email": "m.ba@student.university.edu", "is_staff": false, "is_superuser": false,
+    "password": "pbkdf2_sha256$720000$demo$hashedpassword",
+    "role": 4, "is_active": true, "phone": "+221770000005"
+  }},
+  {"model": "accounts.user", "pk": 6, "fields": {
+    "username": "etudiant_fall", "first_name": "Aissatou", "last_name": "Fall",
+    "email": "a.fall@student.university.edu", "is_staff": false, "is_superuser": false,
+    "password": "pbkdf2_sha256$720000$demo$hashedpassword",
+    "role": 4, "is_active": true, "phone": "+221770000006"
+  }},
+
+  {"model": "academic_structure.academicyear", "pk": 1, "fields": {
+    "label": "2024-2025", "start_date": "2024-10-01", "end_date": "2025-06-30", "is_current": true
+  }},
+
+  {"model": "academic_structure.faculty", "pk": 1, "fields": {
+    "code": "FST", "name": "Faculté des Sciences et Technologies", "dean": "Pr. Cheikh Fall"
+  }},
+  {"model": "academic_structure.faculty", "pk": 2, "fields": {
+    "code": "FSJP", "name": "Faculté des Sciences Juridiques", "dean": "Pr. Mariama Diop"
+  }},
+
+  {"model": "academic_structure.department", "pk": 1, "fields": {
+    "code": "INFO", "name": "Département Informatique", "faculty": 1, "head": "Dr. Lamine Kane"
+  }},
+  {"model": "academic_structure.department", "pk": 2, "fields": {
+    "code": "MATH", "name": "Département Mathématiques", "faculty": 1, "head": "Dr. Seydou Traoré"
+  }},
+
+  {"model": "academic_structure.program", "pk": 1, "fields": {
+    "code": "LI", "name": "Licence Informatique", "department": 1, "duration_years": 3
+  }},
+  {"model": "academic_structure.program", "pk": 2, "fields": {
+    "code": "MI", "name": "Master Informatique", "department": 1, "duration_years": 2
+  }},
+
+  {"model": "academic_structure.level", "pk": 1, "fields": {"name": "Licence 1", "order": 1}},
+  {"model": "academic_structure.level", "pk": 2, "fields": {"name": "Licence 2", "order": 2}},
+  {"model": "academic_structure.level", "pk": 3, "fields": {"name": "Licence 3", "order": 3}},
+  {"model": "academic_structure.level", "pk": 4, "fields": {"name": "Master 1",  "order": 4}},
+  {"model": "academic_structure.level", "pk": 5, "fields": {"name": "Master 2",  "order": 5}},
+
+  {"model": "academic_structure.semester", "pk": 1, "fields": {
+    "academic_year": 1, "number": 1, "label": "Semestre 1",
+    "start_date": "2024-10-01", "end_date": "2025-01-31", "is_active": true
+  }},
+  {"model": "academic_structure.semester", "pk": 2, "fields": {
+    "academic_year": 1, "number": 2, "label": "Semestre 2",
+    "start_date": "2025-02-01", "end_date": "2025-06-30", "is_active": false
+  }},
+
+  {"model": "academic_structure.class", "pk": 1, "fields": {
+    "code": "LI1-A", "name": "Licence Info 1 — Groupe A",
+    "program": 1, "level": 1, "academic_year": 1, "capacity": 45
+  }},
+  {"model": "academic_structure.class", "pk": 2, "fields": {
+    "code": "LI2-A", "name": "Licence Info 2 — Groupe A",
+    "program": 1, "level": 2, "academic_year": 1, "capacity": 40
+  }},
+  {"model": "academic_structure.class", "pk": 3, "fields": {
+    "code": "LI3-A", "name": "Licence Info 3 — Groupe A",
+    "program": 1, "level": 3, "academic_year": 1, "capacity": 35
+  }},
+
+  {"model": "rooms.building", "pk": 1, "fields": {"code": "BAT-A", "name": "Bâtiment A"}},
+  {"model": "rooms.building", "pk": 2, "fields": {"code": "BAT-B", "name": "Bâtiment B"}},
+
+  {"model": "rooms.room", "pk": 1, "fields": {
+    "code": "A101", "name": "Amphi 1", "building": 1,
+    "room_type": "AMPHI", "capacity": 120, "has_projector": true, "has_ac": true, "is_available": true
+  }},
+  {"model": "rooms.room", "pk": 2, "fields": {
+    "code": "A201", "name": "Salle 201", "building": 1,
+    "room_type": "SALLE", "capacity": 40, "has_projector": true, "has_ac": false, "is_available": true
+  }},
+  {"model": "rooms.room", "pk": 3, "fields": {
+    "code": "B101", "name": "Laboratoire Réseaux", "building": 2,
+    "room_type": "LABO", "capacity": 25, "has_projector": true, "has_ac": true, "is_available": true
+  }},
+
+  {"model": "teachers.grade", "pk": 1, "fields": {"code": "MCF", "label": "Maître de Conférences", "order": 1}},
+  {"model": "teachers.grade", "pk": 2, "fields": {"code": "PU",  "label": "Professeur des Universités", "order": 2}},
+  {"model": "teachers.grade", "pk": 3, "fields": {"code": "ASS", "label": "Assistant", "order": 3}},
+
+  {"model": "teachers.teacher", "pk": 1, "fields": {
+    "user": 3, "matricule": "ENS-2024-001", "grade": 1,
+    "specialty": "Algorithmique et Structures de Données",
+    "statut": "PERMANENT", "contractual_hours": "192.00",
+    "hire_date": "2018-09-01"
+  }},
+  {"model": "teachers.teacher", "pk": 2, "fields": {
+    "user": 4, "matricule": "ENS-2024-002", "grade": 3,
+    "specialty": "Réseaux et Télécommunications",
+    "statut": "PERMANENT", "contractual_hours": "160.00",
+    "hire_date": "2020-09-01"
+  }},
+
+  {"model": "students.student", "pk": 1, "fields": {
+    "user": 5, "matricule": "ETU-2024-001",
+    "date_of_birth": "2003-05-15", "gender": "M", "address": "Dakar, Sénégal"
+  }},
+  {"model": "students.student", "pk": 2, "fields": {
+    "user": 6, "matricule": "ETU-2024-002",
+    "date_of_birth": "2003-08-22", "gender": "F", "address": "Thiès, Sénégal"
+  }},
+
+  {"model": "students.enrollment", "pk": 1, "fields": {
+    "student": 1, "class_group": 1, "academic_year": 1, "is_active": true
+  }},
+  {"model": "students.enrollment", "pk": 2, "fields": {
+    "student": 2, "class_group": 1, "academic_year": 1, "is_active": true
+  }},
+
+  {"model": "subjects.subject", "pk": 1, "fields": {
+    "code": "INFO101", "title": "Algorithmique et Programmation",
+    "program": 1, "semester": 1, "subject_type": "CM",
+    "coefficient": "3.00", "credits": 6, "volume_hours": "45.00",
+    "responsible_teacher": 1
+  }},
+  {"model": "subjects.subject", "pk": 2, "fields": {
+    "code": "INFO102", "title": "Architecture des Ordinateurs",
+    "program": 1, "semester": 1, "subject_type": "CM",
+    "coefficient": "2.00", "credits": 4, "volume_hours": "30.00",
+    "responsible_teacher": 2
+  }},
+  {"model": "subjects.subject", "pk": 3, "fields": {
+    "code": "INFO103", "title": "Réseaux Informatiques",
+    "program": 1, "semester": 1, "subject_type": "TP",
+    "coefficient": "2.00", "credits": 4, "volume_hours": "30.00",
+    "responsible_teacher": 2
+  }},
+
+  {"model": "grades.evaluationtype", "pk": 1, "fields": {"code": "CC",         "label": "Contrôle Continu",  "weight": "0.30"}},
+  {"model": "grades.evaluationtype", "pk": 2, "fields": {"code": "TP",         "label": "Travaux Pratiques", "weight": "0.20"}},
+  {"model": "grades.evaluationtype", "pk": 3, "fields": {"code": "EXAM",       "label": "Examen Final",      "weight": "0.50"}},
+  {"model": "grades.evaluationtype", "pk": 4, "fields": {"code": "RATTRAPAGE", "label": "Rattrapage",        "weight": "1.00"}},
+  {"model": "grades.evaluationtype", "pk": 5, "fields": {"code": "PROJECT",    "label": "Projet",            "weight": "0.30"}}
+]

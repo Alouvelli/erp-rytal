@@ -1,0 +1,34 @@
+# Secrets — jamais dans le dépôt
+.env
+.env.*
+!.env.example
+
+# Bases de données locales (données réelles d'étudiants/finances par institut)
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+db.sqlite3
+db_inst_*.sqlite3
+
+# Bases d'instituts supprimés, archivées au lieu d'être effacées (voir
+# academic_structure/utils.py::archive_institut_db)
+archives/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# Django
+media/
+staticfiles/
+*.log
+
+# Éditeurs / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+sauvegarde/

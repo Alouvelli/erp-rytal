@@ -1,0 +1,155 @@
+{% extends 'base/base.html' %}
+{% block title %}Budget honoraires mensuels{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Direction Pédagogique</a></li>
+{% if can_view_all %}<li class="breadcrumb-item"><a href="{% url 'accounting:budget_honoraires' %}">Budget honoraires mensuels</a></li>{% endif %}
+<li class="breadcrumb-item active">{{ department.name }}</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  @media print {
+    .no-print { display: none !important; }
+    .sidebar, .app-sidebar, .topbar { display: none !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header no-print">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-cash-coin"></i></span>
+    Budget honoraires mensuels — {{ department.name }}
+  </h1>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if academic_year %}
+    <a href="{% url 'accounting:budget_honoraires_export_excel' %}?department={{ department.pk }}&academic_year={{ academic_year.pk }}"
+       class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
+    <a href="{% url 'accounting:budget_honoraires_export_pdf' %}?department={{ department.pk }}&academic_year={{ academic_year.pk }}"
+       class="btn btn-outline-danger btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</a>
+    <a href="{% url 'accounting:budget_honoraires_export_word' %}?department={{ department.pk }}&academic_year={{ academic_year.pk }}"
+       class="btn btn-outline-primary btn-sm"><i class="bi bi-file-earmark-word me-1"></i>Word</a>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+      <i class="bi bi-printer me-1"></i>Imprimer
+    </button>
+    {% endif %}
+    {% if can_view_all %}
+    <a href="{% url 'accounting:budget_honoraires' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Vue globale
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card-section mb-3 no-print">
+  <div class="p-3">
+    <form method="get" class="d-flex align-items-end gap-2">
+      {% if can_view_all %}<input type="hidden" name="department" value="{{ department.pk }}">{% endif %}
+      <div>
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Année académique</label>
+        <select name="academic_year" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for y in academic_years %}
+          <option value="{{ y.pk }}" {% if academic_year and y.pk == academic_year.pk %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if not academic_year %}
+<div class="card-section">
+  <div style="text-align:center;padding:50px 20px;color:#94a3b8;">
+    Aucune année académique disponible.
+  </div>
+</div>
+{% elif not rows %}
+<div class="card-section">
+  <div style="text-align:center;padding:50px 20px;color:#94a3b8;">
+    <i class="bi bi-cash-coin d-block mb-3" style="font-size:2.5rem;color:#cbd5e1;"></i>
+    <div style="font-size:.95rem;font-weight:600;">Aucune classe pour {{ department.name }} en {{ academic_year.label }}.</div>
+  </div>
+</div>
+{% else %}
+<form method="post">
+  {% csrf_token %}
+  <input type="hidden" name="academic_year" value="{{ academic_year.pk }}">
+  {% if can_view_all %}<input type="hidden" name="department" value="{{ department.pk }}">{% endif %}
+
+  <div class="card-section">
+    <div class="card-section-header">
+      <h6 class="card-section-title">
+        <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-table"></i></span>
+        Projet de budget des honoraires — {{ academic_year.label }}
+      </h6>
+      <button type="submit" class="btn btn-primary btn-sm no-print"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+    </div>
+    <div class="table-responsive">
+      <table class="table" style="margin:0;font-size:.78rem;">
+        <thead>
+          <tr>
+            <th rowspan="2" style="vertical-align:middle;">Classe</th>
+            <th rowspan="2" style="vertical-align:middle;text-align:right;">TAUX (FCFA/h)</th>
+            <th rowspan="2" style="vertical-align:middle;text-align:right;min-width:90px;">VHA</th>
+            {% for m in all_months %}
+            <th colspan="2" style="text-align:center;background:{{ m.header_color }};color:#1e293b;">{{ m.label }} {{ m.year }}</th>
+            {% endfor %}
+            <th rowspan="2" style="vertical-align:middle;text-align:right;">HT</th>
+          </tr>
+          <tr>
+            {% for m in all_months %}
+            <th style="text-align:right;min-width:80px;background:{{ m.bg }};color:#1e293b;">Vol. h</th>
+            <th style="text-align:right;min-width:100px;background:{{ m.bg }};color:#166534;">Honoraires</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% regroup rows by cycle as cycle_list %}
+          {% for cycle in cycle_list %}
+          <tr>
+            <td colspan="{{ cycle_row_colspan }}" style="background:#f1f5f9;font-weight:700;color:#1e293b;">
+              {{ cycle.grouper }}
+            </td>
+          </tr>
+          {% for row in cycle.list %}
+          <tr>
+            <td style="font-weight:600;">{{ row.class_group.name }}</td>
+            <td style="text-align:right;">
+              {% if row.rate %}{{ row.rate.rate_per_hour|floatformat:0 }}{% else %}
+              <span class="text-danger" title="Aucun taux horaire défini pour ce niveau/département/année">—</span>
+              {% endif %}
+            </td>
+            <td style="text-align:right;">
+              <input type="number" step="0.5" name="vha_{{ row.class_group.pk }}" value="{{ row.vha|stringformat:'0.2f' }}"
+                     class="form-control form-control-sm text-end" style="min-width:80px;">
+            </td>
+            {% for cell in row.months %}
+            {% if cell %}
+            <td style="text-align:right;background:{{ cell.bg }};">
+              <input type="number" step="0.5" name="vol_{{ row.class_group.pk }}_{{ cell.year }}_{{ cell.month }}"
+                     value="{{ cell.volume|stringformat:'0.2f' }}" class="form-control form-control-sm text-end" style="min-width:70px;">
+            </td>
+            <td style="text-align:right;color:#166534;font-weight:600;background:{{ cell.bg }};">
+              {% if cell.honoraires is not None %}{{ cell.honoraires|floatformat:0 }}{% else %}—{% endif %}
+            </td>
+            {% else %}
+            <td></td><td></td>
+            {% endif %}
+            {% endfor %}
+            <td style="text-align:right;font-weight:800;color:#166534;">{{ row.ht|floatformat:0 }}</td>
+          </tr>
+          {% endfor %}
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr style="background:#dcfce7;">
+            <td colspan="{{ total_row_colspan }}" style="text-align:right;font-weight:800;color:#166534;">TOTAL {{ department.name|upper }}</td>
+            <td style="text-align:right;font-weight:800;color:#166534;">{{ dept_ht|floatformat:0 }} FCFA</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

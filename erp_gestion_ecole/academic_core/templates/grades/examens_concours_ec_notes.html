@@ -1,0 +1,280 @@
+{% extends 'base/base.html' %}
+{% block title %}Notes — {{ subject.title }} — {{ class_group.name }} S{{ semester.number }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'grades:examens_concours_class_list' %}">Examens &amp; Concours</a></li>
+<li class="breadcrumb-item"><a href="{% url 'grades:examens_concours_detail' class_group.pk semester.pk %}">{{ class_group.name }} — S{{ semester.number }}</a></li>
+<li class="breadcrumb-item active">{{ subject.title }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#1e3a5f;"><i class="bi bi-journal-text"></i></span>
+    {{ subject.code }} — {{ subject.title }}
+  </h1>
+  <div class="page-actions d-flex gap-2" style="margin-left:auto;">
+    {% if not semester.is_locked %}
+    <button type="button" class="btn btn-sm" style="background:#16a34a;color:#fff;" data-bs-toggle="modal" data-bs-target="#modalImportExcel">
+      <i class="bi bi-file-earmark-excel me-1"></i>Importer Excel
+    </button>
+    {% endif %}
+    <a href="{% url 'grades:examens_concours_detail' class_group.pk semester.pk %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+  </div>
+</div>
+
+<div class="d-flex gap-3 flex-wrap mb-3" style="font-size:.85rem;color:#475569;">
+  <span><i class="bi bi-people-fill me-1"></i><strong>{{ class_group.name }}</strong> — Semestre {{ semester.number }}</span>
+  <span><i class="bi bi-person-badge-fill me-1"></i>Enseignant : <strong>{{ teacher_label }}</strong></span>
+  {% if validation and validation.is_validated %}
+  <span style="background:#dcfce7;color:#166534;border-radius:10px;padding:2px 10px;font-weight:700;">
+    <i class="bi bi-check-circle-fill me-1"></i>Validé le {{ validation.validated_at|date:"d/m/Y H:i" }}
+    {% if validation.validated_by %} par {{ validation.validated_by.get_full_name }}{% endif %}
+  </span>
+  {% else %}
+  <span style="background:#f1f5f9;color:#94a3b8;border-radius:10px;padding:2px 10px;font-weight:700;">
+    <i class="bi bi-hourglass-split me-1"></i>Non validé
+  </span>
+  {% endif %}
+</div>
+
+<div class="card-section">
+  <div class="table-responsive">
+    <table class="table" style="font-size:.83rem;">
+      <thead>
+        <tr>
+          <th>Étudiant</th>
+          <th class="text-center">Devoir 1</th>
+          <th class="text-center">Devoir 2</th>
+          <th class="text-center">TP</th>
+          <th class="text-center">Examen</th>
+          <th class="text-center">Moyenne EC</th>
+          <th>Appréciation</th>
+        </tr>
+      </thead>
+      <tbody id="ec-notes-tbody">
+        {% for row in student_rows %}
+        <tr class="ec-note-row" data-student-id="{{ row.student.pk }}">
+          <td style="font-weight:600;color:#1e293b;">{{ row.student.full_name }} <span style="color:#94a3b8;font-size:.75rem;">({{ row.student.matricule }})</span></td>
+          {% if semester.is_locked %}
+          <td class="text-center">{{ row.devoir1|floatformat:2|default:"—" }}</td>
+          <td class="text-center">{{ row.devoir2|floatformat:2|default:"—" }}</td>
+          <td class="text-center">{{ row.tp|floatformat:2|default:"—" }}</td>
+          <td class="text-center">{{ row.examen|floatformat:2|default:"—" }}</td>
+          {% else %}
+          <td class="text-center p-1">
+            <input type="number" class="form-control form-control-sm grade-input text-center" data-type="DEVOIR1"
+                   min="0" max="20" step="0.01" style="max-width:80px;margin:0 auto;"
+                   value="{% if row.devoir1 is not None %}{{ row.devoir1|stringformat:".2f" }}{% endif %}">
+          </td>
+          <td class="text-center p-1">
+            <input type="number" class="form-control form-control-sm grade-input text-center" data-type="DEVOIR2"
+                   min="0" max="20" step="0.01" style="max-width:80px;margin:0 auto;"
+                   value="{% if row.devoir2 is not None %}{{ row.devoir2|stringformat:".2f" }}{% endif %}">
+          </td>
+          <td class="text-center p-1">
+            <input type="number" class="form-control form-control-sm grade-input text-center" data-type="TP"
+                   min="0" max="20" step="0.01" style="max-width:80px;margin:0 auto;"
+                   value="{% if row.tp is not None %}{{ row.tp|stringformat:".2f" }}{% endif %}">
+          </td>
+          <td class="text-center p-1">
+            <input type="number" class="form-control form-control-sm grade-input text-center" data-type="EXAM"
+                   min="0" max="20" step="0.01" style="max-width:80px;margin:0 auto;"
+                   value="{% if row.examen is not None %}{{ row.examen|stringformat:".2f" }}{% endif %}">
+          </td>
+          {% endif %}
+          <td class="text-center ec-final-cell" style="font-weight:700;">{{ row.final_average|floatformat:2|default:"—" }}</td>
+          <td class="ec-appr-cell">
+            {% if row.appreciation == 'Validé' %}
+            <span style="color:#166534;font-weight:600;">{{ row.appreciation }}</span>
+            {% elif row.appreciation == 'Non Validé' %}
+            <span style="color:#b91c1c;font-weight:600;">{{ row.appreciation }}</span>
+            {% else %}
+            <span style="color:#94a3b8;">{{ row.appreciation }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:40px;">Aucun étudiant inscrit dans cette classe.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if not semester.is_locked and student_rows %}
+  <div class="px-3 pb-3" style="font-size:.72rem;color:#94a3b8;">
+    <i class="bi bi-info-circle me-1"></i>Cliquez sur une note pour la modifier, puis appuyez sur <kbd>Entrée</kbd> pour valider.
+  </div>
+  {% endif %}
+</div>
+
+<div class="d-flex justify-content-end mt-3">
+  <form method="post" action="{% url 'grades:examens_concours_ec_validate' class_group.pk semester.pk subject.pk %}"
+        onsubmit="return confirm('Valider les notes de {{ subject.title|escapejs }} pour {{ class_group.name|escapejs }} ?\n\nCette action importera automatiquement les notes dans la gestion des bulletins.');">
+    {% csrf_token %}
+    <button type="submit" class="btn" style="background:#16a34a;color:#fff;border:none;padding:8px 20px;">
+      <i class="bi bi-check2-circle me-1"></i>{% if validation and validation.is_validated %}Revalider{% else %}Valider{% endif %} cet EC
+    </button>
+  </form>
+</div>
+
+<!-- Modal import Excel -->
+<div class="modal fade" id="modalImportExcel" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:#16a34a;color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-file-earmark-excel me-2"></i>Importer les notes depuis Excel</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'grades:examens_concours_ec_import' class_group.pk semester.pk subject.pk %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <p style="font-size:.83rem;color:#64748b;">
+            Fichier Excel (.xlsx) pour <strong>{{ subject.title }}</strong> — <strong>{{ class_group.name }}</strong>, Semestre {{ semester.number }}.
+          </p>
+          <div class="p-3 mb-3" style="background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;font-size:.78rem;color:#166534;">
+            <i class="bi bi-info-circle me-1"></i>
+            Colonnes attendues (ordre libre) :
+            <strong>Matricule</strong>, <strong>Devoir 1</strong>, <strong>Devoir 2</strong>, <strong>TP</strong>, <strong>Examen</strong>
+            (notes sur 20). Seules les colonnes présentes seront importées.
+          </div>
+          <div class="d-flex flex-wrap gap-3 mb-3">
+            <a href="{% url 'grades:examens_concours_ec_template' class_group.pk semester.pk subject.pk %}"
+               class="d-inline-flex align-items-center gap-2" style="font-size:.82rem;font-weight:600;color:#16a34a;text-decoration:none;">
+              <i class="bi bi-download"></i>Télécharger le modèle Excel (pré-rempli pour cette classe)
+            </a>
+            <a href="{% url 'grades:examens_concours_ec_template' class_group.pk semester.pk subject.pk %}?anon=1"
+               class="d-inline-flex align-items-center gap-2" style="font-size:.82rem;font-weight:600;color:#7c3aed;text-decoration:none;"
+               title="Modèle anonyme : Nom/Prénom masqués, la correspondance avec l'étudiant se fait automatiquement via le matricule à l'import">
+              <i class="bi bi-incognito"></i>Télécharger le modèle anonyme (noms masqués)
+            </a>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Fichier Excel <span class="text-danger">*</span></label>
+            <input type="file" name="excel_file" class="form-control" accept=".xlsx" required>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-sm" style="background:#16a34a;color:#fff;">
+            <i class="bi bi-upload me-1"></i>Importer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% if not semester.is_locked %}
+<style>
+.grade-input:focus { outline:2px solid #3b82f6;border-color:#3b82f6 !important;background:#eff6ff !important; }
+.grade-input.saving { opacity:.6;pointer-events:none; }
+.grade-input.saved  { border-color:#16a34a !important; }
+.grade-input.error  { border-color:#dc2626 !important;background:#fef2f2 !important; }
+</style>
+<script>
+(function () {
+  const INLINE_URL   = "{% url 'grades:grade_inline_update' %}";
+  const CSRF         = "{{ csrf_token }}";
+  const SUBJECT_ID   = {{ subject.pk }};
+  const SEMESTER_ID  = {{ semester.pk }};
+  const CLASS_ID     = {{ class_group.pk }};
+
+  function gradeColor(v) {
+    if (v === null || v === undefined) return '#94a3b8';
+    return parseFloat(v) >= 10 ? '#15803D' : '#DC2626';
+  }
+
+  async function saveGrade(input) {
+    const row = input.closest('tr.ec-note-row');
+    if (!row) return;
+
+    const studentId = row.dataset.studentId;
+    const gradeType = input.dataset.type;
+    const scoreRaw  = input.value.trim().replace(',', '.');
+    const score     = scoreRaw === '' ? '' : parseFloat(scoreRaw);
+
+    if (scoreRaw !== '' && (isNaN(score) || score < 0 || score > 20)) {
+      input.classList.add('error');
+      input.title = 'Note invalide (0–20)';
+      return;
+    }
+
+    input.classList.remove('saved', 'error');
+    input.classList.add('saving');
+
+    try {
+      const resp = await fetch(INLINE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({
+          student_id:  parseInt(studentId),
+          subject_id:  SUBJECT_ID,
+          semester_id: SEMESTER_ID,
+          class_id:    CLASS_ID,
+          grade_type:  gradeType,
+          score:       scoreRaw === '' ? null : score,
+        }),
+      });
+
+      const d = await resp.json();
+
+      if (!resp.ok) {
+        input.classList.remove('saving');
+        input.classList.add('error');
+        input.title = d.error || 'Erreur serveur';
+        return;
+      }
+
+      input.classList.remove('saving', 'error');
+      input.classList.add('saved');
+      input.title = '';
+      setTimeout(() => input.classList.remove('saved'), 1500);
+
+      // Mettre à jour Devoir 1 / Devoir 2 / Examen depuis la réponse serveur
+      // (TP n'entre pas dans le calcul de la moyenne EC — il n'est pas
+      // renvoyé, la valeur saisie localement est conservée telle quelle).
+      row.querySelectorAll('.grade-input').forEach(inp => {
+        if (inp === input) return;
+        let val = null;
+        if (inp.dataset.type === 'DEVOIR1') val = d.d1;
+        else if (inp.dataset.type === 'DEVOIR2') val = d.d2;
+        else if (inp.dataset.type === 'EXAM') val = d.exam;
+        else return;
+        inp.value = (val !== null && val !== undefined) ? parseFloat(val).toFixed(2) : '';
+      });
+
+      const finalCell = row.querySelector('.ec-final-cell');
+      if (finalCell) {
+        finalCell.textContent = d.final !== null && d.final !== undefined ? parseFloat(d.final).toFixed(2) : '—';
+        finalCell.style.color = gradeColor(d.final);
+      }
+
+      const apprCell = row.querySelector('.ec-appr-cell');
+      if (apprCell) {
+        if (d.appreciation === 'Validé') {
+          apprCell.innerHTML = '<span style="color:#166534;font-weight:600;">Validé</span>';
+        } else if (d.appreciation === 'Non Validé') {
+          apprCell.innerHTML = '<span style="color:#b91c1c;font-weight:600;">Non Validé</span>';
+        } else {
+          apprCell.innerHTML = '<span style="color:#94a3b8;">' + (d.appreciation || 'A faire') + '</span>';
+        }
+      }
+    } catch (e) {
+      input.classList.remove('saving');
+      input.classList.add('error');
+      input.title = 'Erreur réseau';
+    }
+  }
+
+  document.querySelectorAll('#ec-notes-tbody .grade-input').forEach(input => {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); saveGrade(input); input.blur(); }
+      if (e.key === 'Escape') { input.blur(); }
+    });
+    input.addEventListener('focus', () => input.select());
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

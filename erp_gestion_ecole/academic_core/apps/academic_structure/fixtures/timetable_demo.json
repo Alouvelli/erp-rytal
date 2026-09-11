@@ -1,0 +1,110 @@
+[
+  {"model": "timetable.timetableentry", "pk": 1, "fields": {
+    "semester": 1, "class_group": 1, "subject": 1, "teacher": 1, "room": 1,
+    "day_of_week": 1, "start_time": "08:00:00", "end_time": "10:00:00",
+    "recurrence": "WEEKLY", "color": "#0d6efd", "is_active": true
+  }},
+  {"model": "timetable.timetableentry", "pk": 2, "fields": {
+    "semester": 1, "class_group": 1, "subject": 2, "teacher": 2, "room": 2,
+    "day_of_week": 2, "start_time": "10:00:00", "end_time": "12:00:00",
+    "recurrence": "WEEKLY", "color": "#198754", "is_active": true
+  }},
+  {"model": "timetable.timetableentry", "pk": 3, "fields": {
+    "semester": 1, "class_group": 1, "subject": 3, "teacher": 2, "room": 3,
+    "day_of_week": 3, "start_time": "14:00:00", "end_time": "16:00:00",
+    "recurrence": "WEEKLY", "color": "#dc3545", "is_active": true
+  }},
+  {"model": "timetable.timetableentry", "pk": 4, "fields": {
+    "semester": 1, "class_group": 1, "subject": 1, "teacher": 1, "room": 2,
+    "day_of_week": 4, "start_time": "08:00:00", "end_time": "10:00:00",
+    "recurrence": "WEEKLY", "color": "#0d6efd", "is_active": true
+  }},
+  {"model": "timetable.timetableentry", "pk": 5, "fields": {
+    "semester": 1, "class_group": 2, "subject": 2, "teacher": 2, "room": 1,
+    "day_of_week": 1, "start_time": "10:30:00", "end_time": "12:30:00",
+    "recurrence": "WEEKLY", "color": "#6f42c1", "is_active": true
+  }},
+
+  {"model": "attendance.attendancesheet", "pk": 1, "fields": {
+    "timetable_entry": 1, "session_date": "2025-01-06",
+    "status": "VALIDATED", "teacher_comment": "Cours dispensé normalement.",
+    "teacher_signature_at": "2025-01-06T10:05:00Z",
+    "validated_by": 2, "validated_at": "2025-01-06T14:00:00Z"
+  }},
+  {"model": "attendance.attendancesheet", "pk": 2, "fields": {
+    "timetable_entry": 1, "session_date": "2025-01-13",
+    "status": "SIGNED", "teacher_comment": "RAS.",
+    "teacher_signature_at": "2025-01-13T10:08:00Z",
+    "validated_by": null, "validated_at": null
+  }},
+  {"model": "attendance.attendancesheet", "pk": 3, "fields": {
+    "timetable_entry": 2, "session_date": "2025-01-07",
+    "status": "PENDING", "teacher_comment": "",
+    "teacher_signature_at": null, "validated_by": null, "validated_at": null
+  }},
+
+  {"model": "attendance.studentattendance", "pk": 1, "fields": {
+    "attendance_sheet": 1, "student": 1, "status": "PRESENT", "comment": ""
+  }},
+  {"model": "attendance.studentattendance", "pk": 2, "fields": {
+    "attendance_sheet": 1, "student": 2, "status": "ABSENT",
+    "comment": "Problème de transport signalé"
+  }},
+  {"model": "attendance.studentattendance", "pk": 3, "fields": {
+    "attendance_sheet": 2, "student": 1, "status": "PRESENT", "comment": ""
+  }},
+  {"model": "attendance.studentattendance", "pk": 4, "fields": {
+    "attendance_sheet": 2, "student": 2, "status": "PRESENT", "comment": ""
+  }},
+
+  {"model": "grades.evaluation", "pk": 1, "fields": {
+    "subject": 1, "semester": 1, "evaluation_type": 1, "teacher": 1,
+    "title": "CC1 — Algorithmique", "date": "2024-11-15",
+    "max_score": "20.00", "is_locked": false
+  }},
+  {"model": "grades.evaluation", "pk": 2, "fields": {
+    "subject": 1, "semester": 1, "evaluation_type": 3, "teacher": 1,
+    "title": "Examen Final — Algorithmique", "date": "2025-01-20",
+    "max_score": "20.00", "is_locked": false
+  }},
+
+  {"model": "grades.grade", "pk": 1, "fields": {
+    "student": 1, "evaluation": 1, "score": "14.50",
+    "comment": "", "entered_by": 3
+  }},
+  {"model": "grades.grade", "pk": 2, "fields": {
+    "student": 2, "evaluation": 1, "score": "12.00",
+    "comment": "Doit réviser les tris", "entered_by": 3
+  }},
+  {"model": "grades.grade", "pk": 3, "fields": {
+    "student": 1, "evaluation": 2, "score": "16.00",
+    "comment": "Excellent travail", "entered_by": 3
+  }},
+  {"model": "grades.grade", "pk": 4, "fields": {
+    "student": 2, "evaluation": 2, "score": "11.50",
+    "comment": "", "entered_by": 3
+  }},
+
+  {"model": "cancellations.coursecancellation", "pk": 1, "fields": {
+    "timetable_entry": 3, "session_date": "2025-01-22",
+    "request_type": "POSTPONE",
+    "reason": "Participation à un séminaire international.",
+    "requested_by": 4, "status": "PENDING",
+    "rescheduled_date": "2025-01-25",
+    "rescheduled_start": "08:00:00", "rescheduled_end": "10:00:00",
+    "rescheduled_room": 2
+  }},
+
+  {"model": "notifications.notification", "pk": 1, "fields": {
+    "recipient": 5, "notification_type": "NEW_GRADE",
+    "title": "Nouvelle note disponible", "priority": "MEDIUM",
+    "message": "La note pour CC1 — Algorithmique a été publiée.",
+    "is_read": false, "link": "/grades/student/", "email_sent": false
+  }},
+  {"model": "notifications.notification", "pk": 2, "fields": {
+    "recipient": 6, "notification_type": "ABSENCE",
+    "title": "Absence enregistrée", "priority": "HIGH",
+    "message": "Une absence a été enregistrée pour le 06/01/2025 — Algorithmique.",
+    "is_read": true, "link": "/attendance/", "email_sent": false
+  }}
+]

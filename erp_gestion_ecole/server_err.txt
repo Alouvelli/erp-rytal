@@ -1,0 +1,1198 @@
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:21:53,242 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-20 21:31:25,676 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:31:28,631 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+INFO 2026-06-20 21:39:48,043 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:39:50,603 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+INFO 2026-06-20 21:39:58,550 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:40:01,054 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\forms.py changed, reloading.
+INFO 2026-06-20 21:42:09,585 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\forms.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:42:12,306 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-20 21:42:25,667 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:42:28,360 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-20 21:42:37,085 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:42:40,296 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-20 21:42:53,729 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:42:56,408 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-20 21:43:02,144 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:43:05,059 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-20 21:43:17,097 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:43:19,762 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-20 21:43:37,730 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:43:40,233 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-20 21:43:47,046 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:43:49,786 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-20 21:49:02,789 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:49:05,140 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-20 21:49:15,227 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:49:17,455 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-20 21:49:26,715 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:49:29,205 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-20 21:54:07,427 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:54:11,343 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+INFO 2026-06-20 21:57:31,865 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 21:57:34,993 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-20 22:01:46,694 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 22:01:49,686 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\models.py changed, reloading.
+INFO 2026-06-20 22:13:52,863 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 22:13:56,530 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+INFO 2026-06-20 22:14:08,204 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 22:14:11,017 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\teachers\views.py changed, reloading.
+INFO 2026-06-20 22:14:19,575 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\teachers\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 22:14:22,204 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+INFO 2026-06-20 22:14:28,000 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 22:14:30,954 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\timetable\views.py changed, reloading.
+INFO 2026-06-20 22:14:41,916 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\timetable\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 22:14:44,367 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\timetable\views.py changed, reloading.
+INFO 2026-06-20 22:14:50,239 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\timetable\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 22:14:52,788 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\dashboard\views.py changed, reloading.
+INFO 2026-06-20 22:15:08,894 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\dashboard\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 22:15:11,703 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\views.py changed, reloading.
+INFO 2026-06-20 22:15:21,472 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-20 22:15:24,073 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 01:54:04,074 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 01:54:08,614 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 01:54:15,687 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 01:54:18,127 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-21 01:54:38,370 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 01:54:40,830 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-21 01:54:46,001 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 01:54:48,381 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-21 01:55:00,966 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 01:55:03,352 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\teachers\views.py changed, reloading.
+INFO 2026-06-21 02:56:50,574 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\teachers\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 02:56:55,021 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\services.py changed, reloading.
+INFO 2026-06-21 02:57:04,678 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\services.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 02:57:07,161 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\services.py changed, reloading.
+INFO 2026-06-21 02:57:13,814 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\services.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 02:57:16,252 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 02:58:20,797 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 02:58:23,354 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 09:21:31,538 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 09:21:39,295 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 09:43:36,723 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 09:43:40,505 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 09:47:17,502 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 09:47:20,941 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+INFO 2026-06-21 09:56:10,411 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 09:56:13,573 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 09:56:22,508 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 09:56:25,306 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\urls.py changed, reloading.
+INFO 2026-06-21 10:20:24,329 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\urls.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:20:27,868 autoreload Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 1041, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 992, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+    ~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\commands\runserver.py", line 134, in inner_run
+    self.check(display_num_errors=True)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\base.py", line 486, in check
+    all_issues = checks.run_checks(
+        app_configs=app_configs,
+    ...<2 lines>...
+        databases=databases,
+    )
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\registry.py", line 88, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\urls.py", line 16, in check_url_config
+    return check_resolver(resolver)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\urls.py", line 26, in check_resolver
+    return check_method()
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 531, in check
+    for pattern in self.url_patterns:
+                   ^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 718, in url_patterns
+    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
+                       ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 711, in urlconf_module
+    return import_module(self.urlconf_name)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\config\urls.py", line 22, in <module>
+    path('structure/', include('academic_core.apps.academic_structure.urls')),
+                       ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\conf.py", line 39, in include
+    urlconf_module = import_module(urlconf_module)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\urls.py", line 25, in <module>
+    path('instituts/creer/',                         views.institut_create_view, name='institut_create'),
+                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'academic_core.apps.academic_structure.views' has no attribute 'institut_create_view'. Did you mean: 'institut_config_view'?
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-21 10:20:49,024 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:20:51,374 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-21 10:24:35,064 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:24:38,228 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-21 10:26:19,779 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:26:22,462 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+INFO 2026-06-21 10:40:27,170 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:40:30,810 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 10:40:36,839 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:40:39,176 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 10:40:45,678 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:40:48,326 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 10:40:58,528 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:41:01,610 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 10:41:20,053 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:41:23,000 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\teachers\views.py changed, reloading.
+INFO 2026-06-21 10:41:29,896 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\teachers\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:41:32,826 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\attendance\views.py changed, reloading.
+INFO 2026-06-21 10:41:39,966 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\attendance\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:41:43,643 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-21 10:49:15,495 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:49:18,666 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-21 10:49:28,048 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:49:30,452 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 10:49:39,991 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:49:42,385 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 10:49:50,398 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:49:52,778 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 10:50:07,014 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:50:09,853 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 10:50:36,108 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:50:38,293 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 10:50:43,750 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:50:46,007 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 10:50:56,474 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:50:58,814 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 10:56:57,285 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:57:00,523 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 10:57:09,155 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 10:57:11,750 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+INFO 2026-06-21 11:00:02,876 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:00:05,641 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 11:01:04,626 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:01:07,162 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\forms.py changed, reloading.
+INFO 2026-06-21 11:01:55,605 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\forms.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:01:58,060 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+INFO 2026-06-21 11:04:08,007 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:04:11,271 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\models.py changed, reloading.
+INFO 2026-06-21 11:04:17,867 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:04:20,171 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-21 11:04:56,805 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:04:59,030 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-21 11:05:34,458 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:05:37,225 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+INFO 2026-06-21 11:07:21,116 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:07:24,096 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\dashboard\views.py changed, reloading.
+INFO 2026-06-21 11:07:33,826 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\dashboard\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:07:36,722 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\dashboard\views.py changed, reloading.
+INFO 2026-06-21 11:08:01,665 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\dashboard\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:08:04,648 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\dashboard\urls.py changed, reloading.
+INFO 2026-06-21 11:08:11,494 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\dashboard\urls.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:08:14,328 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-21 11:14:33,518 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:14:37,879 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\dashboard\views.py changed, reloading.
+INFO 2026-06-21 11:24:04,204 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\dashboard\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:24:07,555 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 11:33:18,297 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:33:24,054 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\dashboard\apps.py changed, reloading.
+INFO 2026-06-21 11:42:06,821 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\dashboard\apps.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:42:10,635 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 11:49:53,421 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:49:57,870 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+INFO 2026-06-21 11:53:42,255 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:53:45,769 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 11:54:44,292 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:54:46,969 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 11:59:21,238 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 11:59:24,074 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 12:07:42,202 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 12:07:45,702 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 12:07:53,853 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 12:07:56,343 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\teachers\views.py changed, reloading.
+INFO 2026-06-21 12:12:43,506 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\teachers\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 12:12:46,558 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\views.py changed, reloading.
+INFO 2026-06-21 12:13:00,346 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 12:13:03,047 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+INFO 2026-06-21 12:16:22,601 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 12:16:25,643 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+INFO 2026-06-21 12:16:46,455 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 12:16:48,897 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 12:19:10,543 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 12:19:13,010 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 12:19:21,236 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 12:19:24,018 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 12:19:58,924 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 12:20:01,510 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 14:18:01,641 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 14:18:17,815 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\teachers\views.py changed, reloading.
+INFO 2026-06-21 14:22:56,119 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\teachers\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 14:22:58,796 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\views.py changed, reloading.
+INFO 2026-06-21 14:23:11,938 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 14:23:14,732 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 14:26:59,806 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 14:27:02,793 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 14:27:10,220 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 14:27:13,060 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 14:30:22,397 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 14:30:25,080 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\forms.py changed, reloading.
+INFO 2026-06-21 14:31:36,041 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\forms.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 14:31:38,904 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\urls.py changed, reloading.
+INFO 2026-06-21 14:45:39,150 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\urls.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 14:45:43,561 autoreload Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 1041, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 992, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+    ~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\commands\runserver.py", line 134, in inner_run
+    self.check(display_num_errors=True)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\base.py", line 486, in check
+    all_issues = checks.run_checks(
+        app_configs=app_configs,
+    ...<2 lines>...
+        databases=databases,
+    )
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\registry.py", line 88, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\urls.py", line 16, in check_url_config
+    return check_resolver(resolver)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\urls.py", line 26, in check_resolver
+    return check_method()
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 531, in check
+    for pattern in self.url_patterns:
+                   ^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 718, in url_patterns
+    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
+                       ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 711, in urlconf_module
+    return import_module(self.urlconf_name)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\config\urls.py", line 13, in <module>
+    path('accounts/', include('academic_core.apps.accounts.urls')),
+                      ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\conf.py", line 39, in include
+    urlconf_module = import_module(urlconf_module)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\urls.py", line 33, in <module>
+    path('session-check/',                   views.session_check,          name='session_check'),
+                                             ^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'academic_core.apps.accounts.views' has no attribute 'session_check'
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 14:45:53,503 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 14:45:56,517 autoreload Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 1041, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 992, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+    ~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\commands\runserver.py", line 134, in inner_run
+    self.check(display_num_errors=True)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\base.py", line 486, in check
+    all_issues = checks.run_checks(
+        app_configs=app_configs,
+    ...<2 lines>...
+        databases=databases,
+    )
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\registry.py", line 88, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\urls.py", line 16, in check_url_config
+    return check_resolver(resolver)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\urls.py", line 26, in check_resolver
+    return check_method()
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 531, in check
+    for pattern in self.url_patterns:
+                   ^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 718, in url_patterns
+    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
+                       ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 711, in urlconf_module
+    return import_module(self.urlconf_name)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\config\urls.py", line 13, in <module>
+    path('accounts/', include('academic_core.apps.accounts.urls')),
+                      ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\conf.py", line 39, in include
+    urlconf_module = import_module(urlconf_module)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\urls.py", line 33, in <module>
+    path('session-check/',                   views.session_check,          name='session_check'),
+                                             ^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'academic_core.apps.accounts.views' has no attribute 'session_check'
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 14:46:10,360 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 14:46:12,741 autoreload Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 1041, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 992, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+    ~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\commands\runserver.py", line 134, in inner_run
+    self.check(display_num_errors=True)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\base.py", line 486, in check
+    all_issues = checks.run_checks(
+        app_configs=app_configs,
+    ...<2 lines>...
+        databases=databases,
+    )
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\registry.py", line 88, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\urls.py", line 16, in check_url_config
+    return check_resolver(resolver)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\urls.py", line 26, in check_resolver
+    return check_method()
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 531, in check
+    for pattern in self.url_patterns:
+                   ^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 718, in url_patterns
+    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
+                       ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 711, in urlconf_module
+    return import_module(self.urlconf_name)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\config\urls.py", line 13, in <module>
+    path('accounts/', include('academic_core.apps.accounts.urls')),
+                      ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\conf.py", line 39, in include
+    urlconf_module = import_module(urlconf_module)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\urls.py", line 33, in <module>
+    path('session-check/',                   views.session_check,          name='session_check'),
+                                             ^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'academic_core.apps.accounts.views' has no attribute 'session_check'
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 14:47:46,838 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 14:47:50,319 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+INFO 2026-06-21 14:48:55,978 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 14:48:58,520 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-21 15:00:31,813 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 15:00:36,123 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+INFO 2026-06-21 15:00:42,466 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 15:00:44,863 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+INFO 2026-06-21 15:03:42,292 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 15:03:45,000 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+INFO 2026-06-21 15:03:51,104 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 15:03:53,599 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+INFO 2026-06-21 15:04:00,241 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 15:04:02,713 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-21 15:07:26,412 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 15:07:30,357 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+INFO 2026-06-21 15:21:44,619 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 15:21:48,431 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+INFO 2026-06-21 15:21:55,611 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 15:21:58,205 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+INFO 2026-06-21 15:35:56,563 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 15:36:00,418 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+INFO 2026-06-21 15:36:11,220 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\rooms\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 15:36:14,012 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\models.py changed, reloading.
+INFO 2026-06-21 15:47:43,002 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 15:47:47,146 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\apps.py changed, reloading.
+INFO 2026-06-21 15:48:58,113 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\apps.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 15:49:01,311 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+INFO 2026-06-21 15:49:09,885 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 15:49:12,779 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\config\settings\development.py changed, reloading.
+INFO 2026-06-21 15:49:34,133 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\config\settings\development.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 15:49:36,847 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\signals.py changed, reloading.
+INFO 2026-06-21 16:00:16,854 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\signals.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:00:20,267 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\pdf_utils.py changed, reloading.
+INFO 2026-06-21 16:14:08,883 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\pdf_utils.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:14:12,142 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\pdf_generator.py changed, reloading.
+INFO 2026-06-21 16:14:29,816 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\pdf_generator.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:14:32,523 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\pdf_generator.py changed, reloading.
+INFO 2026-06-21 16:14:40,010 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\pdf_generator.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:14:42,579 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\pdf_generator.py changed, reloading.
+INFO 2026-06-21 16:15:02,398 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\pdf_generator.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:15:06,278 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\pdf_generator.py changed, reloading.
+INFO 2026-06-21 16:15:15,648 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\pdf_generator.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:15:18,377 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\pdf_generator.py changed, reloading.
+INFO 2026-06-21 16:15:24,593 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\pdf_generator.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:15:27,253 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\pdf_generator.py changed, reloading.
+INFO 2026-06-21 16:15:33,084 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\pdf_generator.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:15:36,062 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\pdf_generator.py changed, reloading.
+INFO 2026-06-21 16:15:43,057 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\pdf_generator.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:15:46,634 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\excel_generator.py changed, reloading.
+INFO 2026-06-21 16:17:21,553 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\excel_generator.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:17:24,470 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\excel_generator.py changed, reloading.
+INFO 2026-06-21 16:17:32,693 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\excel_generator.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:17:35,204 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\excel_generator.py changed, reloading.
+INFO 2026-06-21 16:17:44,751 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\excel_generator.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:17:47,347 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\excel_generator.py changed, reloading.
+INFO 2026-06-21 16:17:54,044 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\excel_generator.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:17:56,672 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\excel_generator.py changed, reloading.
+INFO 2026-06-21 16:18:06,220 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\excel_generator.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:18:08,941 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\views.py changed, reloading.
+INFO 2026-06-21 16:18:32,667 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:18:35,781 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\views.py changed, reloading.
+INFO 2026-06-21 16:18:47,867 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:18:50,693 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\views.py changed, reloading.
+INFO 2026-06-21 16:19:00,641 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:19:03,326 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\views.py changed, reloading.
+INFO 2026-06-21 16:19:09,695 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\reports\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:19:12,008 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 16:19:33,138 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:19:35,844 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 16:19:49,644 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:19:52,355 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 16:20:07,073 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:20:09,571 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 16:21:12,123 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:21:15,030 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 16:21:21,314 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:21:24,218 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 16:21:51,932 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:21:54,760 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 16:22:06,907 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:22:09,561 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 16:22:20,708 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:22:23,887 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 16:22:29,839 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:22:32,423 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 16:22:38,622 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:22:41,167 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\views.py changed, reloading.
+INFO 2026-06-21 16:22:49,624 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:22:53,102 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\views.py changed, reloading.
+INFO 2026-06-21 16:22:59,468 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:23:02,288 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\dashboard\views.py changed, reloading.
+INFO 2026-06-21 16:28:16,374 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\dashboard\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:28:19,628 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\signals.py changed, reloading.
+INFO 2026-06-21 16:38:31,371 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\signals.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:38:35,513 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\signals.py changed, reloading.
+INFO 2026-06-21 16:39:09,393 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\signals.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:39:12,168 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 16:49:21,523 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:49:26,517 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 16:49:36,864 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 16:49:41,043 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\services.py changed, reloading.
+INFO 2026-06-21 17:04:57,804 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\services.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 17:05:02,380 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 19:13:02,080 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 19:13:13,249 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\services.py changed, reloading.
+INFO 2026-06-21 19:15:02,163 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\services.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 19:15:05,064 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 19:21:12,325 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 19:21:15,945 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 19:21:23,855 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 19:21:26,592 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\services.py changed, reloading.
+INFO 2026-06-21 19:22:07,417 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\services.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 19:22:11,798 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 19:32:42,603 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 19:32:46,855 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+INFO 2026-06-21 19:34:51,535 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 19:34:54,791 autoreload Watching for file changes with StatReloader
+Exception in thread django-main-thread:
+Traceback (most recent call last):
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 1041, in _bootstrap_inner
+    self.run()
+    ~~~~~~~~^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\threading.py", line 992, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\autoreload.py", line 64, in wrapper
+    fn(*args, **kwargs)
+    ~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\commands\runserver.py", line 134, in inner_run
+    self.check(display_num_errors=True)
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\management\base.py", line 486, in check
+    all_issues = checks.run_checks(
+        app_configs=app_configs,
+    ...<2 lines>...
+        databases=databases,
+    )
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\registry.py", line 88, in run_checks
+    new_errors = check(app_configs=app_configs, databases=databases)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\urls.py", line 16, in check_url_config
+    return check_resolver(resolver)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\core\checks\urls.py", line 26, in check_resolver
+    return check_method()
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 531, in check
+    for pattern in self.url_patterns:
+                   ^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 718, in url_patterns
+    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
+                       ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\utils\functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\resolvers.py", line 711, in urlconf_module
+    return import_module(self.urlconf_name)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\config\urls.py", line 19, in <module>
+    path('grades/', include('academic_core.apps.grades.urls')),
+                    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\site-packages\django\urls\conf.py", line 39, in include
+    urlconf_module = import_module(urlconf_module)
+  File "C:\Users\HP RYZEN 7\AppData\Local\Programs\Python\Python313\Lib\importlib\__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\urls.py", line 45, in <module>
+    path('bulletins/class/<int:class_id>/semester/<int:semester_id>/student/<int:student_id>/word/',    views.bulletin_word,    name='bulletin_word'),
+                                                                                                        ^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'academic_core.apps.grades.views' has no attribute 'bulletin_word'. Did you mean: 'bulletin_list'?
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\urls.py changed, reloading.
+INFO 2026-06-21 19:35:04,870 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\urls.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 19:35:07,661 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\services.py changed, reloading.
+INFO 2026-06-21 19:44:31,813 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\services.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 19:44:36,749 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+INFO 2026-06-21 19:54:42,698 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 19:54:50,717 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+INFO 2026-06-21 19:54:57,807 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 19:55:00,462 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 19:55:16,042 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 19:55:18,365 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\forms.py changed, reloading.
+INFO 2026-06-21 19:55:25,350 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\forms.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 19:55:28,445 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+INFO 2026-06-21 20:08:53,404 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 20:08:58,566 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\config\settings\development.py changed, reloading.
+INFO 2026-06-21 20:15:45,838 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\config\settings\development.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 20:15:50,238 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 20:30:07,168 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 20:30:10,190 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+INFO 2026-06-21 20:30:21,164 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 20:30:23,688 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\forms.py changed, reloading.
+INFO 2026-06-21 20:37:52,494 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\forms.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 20:37:57,010 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+INFO 2026-06-21 20:41:27,692 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounts\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 20:41:32,227 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 20:41:51,581 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 20:41:56,895 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+INFO 2026-06-21 20:57:48,114 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\middleware.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 20:57:53,461 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\config\settings\base.py changed, reloading.
+INFO 2026-06-21 20:58:10,896 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\config\settings\base.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 20:58:13,932 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\views.py changed, reloading.
+INFO 2026-06-21 21:14:09,107 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 21:14:15,541 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\forms.py changed, reloading.
+INFO 2026-06-21 21:20:46,646 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\forms.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 21:20:53,289 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\views.py changed, reloading.
+INFO 2026-06-21 21:21:06,121 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 21:21:09,647 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 21:23:20,948 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 21:23:27,251 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 21:23:54,062 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 21:23:59,021 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 21:24:11,202 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 21:24:15,753 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 21:33:59,099 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 21:34:04,491 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\urls.py changed, reloading.
+INFO 2026-06-21 21:34:12,681 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\urls.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 21:34:15,823 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 21:40:58,895 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 21:41:03,385 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 21:41:18,794 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 21:41:22,739 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 21:41:56,817 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 21:42:00,426 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 21:44:02,443 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 21:44:06,775 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 22:07:19,038 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 22:07:25,705 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 22:18:25,807 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 22:18:30,890 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 22:21:50,864 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 22:21:54,724 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 22:22:22,284 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 22:22:26,049 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-21 22:30:24,225 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 22:30:28,227 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\models.py changed, reloading.
+INFO 2026-06-21 22:33:34,343 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 22:33:37,845 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\models.py changed, reloading.
+INFO 2026-06-21 22:33:43,889 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 22:33:46,844 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\models.py changed, reloading.
+INFO 2026-06-21 22:33:55,830 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 22:33:58,610 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\models.py changed, reloading.
+INFO 2026-06-21 22:34:05,850 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 22:34:09,731 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\models.py changed, reloading.
+INFO 2026-06-21 22:45:50,073 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\students\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 22:45:53,728 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\models.py changed, reloading.
+INFO 2026-06-21 22:46:45,631 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 22:46:49,434 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\models.py changed, reloading.
+INFO 2026-06-21 22:46:56,547 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 22:47:00,084 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\models.py changed, reloading.
+INFO 2026-06-21 22:47:09,043 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\grades\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 22:47:12,518 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\models.py changed, reloading.
+INFO 2026-06-21 22:47:42,746 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-21 22:47:46,831 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-22 00:14:33,422 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-22 00:14:42,196 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-22 00:18:03,895 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-22 00:18:07,469 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-22 00:21:59,469 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-22 00:22:03,224 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-22 00:22:18,476 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-22 00:22:21,351 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-22 07:24:34,533 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-22 07:24:42,827 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-22 07:28:35,258 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-22 07:28:39,763 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-22 07:28:49,837 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-22 07:28:53,071 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-22 07:29:25,584 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-22 07:29:28,788 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+INFO 2026-06-22 07:29:40,454 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\accounting\views.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-22 07:29:43,751 autoreload Watching for file changes with StatReloader
+C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\models.py changed, reloading.
+INFO 2026-06-22 08:19:29,795 autoreload C:\Users\HP RYZEN 7\Desktop\Mes APPS\GestionEmploisDuTemps\academic_core\apps\academic_structure\models.py changed, reloading.
+Watching for file changes with StatReloader
+INFO 2026-06-22 08:19:56,140 autoreload Watching for file changes with StatReloader
+[22/Jun/2026 08:35:34] "GET / HTTP/1.1" 302 0
+[22/Jun/2026 08:35:34] "GET /accounts/login/ HTTP/1.1" 200 7626
+Not Found: /favicon.ico
+WARNING 2026-06-22 08:35:37,596 log Not Found: /favicon.ico
+[22/Jun/2026 08:35:37] "GET /favicon.ico HTTP/1.1" 404 5486
+[22/Jun/2026 08:35:40] "GET /accounts/login/ HTTP/1.1" 200 7626
+[22/Jun/2026 08:35:45] "GET /accounts/login/ HTTP/1.1" 200 7626
+[22/Jun/2026 08:35:47] "GET /accounts/login/ HTTP/1.1" 200 7626
+Not Found: /favicon.ico
+WARNING 2026-06-22 08:35:48,726 log Not Found: /favicon.ico
+[22/Jun/2026 08:35:48] "GET /favicon.ico HTTP/1.1" 404 5486
+[22/Jun/2026 08:36:19] "GET /accounts/login/ HTTP/1.1" 200 7626
+[22/Jun/2026 08:36:28] "GET / HTTP/1.1" 302 0
+[22/Jun/2026 08:36:28] "GET /accounts/login/ HTTP/1.1" 200 7626
+[22/Jun/2026 08:37:31] "GET / HTTP/1.1" 302 0
+[22/Jun/2026 08:37:32] "GET /accounts/login/ HTTP/1.1" 200 7626
+Not Found: /favicon.ico
+WARNING 2026-06-22 08:37:33,929 log Not Found: /favicon.ico
+[22/Jun/2026 08:37:33] "GET /favicon.ico HTTP/1.1" 404 5486
+[22/Jun/2026 08:38:06] "GET /accounts/login/ HTTP/1.1" 200 7626
+[22/Jun/2026 08:38:11] "GET /accounts/login/ HTTP/1.1" 200 7626
+[22/Jun/2026 08:38:12] "GET /accounts/login/ HTTP/1.1" 200 7626
+[22/Jun/2026 08:38:25] "GET / HTTP/1.1" 302 0
+[22/Jun/2026 08:38:25] "GET /accounts/login/ HTTP/1.1" 200 7626
+Not Found: /favicon.ico
+WARNING 2026-06-22 08:38:26,056 log Not Found: /favicon.ico
+[22/Jun/2026 08:38:26] "GET /favicon.ico HTTP/1.1" 404 5486
+[22/Jun/2026 08:39:10] "GET / HTTP/1.1" 302 0
+[22/Jun/2026 08:39:10] "GET /accounts/login/ HTTP/1.1" 200 7626

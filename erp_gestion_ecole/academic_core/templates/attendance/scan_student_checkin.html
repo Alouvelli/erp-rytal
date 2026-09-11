@@ -1,0 +1,265 @@
+{% extends 'base/base.html' %}
+{% block title %}Scanner présence — {{ sheet.timetable_entry.subject.title }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_list' %}">Émargements</a></li>
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_detail' sheet.pk %}">Détail</a></li>
+<li class="breadcrumb-item active">Scanner présence</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0ea5e9;"><i class="bi bi-camera-video"></i></span>
+    Scanner les cartes Présence
+  </h1>
+</div>
+
+<!-- Infos séance -->
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:12px 18px;margin-bottom:20px;
+            display:flex;flex-wrap:wrap;gap:16px;align-items:center;font-size:.84rem;">
+  <div><i class="bi bi-book me-1" style="color:var(--navy);"></i><strong>{{ sheet.timetable_entry.subject.title }}</strong></div>
+  <div><i class="bi bi-people me-1" style="color:#64748b;"></i>{{ sheet.timetable_entry.class_group.name }}</div>
+  <div><i class="bi bi-calendar me-1" style="color:#64748b;"></i>{{ sheet.session_date|date:"d/m/Y" }}</div>
+  <div><i class="bi bi-clock me-1" style="color:#64748b;"></i>{{ sheet.timetable_entry.start_time|time:"H:i" }} – {{ sheet.timetable_entry.end_time|time:"H:i" }}</div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Colonne caméra -->
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#0ea5e9;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-camera"></i></span>
+          Scanner la carte présence
+        </h6>
+        <span id="scanner-status" style="font-size:.75rem;color:#94a3b8;">En attente de la caméra…</span>
+      </div>
+      <div class="p-3">
+        <div style="position:relative;background:#000;border-radius:12px;overflow:hidden;aspect-ratio:1;">
+          <video id="qr-video" autoplay playsinline muted
+                 style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+          <!-- Viseur -->
+          <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+            <div style="width:55%;height:55%;border:3px solid rgba(14,165,233,.8);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.35);"></div>
+          </div>
+          <!-- Canvas caché pour jsQR -->
+          <canvas id="qr-canvas" style="display:none;"></canvas>
+        </div>
+
+        <!-- Résultat du scan -->
+        <div id="scan-result" style="margin-top:14px;min-height:52px;"></div>
+
+        <!-- Erreur caméra -->
+        <div id="camera-error" style="display:none;background:#fff1f2;border:1px solid #fecdd3;border-radius:10px;padding:14px;margin-top:12px;font-size:.83rem;color:#dc2626;">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i>
+          <span id="camera-error-msg">Impossible d'accéder à la caméra.</span><br>
+          <small style="color:#94a3b8;">Vérifiez les permissions de caméra dans votre navigateur.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Colonne liste présents -->
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-check-circle"></i></span>
+          Présences enregistrées
+        </h6>
+        <span id="present-count" style="font-size:.78rem;font-weight:700;background:#f0fdf4;color:#16a34a;border-radius:20px;padding:2px 10px;">
+          {{ presences|length }} présent(s)
+        </span>
+      </div>
+      <div id="presences-list" style="max-height:420px;overflow-y:auto;">
+        {% if presences %}
+        {% for att in presences %}
+        <div class="presence-row" data-id="{{ att.student.pk }}"
+             style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid #f1f5f9;">
+          <div style="width:34px;height:34px;border-radius:50%;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:#16a34a;flex-shrink:0;">
+            {{ att.student.user.first_name|first|upper }}
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:.85rem;color:#1e293b;">{{ att.student.user.get_full_name }}</div>
+            <div style="font-size:.72rem;color:#64748b;">{{ att.student.matricule }}</div>
+          </div>
+          <span style="font-size:.72rem;background:#f0fdf4;color:#16a34a;border-radius:10px;padding:2px 8px;font-weight:600;flex-shrink:0;">
+            {% if att.student.gender == 'F' %}Présente{% else %}Présent{% endif %}
+          </span>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div id="empty-msg" style="text-align:center;padding:40px 20px;color:#94a3b8;font-size:.85rem;">
+          <i class="bi bi-camera d-block mb-2" style="font-size:1.8rem;color:#cbd5e1;"></i>
+          Aucune présence enregistrée.<br>Scannez les cartes des étudiants.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Boutons bas de page -->
+<div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
+  <a href="{% url 'attendance:sheet_detail' sheet.pk %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Retour au détail
+  </a>
+  <a href="{% url 'attendance:session_qr_display' sheet.pk %}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-qr-code me-1"></i>Afficher le QR séance
+  </a>
+</div>
+
+<!-- jsQR CDN -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+<script>
+const VALIDATE_URL = "{% url 'attendance:ajax_scan_validate' sheet.pk %}";
+const CSRF_TOKEN   = "{{ csrf_token }}";
+
+const video        = document.getElementById('qr-video');
+const canvas       = document.getElementById('qr-canvas');
+const ctx          = canvas.getContext('2d');
+const statusEl     = document.getElementById('scanner-status');
+const resultEl     = document.getElementById('scan-result');
+const countEl      = document.getElementById('present-count');
+const listEl       = document.getElementById('presences-list');
+const camErrEl     = document.getElementById('camera-error');
+const camErrMsg    = document.getElementById('camera-error-msg');
+
+let scanning = true;
+let lastScanned = '';
+let cooldownUntil = 0;
+
+// Démarrer la caméra
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 1280 } }
+    });
+    video.srcObject = stream;
+    video.play();
+    statusEl.textContent = 'Caméra active — présentez la carte';
+    statusEl.style.color = '#16a34a';
+    requestAnimationFrame(scanFrame);
+  } catch(err) {
+    camErrEl.style.display = 'block';
+    camErrMsg.textContent = err.message || 'Impossible d\'accéder à la caméra.';
+    statusEl.textContent = 'Erreur caméra';
+    statusEl.style.color = '#dc2626';
+  }
+}
+
+function scanFrame() {
+  if (!scanning) return;
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+    if (code && code.data) {
+      const now = Date.now();
+      if (code.data !== lastScanned || now > cooldownUntil) {
+        lastScanned   = code.data;
+        cooldownUntil = now + 3000; // 3s cooldown par QR
+        handleQR(code.data);
+      }
+    }
+  }
+  requestAnimationFrame(scanFrame);
+}
+
+async function handleQR(rawData) {
+  // Vérifier que c'est bien une carte présence
+  let payload;
+  try {
+    payload = JSON.parse(rawData);
+    if (payload.type !== 'presence') {
+      showResult('warning', 'QR non reconnu — ce n\'est pas une carte Présence.');
+      return;
+    }
+  } catch(e) {
+    showResult('warning', 'QR illisible ou format incorrect.');
+    return;
+  }
+
+  statusEl.textContent = 'Validation en cours…';
+  statusEl.style.color = '#f59e0b';
+
+  try {
+    const res = await fetch(VALIDATE_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+      body: JSON.stringify({ qr_data: rawData }),
+    });
+    const data = await res.json();
+
+    if (data.ok) {
+      if (data.already) {
+        showResult('info', `<strong>${data.nom}</strong> (${data.matricule}) — déjà enregistré(e) comme ${data.label}.`);
+      } else {
+        showResult('success', `<i class="bi bi-check-circle-fill me-1"></i><strong>${data.nom}</strong> — <span style="color:#16a34a;font-weight:700;">${data.label}</span>`);
+        addPresenceRow(data);
+        updateCount(data.total_present);
+      }
+    } else {
+      showResult('error', `<i class="bi bi-x-circle-fill me-1"></i>${data.error}`);
+    }
+    statusEl.textContent = 'Caméra active — présentez la carte';
+    statusEl.style.color = '#16a34a';
+  } catch(err) {
+    showResult('error', 'Erreur réseau — réessayez.');
+    statusEl.textContent = 'Caméra active — présentez la carte';
+    statusEl.style.color = '#16a34a';
+  }
+}
+
+function showResult(type, html) {
+  const colors = {
+    success: { bg: '#f0fdf4', border: '#bbf7d0', color: '#166534' },
+    info:    { bg: '#eff6ff', border: '#bfdbfe', color: '#1d4ed8' },
+    warning: { bg: '#fff7ed', border: '#fed7aa', color: '#92400e' },
+    error:   { bg: '#fff1f2', border: '#fecdd3', color: '#dc2626' },
+  };
+  const c = colors[type] || colors.info;
+  resultEl.innerHTML = `
+    <div style="background:${c.bg};border:1px solid ${c.border};border-radius:10px;padding:12px 16px;
+                font-size:.85rem;color:${c.color};animation:fadeIn .2s ease;">${html}</div>`;
+}
+
+function addPresenceRow(data) {
+  const emptyMsg = document.getElementById('empty-msg');
+  if (emptyMsg) emptyMsg.remove();
+
+  // Éviter les doublons visuels
+  if (document.querySelector(`.presence-row[data-id="${data.student_id}"]`)) return;
+
+  const initiale = (data.nom || '?')[0].toUpperCase();
+  const row = document.createElement('div');
+  row.className = 'presence-row';
+  row.setAttribute('data-id', data.student_id || '');
+  row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid #f1f5f9;animation:fadeIn .3s ease;';
+  row.innerHTML = `
+    <div style="width:34px;height:34px;border-radius:50%;background:#f0fdf4;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;color:#16a34a;flex-shrink:0;">${initiale}</div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:600;font-size:.85rem;color:#1e293b;">${data.nom}</div>
+      <div style="font-size:.72rem;color:#64748b;">${data.matricule}</div>
+    </div>
+    <span style="font-size:.72rem;background:#f0fdf4;color:#16a34a;border-radius:10px;padding:2px 8px;font-weight:600;flex-shrink:0;">${data.label}</span>`;
+  listEl.insertBefore(row, listEl.firstChild);
+}
+
+function updateCount(n) {
+  countEl.textContent = `${n} présent(s)`;
+}
+
+// Animation
+const style = document.createElement('style');
+style.textContent = '@keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }';
+document.head.appendChild(style);
+
+startCamera();
+</script>
+{% endblock %}

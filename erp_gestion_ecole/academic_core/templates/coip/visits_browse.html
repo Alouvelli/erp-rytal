@@ -1,0 +1,41 @@
+{% extends 'base/base.html' %}
+{% block title %}Sorties pédagogiques{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Sorties pédagogiques</li>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-bus-front-fill"></i></span>
+    Sorties pédagogiques à venir
+  </h1>
+</div>
+
+<div class="row g-3">
+  {% for v in visits %}
+  <div class="col-lg-6">
+    <div class="card-section p-3">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <h6 class="mb-0" style="font-weight:700;">{{ v.intitule }}</h6>
+        <span class="badge bg-secondary">{{ v.places_restantes }} places restantes</span>
+      </div>
+      <div style="font-size:.83rem;color:#64748b;">{{ v.date_depart|date:"d/m/Y H:i" }} · {{ v.lieu }}</div>
+      {% if v.objectifs %}<p class="mt-2 mb-2" style="font-size:.85rem;">{{ v.objectifs|truncatewords:30 }}</p>{% endif %}
+      {% if v.pk in registered_ids %}
+      <form method="post" action="{% url 'coip:visit_unregister' v.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-x-lg me-1"></i>Se désinscrire</button>
+      </form>
+      {% elif v.places_restantes > 0 %}
+      <form method="post" action="{% url 'coip:visit_register' v.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>S'inscrire</button>
+      </form>
+      {% else %}
+      <span class="badge bg-danger">Complet</span>
+      {% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12"><div class="card-section p-4 text-center text-muted">Aucune sortie pédagogique planifiée pour le moment.</div></div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,2329 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Institut Supérieur d'Informatique - ISI{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <link href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="{% static 'css/chatbot.css' %}">
+  <style>
+    /* Collapsible sidebar groups */
+    .sb-group { margin: 0; }
+    .sb-toggle-group {
+      display: flex; align-items: center; width: 100%;
+      padding: 5px 10px; border: none; background: none; cursor: pointer;
+      color: rgba(255,255,255,.48); font-size: .67rem; font-weight: 700;
+      letter-spacing: .06em; text-transform: uppercase;
+      border-radius: 7px; transition: background .15s, color .15s;
+      gap: 4px; line-height: 1.35;
+    }
+    .sb-toggle-group span span { white-space: normal; word-break: break-word; }
+    .sb-toggle-group:hover { background: rgba(255,255,255,.07); color: rgba(255,255,255,.75); }
+    .sb-toggle-group.sb-open { color: rgba(255,255,255,.75); }
+    .sb-chevron { font-size: .6rem; flex-shrink: 0; transition: transform .25s; margin-left: auto; }
+    .sb-toggle-group.sb-open .sb-chevron { transform: rotate(-180deg); }
+    .sb-group-body { overflow: hidden; max-height: 0; transition: max-height .35s ease; }
+    .sb-group-body.sb-open { max-height: 2000px; }
+
+    /* Impression : masque la navigation, ne garde que le contenu (utilisé par les pages
+       listant des données exportables — RH, etc.). Marquer un élément .no-print pour
+       le masquer spécifiquement à l'impression (ex: barre de boutons Imprimer/PDF/Word). */
+    @media print {
+      #sidebar, #topbar, .no-print, .toast-container, #rytal-widget { display: none !important; }
+      #main { margin-left: 0 !important; }
+      body { background: #fff !important; }
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+{% if user.is_authenticated %}
+
+<!-- Overlay mobile -->
+<div id="sb-overlay" onclick="toggleSidebar()"></div>
+
+<!-- ══ SIDEBAR ══ -->
+<nav id="sidebar">
+
+  <!-- Brand -->
+  <div class="sb-brand">
+    {% if user.role_name == 'ADMIN' %}
+    {# Super Admin : logo plateforme (identique à la page de connexion) #}
+    <div style="width:38px;height:38px;border-radius:8px;background:linear-gradient(135deg,#003d82,#0057b8);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid rgba(255,255,255,.2);">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="white" viewBox="0 0 16 16">
+        <path d="M8.211 2.047a.5.5 0 0 0-.422 0l-7.5 3.5a.5.5 0 0 0 .025.917l7.5 3a.5.5 0 0 0 .372 0L14 7.14V13a1 1 0 0 0-1 1v2h3v-2a1 1 0 0 0-1-1V6.739l.686-.275a.5.5 0 0 0 .025-.917z"/>
+        <path d="M4.176 9.032a.5.5 0 0 0-.656.327l-.5 1.7a.5.5 0 0 0 .294.605l4.5 1.8a.5.5 0 0 0 .372 0l4.5-1.8a.5.5 0 0 0 .294-.605l-.5-1.7a.5.5 0 0 0-.656-.327L8 10.466z"/>
+      </svg>
+    </div>
+    <div style="min-width:0;flex:1;">
+      <div class="app-name" style="font-size:.78rem;line-height:1.25;">Plateforme de<br>Gestion Académique</div>
+      <div class="app-sub" style="font-weight:700;color:var(--accent);font-size:.65rem;letter-spacing:.04em;">SUPER ADMIN</div>
+    </div>
+    {% elif institut_config and institut_config.logo %}
+    <img src="{{ institut_config.logo.url }}" alt="{{ institut_config.sigle|default:'Logo' }}"
+         style="width:38px;height:38px;object-fit:contain;border-radius:8px;background:#fff;padding:3px;flex-shrink:0;">
+    <div style="min-width:0;flex:1;">
+      <div class="app-name">{{ institut_config.nom|truncatechars:35 }}</div>
+      {% if institut_config.sigle %}<div class="app-sub" style="font-weight:700;color:var(--accent);">{{ institut_config.sigle }}</div>{% endif %}
+    </div>
+    {% else %}
+    <img src="{% static 'img/logo_isi.png' %}" alt="ISI"
+         style="width:38px;height:38px;object-fit:contain;border-radius:8px;background:#fff;padding:3px;flex-shrink:0;"
+         onerror="this.style.display='none'">
+    <div style="min-width:0;flex:1;">
+      {% if institut_config %}
+      <div class="app-name">{{ institut_config.nom|truncatechars:35 }}</div>
+      {% if institut_config.sigle %}<div class="app-sub" style="font-weight:700;color:var(--accent);">{{ institut_config.sigle }}</div>{% endif %}
+      {% else %}
+      <div class="app-name">Gestion Académique</div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Département actif (badge dans sidebar) -->
+  {% if active_department %}
+  <div style="margin:0 10px 4px;padding:8px 10px;background:rgba(255,255,255,.07);border-radius:9px;border:1px solid rgba(255,255,255,.12);">
+    <div style="font-size:.63rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:3px;">{% if user.role_name == 'CONTROLEUR' or user.is_comptable or user.role_name == 'CHARGE_EXAMENS_CONCOURS' %}Filtre département{% else %}Département actif{% endif %}</div>
+    <div style="display:flex;align-items:center;gap:7px;">
+      <div style="width:20px;height:20px;border-radius:5px;background:var(--accent);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-building" style="font-size:.6rem;color:var(--navy);"></i>
+      </div>
+      <a href="{% url 'academic_structure:select_department' %}" style="font-size:.78rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;" title="Changer de département">{{ active_department.name }}</a>
+    </div>
+  </div>
+  {% elif user.is_inst_admin or user.is_admin_direction or user.role_name == 'ENSEIGNANT' or user.role_name == 'ASSISTANTE' or user.role_name == 'CIAQ' or user.role_name == 'RESPONSABLE' or user.role_name == 'CONTROLEUR' or user.is_comptable or user.role_name == 'CHARGE_EXAMENS_CONCOURS' %}
+  <div style="margin:0 10px 4px;">
+    <a href="{% url 'academic_structure:select_department' %}"
+       style="display:flex;align-items:center;gap:7px;padding:8px 10px;background:#fbbf2415;border-radius:9px;border:1px solid #fbbf2440;text-decoration:none;">
+      <i class="bi bi-exclamation-triangle-fill" style="color:#fbbf24;font-size:.8rem;flex-shrink:0;"></i>
+      <span style="font-size:.74rem;font-weight:600;color:#fbbf24;">{% if user.role_name == 'CONTROLEUR' or user.is_comptable or user.role_name == 'CHARGE_EXAMENS_CONCOURS' %}Filtrer par département{% else %}Choisir un département{% endif %}</span>
+    </a>
+  </div>
+  {% elif user.role_name == 'ADMIN' and active_faculty and not active_department %}
+  <div style="margin:0 10px 4px;">
+    <a href="{% url 'academic_structure:select_department' %}"
+       style="display:flex;align-items:center;gap:7px;padding:8px 10px;background:#fbbf2415;border-radius:9px;border:1px solid #fbbf2440;text-decoration:none;">
+      <i class="bi bi-exclamation-triangle-fill" style="color:#fbbf24;font-size:.8rem;flex-shrink:0;"></i>
+      <span style="font-size:.74rem;font-weight:600;color:#fbbf24;">Choisir un département</span>
+    </a>
+  </div>
+  {% elif user.role_name == 'ADMIN' and not active_faculty %}
+  <div style="margin:0 10px 4px;">
+    {% if 'academic_structure:institut_list' not in disabled_features %}
+    <a href="{% url 'academic_structure:institut_list' %}"
+       style="display:flex;align-items:center;gap:7px;padding:8px 10px;background:#fbbf2415;border-radius:9px;border:1px solid #fbbf2440;text-decoration:none;">
+      <i class="bi bi-buildings-fill" style="color:#fbbf24;font-size:.85rem;flex-shrink:0;"></i>
+      <span style="font-size:.74rem;font-weight:600;color:#fbbf24;">Choisir un institut</span>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Navigation -->
+  <div class="sb-nav">
+
+    {% if user.is_candidat %}
+    <!-- Interface candidat minimale : pour le moment, un seul onglet -->
+    <div style="padding:8px 8px 2px;">
+      <a href="{% url 'candidat:candidat_dashboard' %}" title="Mon Dossier de Candidature"
+         class="sb-link {% if request.resolver_match.app_name == 'candidat' %}active{% endif %}">
+        <i class="bi bi-folder2-open"></i><span>Mon Dossier de Candidature</span>
+      </a>
+    </div>
+    {% else %}
+
+    <div style="padding:8px 8px 2px;">
+      <a href="{% url 'dashboard:index' %}" title="Tableau de bord"
+         class="sb-link {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
+        <i class="bi bi-speedometer2"></i><span>Tableau de bord</span>
+      </a>
+      {% if user.is_etudiant %}
+      {% if user.student_profile %}
+      <a href="{% url 'students:student_card_pdf' user.student_profile.pk %}" title="Ma carte d'apprenant"
+         class="sb-link {% if request.resolver_match.url_name == 'student_card_pdf' %}active{% endif %}">
+        <i class="bi bi-credit-card-fill"></i><span>Ma carte d'apprenant</span>
+      </a>
+      {% endif %}
+      <a href="{% url 'students:my_presence_card' %}" title="Ma carte de pointage"
+         class="sb-link {% if request.resolver_match.url_name == 'my_presence_card' %}active{% endif %}">
+        <i class="bi bi-qr-code"></i><span>Ma carte de pointage</span>
+      </a>
+      {% endif %}
+      {% if not user.is_etudiant and user.role_name != 'CONTROLE_ACCUEIL' and user.role_name != 'ADMIN' %}
+        {% if not user.is_enseignant or user.teacher_profile.statut == 'PERMANENT' %}
+        <a href="{% url 'hr:ma_carte_personnel' %}" title="Ma carte du personnel"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name == 'ma_carte_personnel' %}active{% endif %}">
+          <i class="bi bi-credit-card-fill"></i><span>Ma carte du personnel</span>
+        </a>
+        <a href="{% url 'hr:ma_carte_pointage' %}" title="Ma carte de pointage"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name == 'ma_carte_pointage' %}active{% endif %}">
+          <i class="bi bi-qr-code"></i><span>Ma carte de pointage</span>
+        </a>
+        <a href="{% url 'hr:mes_attestations' %}" title="Mes attestations"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name == 'mes_attestations' %}active{% endif %}">
+          <i class="bi bi-file-earmark-check-fill"></i><span>Mes attestations</span>
+        </a>
+        {% endif %}
+      {% endif %}
+      {% if user.can_manage_pta and not user.is_super_admin %}
+      <a href="{% url 'strategic_plan:pta_my_plan' %}" title="Plan de Travail Annuel"
+         class="sb-link {% if request.resolver_match.app_name == 'strategic_plan' and request.resolver_match.url_name in 'pta_my_plan,pta_plan_detail,pta_all_plans,pta_import' %}active{% endif %}">
+        <i class="bi bi-journal-check"></i><span>Plan de Travail Annuel</span>
+      </a>
+      {% endif %}
+    </div>
+
+    {% if user.role_name == 'CONTROLE_ACCUEIL' %}
+    <!-- ── Rôle Contrôle Accueil ── -->
+    <div class="sb-divider"></div>
+    <div style="padding:8px 8px 2px;">
+      {% if 'students:controle_scan' not in disabled_features %}
+      <a href="{% url 'students:controle_scan' %}" title="Contrôle Accueil Étudiants"
+         class="sb-link {% if request.resolver_match.app_name == 'students' and request.resolver_match.url_name == 'controle_scan' %}active{% endif %}">
+        <i class="bi bi-qr-code-scan"></i><span>Contrôle Accueil Étudiants</span>
+      </a>
+      {% endif %}
+      <a href="{% url 'hr:controle_accueil_personnel' %}" title="Pointage Personnel"
+         class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name == 'controle_accueil_personnel' %}active{% endif %}">
+        <i class="bi bi-person-badge-fill"></i><span>Pointage Personnel</span>
+      </a>
+      <a href="{% url 'hr:accueil_qr_display' %}" title="Afficher QR Contrôle Accueil"
+         class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name == 'accueil_qr_display' %}active{% endif %}">
+        <i class="bi bi-qr-code"></i><span>Afficher QR Contrôle Accueil</span>
+      </a>
+    </div>
+    {% endif %}
+
+    {% if user.role_name == 'ADMIN' %}
+    <div class="sb-divider"></div>
+    <div style="padding:8px 8px 2px;">
+      {% if 'academic_structure:institut_list' not in disabled_features %}
+      <a href="{% url 'academic_structure:institut_list' %}" title="Les Institutions"
+         class="sb-link {% if request.resolver_match.url_name in 'institut_list,institut_create,institut_edit,abonnement_list' and not active_faculty %}active{% endif %}"
+         style="{% if not active_faculty %}background:rgba(251,191,36,.13);{% endif %}">
+        <i class="bi bi-buildings-fill"></i><span>Les Institutions</span>
+      </a>
+      {% endif %}
+      <a href="{% url 'accounts:inst_admin_list' %}" title="Les administrateurs d'institut"
+         class="sb-link {% if request.resolver_match.url_name in 'inst_admin_list,inst_admin_create,inst_admin_edit,inst_admin_delete,institut_edit,institut_delete' %}active{% endif %}">
+        <i class="bi bi-person-badge-fill"></i><span>Admins d'Institut</span>
+      </a>
+      <a href="{% url 'accounts:controleur_list' %}" title="Contrôleurs Internes multi-instituts"
+         class="sb-link {% if request.resolver_match.url_name in 'controleur_list,controleur_create,controleur_edit,controleur_delete' %}active{% endif %}">
+        <i class="bi bi-eye-fill"></i><span>Contrôleurs multi-instituts</span>
+      </a>
+      <a href="{% url 'accounts:platform_activation_rotate' %}" title="Code d'activation de la plateforme"
+         class="sb-link {% if request.resolver_match.url_name in 'platform_activation_rotate,platform_activation_forgot' %}active{% endif %}">
+        <i class="bi bi-shield-lock-fill"></i><span>Code d'activation</span>
+      </a>
+      <a href="{% url 'accounts:institut_archives_list' %}" title="Archives des bases d'instituts supprimés"
+         class="sb-link {% if request.resolver_match.url_name == 'institut_archives_list' %}active{% endif %}">
+        <i class="bi bi-archive-fill"></i><span>Archives d'instituts</span>
+      </a>
+    </div>
+    {% endif %}
+
+    {% if user.role_name != 'ADMIN' or active_faculty %}
+    {% if not user.is_controle_accueil %}
+    {% if not user.is_tresorier %}
+    <div class="sb-divider"></div>
+
+    <!-- ── PLANNING ── -->
+    {% if 'planning' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group" data-group="planning" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-calendar3" style="font-size:.65rem;flex-shrink:0;"></i>
+          <span>{% if user.is_etudiant %}Planning{% elif user.is_comptable %}Émargements{% else %}Planning &amp; Émargement{% endif %}</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-planning">
+        {% if not user.is_comptable %}
+        {% if 'timetable:index' not in disabled_features %}
+        <a href="{% url 'timetable:index' %}" title="Emplois du temps"
+           class="sb-link {% if request.resolver_match.app_name == 'timetable' and request.resolver_match.url_name not in 'holiday_list,holiday_create,holiday_edit,mes_seances,cahier_texte_list,cahier_texte_view,cahier_texte_pdf,cahier_texte_word,teacher_supports_list,teacher_support_upload,student_supports_list' %}active{% endif %}">
+          <i class="bi bi-calendar3-week-fill"></i><span>Emplois du temps</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if not user.is_etudiant %}
+        {% if 'attendance:sheet_list' not in disabled_features %}
+        <a href="{% url 'attendance:sheet_list' %}" title="Émargements"
+           class="sb-link {% if request.resolver_match.app_name == 'attendance' and request.resolver_match.url_name not in 'my_absences,planned_modules_admin,my_modules,extra_request_create,my_extra_requests,extra_request_review,extra_requests_admin' %}active{% endif %}">
+          <i class="bi bi-pencil-square"></i><span>Émargements</span>
+        </a>
+        {% endif %}
+        {% if user.role_name != 'CIAQ' and user.role_name != 'CONTROLEUR' %}
+        {% if 'cancellations:list' not in disabled_features %}
+        <a href="{% url 'cancellations:list' %}" title="Annulations / Reports"
+           class="sb-link {% if request.resolver_match.app_name == 'cancellations' %}active{% endif %}">
+          <i class="bi bi-x-circle-fill"></i><span>Annulations / Reports</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% endif %}
+        {% if user.role_name == 'ADMIN' or user.is_inst_admin or user.is_admin_direction or user.role_name == 'RESPONSABLE' or user.role_name == 'ASSISTANTE' %}
+        {% if 'timetable:room_swap' not in disabled_features %}
+        <a href="{% url 'timetable:room_swap' %}" title="Permutation de salles"
+           class="sb-link {% if request.resolver_match.url_name == 'room_swap' %}active{% endif %}">
+          <i class="bi bi-arrow-left-right"></i><span>Permutation de salles</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.can_manage_dept %}
+        {% if 'attendance:planned_modules_admin' not in disabled_features %}
+        <a href="{% url 'attendance:planned_modules_admin' %}" title="Modules planifiés"
+           class="sb-link {% if request.resolver_match.url_name == 'planned_modules_admin' %}active{% endif %}">
+          <i class="bi bi-journal-check"></i><span>Modules planifiés</span>
+        </a>
+        {% endif %}
+        {% if 'timetable:holiday_list' not in disabled_features %}
+        <a href="{% url 'timetable:holiday_list' %}" title="Suspendre un planning de classe"
+           class="sb-link {% if request.resolver_match.url_name == 'holiday_list' or request.resolver_match.url_name == 'holiday_create' or request.resolver_match.url_name == 'holiday_edit' %}active{% endif %}">
+          <i class="bi bi-pause-circle-fill"></i><span>Suspendre un planning</span>
+        </a>
+        {% endif %}
+        {% if 'attendance:absence_alert_config' not in disabled_features %}
+        <a href="{% url 'attendance:absence_alert_config' %}" title="Seuil d'alerte absences"
+           class="sb-link {% if request.resolver_match.url_name == 'absence_alert_config' %}active{% endif %}">
+          <i class="bi bi-bell-fill"></i><span>Seuil d'alerte absences</span>
+        </a>
+        {% endif %}
+        {% if 'attendance:absence_justifications_admin' not in disabled_features %}
+        <a href="{% url 'attendance:absence_justifications_admin' %}" title="Justifications d'absences"
+           class="sb-link {% if request.resolver_match.url_name == 'absence_justifications_admin' %}active{% endif %}">
+          <i class="bi bi-file-earmark-check-fill"></i><span>Justifications d'absences</span>
+        </a>
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="sb-divider"></div>
+
+    <!-- ── PÉDAGOGIE ── -->
+    {% if 'pedagogie' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group" data-group="pedagogie" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-award" style="font-size:.65rem;flex-shrink:0;"></i><span>Direction Pédagogique</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-pedagogie">
+        {% if user.is_etudiant %}
+        <a href="{% url 'attendance:my_absences' %}" title="Mes absences"
+           class="sb-link {% if request.resolver_match.url_name == 'my_absences' %}active{% endif %}">
+          <i class="bi bi-calendar-x-fill"></i><span>Mes absences</span>
+        </a>
+        <a href="{% url 'timetable:student_supports_list' %}" title="Supports de cours"
+           class="sb-link {% if request.resolver_match.url_name == 'student_supports_list' %}active{% endif %}">
+          <i class="bi bi-folder2-open"></i><span>Supports de cours</span>
+        </a>
+        <a href="{% url 'accounting:mon_attestation_passage_pdf' %}" title="Attestation de passage"
+           class="sb-link {% if request.resolver_match.url_name == 'mon_attestation_passage_pdf' %}active{% endif %}">
+          <i class="bi bi-file-earmark-check-fill"></i><span>Attestation de passage</span>
+        </a>
+        {% if user.student_profile %}
+        <a href="{% url 'students:dossier' user.student_profile.pk %}" title="Mon dossier"
+           class="sb-link {% if request.resolver_match.url_name == 'dossier' %}active{% endif %}">
+          <i class="bi bi-person-lines-fill"></i><span>Mon dossier</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.is_responsable_classe %}
+        {% if 'timetable:cahier_texte_list' not in disabled_features %}
+        <a href="{% url 'timetable:cahier_texte_list' %}" title="Cahier de Texte (Responsable de classe)"
+           class="sb-link {% if request.resolver_match.url_name == 'cahier_texte_list' or request.resolver_match.url_name == 'cahier_texte_view' %}active{% endif %}">
+          <i class="bi bi-journal-richtext"></i><span>Cahier de Texte</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.role_name != 'CIAQ' and user.role_name != 'CONTROLEUR' %}
+        {% if 'grades:evaluation_list' not in disabled_features %}
+        <a href="{% url 'grades:evaluation_list' %}" title="Notes & Évaluations"
+           class="sb-link {% if request.resolver_match.app_name == 'grades' and request.resolver_match.url_name not in 'maquette_list,maquette_ue_create,maquette_ue_edit,maquette_ue_delete,maquette_assign_subjects,maquette_duplicate,bulletin_class_list,bulletin_list,bulletin_generate_class,enrollment_toggle_active,bulletin_detail,bulletin_publish,bulletin_preview,bulletin_pdf,bulletin_config_edit,archive_bulletins_zip,conseil_list,conseil_view,conseil_excel,conseil_pdf,conseil_word,gestion_cloture,close_session_normale,reopen_session_normale,lock_semester,unlock_semester,examens_concours_class_list,examens_concours_detail,examens_concours_ec_notes,examens_concours_ec_validate,examens_concours_ec_import,examens_concours_ec_template,rapport_annuel_direction,rapport_annuel_pdf,rapport_annuel_excel,class_results_excel,class_results_pdf,class_results_word,reclamation_class_list,reclamation_list,reclamation_delete,rattrapage_class_list,rattrapage_list,rattrapage_preview,rattrapage_pdf,rattrapage_archive_zip' %}active{% endif %}">
+          <i class="bi bi-award-fill"></i><span>Notes &amp; Évaluations</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.is_enseignant %}
+        <a href="{% url 'attendance:my_modules' %}" title="Mes modules"
+           class="sb-link {% if request.resolver_match.url_name == 'my_modules' %}active{% endif %}">
+          <i class="bi bi-journal-bookmark-fill"></i><span>Mes modules</span>
+        </a>
+        <a href="{% url 'timetable:mes_seances' %}" title="Cahier de Texte"
+           class="sb-link {% if request.resolver_match.url_name == 'mes_seances' or request.resolver_match.url_name == 'session_log_edit' %}active{% endif %}">
+          <i class="bi bi-journal-richtext"></i><span>Cahier de Texte</span>
+        </a>
+        <a href="{% url 'teachers:my_honoraires' %}" title="Mes Honoraires"
+           class="sb-link {% if request.resolver_match.url_name == 'my_honoraires' %}active{% endif %}">
+          <i class="bi bi-cash-coin"></i><span>Mes Honoraires</span>
+        </a>
+        <a href="{% url 'teachers:mes_contrats' %}" title="Mon Contrat"
+           class="sb-link {% if request.resolver_match.url_name == 'mes_contrats' %}active{% endif %}">
+          <i class="bi bi-file-earmark-text-fill"></i><span>Mon Contrat</span>
+        </a>
+        <a href="{% url 'attendance:my_extra_requests' %}" title="Séances supplémentaires"
+           class="sb-link {% if request.resolver_match.url_name == 'my_extra_requests' or request.resolver_match.url_name == 'extra_request_create' %}active{% endif %}">
+          <i class="bi bi-clock-history"></i><span>Séances supplémentaires</span>
+        </a>
+        <a href="{% url 'timetable:teacher_supports_list' %}" title="Mes supports de cours"
+           class="sb-link {% if request.resolver_match.url_name == 'teacher_supports_list' or request.resolver_match.url_name == 'teacher_support_upload' %}active{% endif %}">
+          <i class="bi bi-folder2-open"></i><span>Mes supports de cours</span>
+        </a>
+        {% endif %}
+        {% if user.can_manage_dept %}
+        {% if 'attendance:extra_requests_admin' not in disabled_features %}
+        <a href="{% url 'attendance:extra_requests_admin' %}" title="Demande de séances supplémentaires"
+           class="sb-link {% if request.resolver_match.url_name == 'extra_requests_admin' or request.resolver_match.url_name == 'extra_request_review' %}active{% endif %}">
+          <i class="bi bi-clock-history" style="flex-shrink:0;"></i><span style="white-space:normal;line-height:1.3;">Demande de séances supplémentaires</span>
+        </a>
+        {% endif %}
+        {% if 'timetable:cahier_texte_list' not in disabled_features %}
+        <a href="{% url 'timetable:cahier_texte_list' %}" title="Cahier de Texte Numérique"
+           class="sb-link {% if request.resolver_match.url_name == 'cahier_texte_list' or request.resolver_match.url_name == 'cahier_texte_view' %}active{% endif %}">
+          <i class="bi bi-journal-richtext"></i><span>Cahier de Texte</span>
+        </a>
+        {% endif %}
+        {% if 'grades:maquette_list' not in disabled_features %}
+        <a href="{% url 'grades:maquette_list' %}" title="Maquettes de formation"
+           class="sb-link {% if request.resolver_match.url_name == 'maquette_list' or request.resolver_match.url_name == 'maquette_ue_create' or request.resolver_match.url_name == 'maquette_ue_edit' or request.resolver_match.url_name == 'maquette_assign_subjects' %}active{% endif %}">
+          <i class="bi bi-diagram-3"></i><span>Référentiel des Maquettes</span>
+        </a>
+        {% endif %}
+        {% if 'grades:bulletin_class_list' not in disabled_features %}
+        <a href="{% url 'grades:bulletin_class_list' %}" title="Gestion des Bulletins"
+           class="sb-link {% if request.resolver_match.url_name == 'bulletin_class_list' or request.resolver_match.url_name == 'bulletin_list' or request.resolver_match.url_name == 'bulletin_preview' or request.resolver_match.url_name == 'bulletin_detail' %}active{% endif %}">
+          <i class="bi bi-journal-text"></i><span>Gestion des Bulletins</span>
+        </a>
+        {% endif %}
+        {% if 'grades:conseil_list' not in disabled_features %}
+        <a href="{% url 'grades:conseil_list' %}" title="Tableau de Conseil"
+           class="sb-link {% if request.resolver_match.app_name == 'grades' and 'conseil' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="bi bi-table"></i><span>Tableau de Conseil</span>
+        </a>
+        {% endif %}
+        {% if 'grades:rapport_annuel_direction' not in disabled_features %}
+        <a href="{% url 'grades:rapport_annuel_direction' %}" title="Rapport Annuel de la Direction"
+           class="sb-link {% if request.resolver_match.app_name == 'grades' and 'rapport_annuel' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="bi bi-graph-up-arrow"></i><span>Rapport Annuel de la Direction</span>
+        </a>
+        {% endif %}
+        {% if 'academic_structure:diploma_supplement_config_list' not in disabled_features %}
+        <a href="{% url 'academic_structure:diploma_supplement_config_list' %}" title="Suppléments de diplôme"
+           class="sb-link {% if request.resolver_match.app_name == 'academic_structure' and 'diploma_supplement' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="bi bi-award-fill"></i><span>Suppléments de diplôme</span>
+        </a>
+        {% endif %}
+        {% if 'grades:reclamation_class_list' not in disabled_features %}
+        <a href="{% url 'grades:reclamation_class_list' %}" title="Réclamations de Notes"
+           class="sb-link {% if request.resolver_match.app_name == 'grades' and 'reclamation' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="bi bi-flag"></i><span>Réclamations de Notes</span>
+        </a>
+        {% endif %}
+        {% if request.user.direction_id %}
+        <a href="{% url 'accounting:suivi_budget_direction_detail' request.user.direction_id %}" title="Suivi budget Direction"
+           class="sb-link {% if request.resolver_match.url_name == 'suivi_budget_direction_detail' %}active{% endif %}">
+          <i class="bi bi-clipboard-data-fill"></i><span>Suivi budget Direction</span>
+        </a>
+        {% endif %}
+        {% if 'grades:rattrapage_class_list' not in disabled_features %}
+        <a href="{% url 'grades:rattrapage_class_list' %}" title="Rattrapages"
+           class="sb-link {% if request.resolver_match.app_name == 'grades' and 'rattrapage' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="bi bi-arrow-repeat"></i><span>Rattrapages</span>
+        </a>
+        {% endif %}
+        {% if user.role_name == 'CONTROLEUR' %}
+        {% if 'grades:gestion_cloture' not in disabled_features %}
+        <a href="{% url 'grades:gestion_cloture' %}" title="Clôture des sessions"
+           class="sb-link {% if request.resolver_match.app_name == 'grades' and 'cloture' in request.resolver_match.url_name %}active{% endif %}"
+           style="border-left:3px solid #dc2626;">
+          <i class="bi bi-lock-fill" style="color:#dc2626;"></i><span style="color:#dc2626;font-weight:700;">Clôture des sessions</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.role_name != 'CIAQ' and user.role_name != 'CONTROLEUR' %}
+        {% if 'grades:import_notes_csv' not in disabled_features %}
+        <a href="{% url 'grades:import_notes_csv' %}" title="Import notes CSV"
+           class="sb-link {% if request.resolver_match.url_name == 'import_notes_csv' %}active{% endif %}">
+          <i class="bi bi-file-earmark-arrow-up"></i><span>Import notes CSV</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if 'teachers:contrat_list' not in disabled_features %}
+        <a href="{% url 'teachers:contrat_list' %}" title="Contrats Enseignants"
+           class="sb-link {% if request.resolver_match.url_name == 'contrat_list' or request.resolver_match.url_name == 'contrat_edit' %}active{% endif %}">
+          <i class="bi bi-file-earmark-text-fill"></i><span>Contrats Enseignants</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:budget_honoraires' not in disabled_features %}
+        <a href="{% url 'accounting:budget_honoraires' %}" title="Budget honoraires mensuels"
+           class="sb-link {% if request.resolver_match.url_name == 'budget_honoraires' %}active{% endif %}">
+          <i class="bi bi-cash-coin"></i><span>Budget honoraires mensuels</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.role_name == 'ADMIN_DE' and 'accounting:budget_honoraires' not in disabled_features %}
+        <a href="{% url 'accounting:budget_honoraires' %}" title="Budget honoraires mensuels"
+           class="sb-link {% if request.resolver_match.url_name == 'budget_honoraires' %}active{% endif %}">
+          <i class="bi bi-cash-coin"></i><span>Budget honoraires mensuels</span>
+        </a>
+        {% endif %}
+        {% if user.role_name == 'CHARGE_EXAMENS_CONCOURS' %}
+        {% if 'grades:maquette_list' not in disabled_features %}
+        <a href="{% url 'grades:maquette_list' %}" title="Maquettes de formation"
+           class="sb-link {% if request.resolver_match.url_name == 'maquette_list' or request.resolver_match.url_name == 'maquette_ue_create' or request.resolver_match.url_name == 'maquette_ue_edit' or request.resolver_match.url_name == 'maquette_assign_subjects' %}active{% endif %}">
+          <i class="bi bi-diagram-3"></i><span>Référentiel des Maquettes</span>
+        </a>
+        {% endif %}
+        {% if 'grades:bulletin_class_list' not in disabled_features %}
+        <a href="{% url 'grades:bulletin_class_list' %}" title="Gestion des Bulletins"
+           class="sb-link {% if request.resolver_match.url_name == 'bulletin_class_list' or request.resolver_match.url_name == 'bulletin_list' or request.resolver_match.url_name == 'bulletin_preview' or request.resolver_match.url_name == 'bulletin_detail' %}active{% endif %}">
+          <i class="bi bi-journal-text"></i><span>Gestion des Bulletins</span>
+        </a>
+        {% endif %}
+        {% if 'grades:conseil_list' not in disabled_features %}
+        <a href="{% url 'grades:conseil_list' %}" title="Tableau de Conseil"
+           class="sb-link {% if request.resolver_match.app_name == 'grades' and 'conseil' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="bi bi-table"></i><span>Tableau de Conseil</span>
+        </a>
+        {% endif %}
+        {% if 'grades:rapport_annuel_direction' not in disabled_features %}
+        <a href="{% url 'grades:rapport_annuel_direction' %}" title="Rapport Annuel de la Direction"
+           class="sb-link {% if request.resolver_match.app_name == 'grades' and 'rapport_annuel' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="bi bi-graph-up-arrow"></i><span>Rapport Annuel de la Direction</span>
+        </a>
+        {% endif %}
+        {% if 'academic_structure:diploma_supplement_config_list' not in disabled_features %}
+        <a href="{% url 'academic_structure:diploma_supplement_config_list' %}" title="Suppléments de diplôme"
+           class="sb-link {% if request.resolver_match.app_name == 'academic_structure' and 'diploma_supplement' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="bi bi-award-fill"></i><span>Suppléments de diplôme</span>
+        </a>
+        {% endif %}
+        {% if 'grades:reclamation_class_list' not in disabled_features %}
+        <a href="{% url 'grades:reclamation_class_list' %}" title="Réclamations de Notes"
+           class="sb-link {% if request.resolver_match.app_name == 'grades' and 'reclamation' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="bi bi-flag"></i><span>Réclamations de Notes</span>
+        </a>
+        {% endif %}
+        {% if 'grades:rattrapage_class_list' not in disabled_features %}
+        <a href="{% url 'grades:rattrapage_class_list' %}" title="Rattrapages"
+           class="sb-link {% if request.resolver_match.app_name == 'grades' and 'rattrapage' in request.resolver_match.url_name %}active{% endif %}">
+          <i class="bi bi-arrow-repeat"></i><span>Rattrapages</span>
+        </a>
+        {% endif %}
+        {% if 'grades:examens_concours_class_list' not in disabled_features %}
+        <a href="{% url 'grades:examens_concours_class_list' %}" title="Examens & Concours"
+           class="sb-link {% if request.resolver_match.url_name in 'examens_concours_class_list,examens_concours_detail,examens_concours_ec_notes' %}active{% endif %}">
+          <i class="bi bi-patch-check-fill"></i><span>Examens &amp; Concours</span>
+        </a>
+        {% endif %}
+        {% if 'grades:import_notes_csv' not in disabled_features %}
+        <a href="{% url 'grades:import_notes_csv' %}" title="Import notes CSV"
+           class="sb-link {% if request.resolver_match.url_name == 'import_notes_csv' %}active{% endif %}">
+          <i class="bi bi-file-earmark-arrow-up"></i><span>Import notes CSV</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.role_name == 'ADMIN' or user.is_inst_admin or user.is_admin_direction or user.role_name == 'RESPONSABLE' or user.role_name == 'ASSISTANTE' or user.role_name == 'CONTROLEUR' %}
+        {% if 'academic_structure:index' not in disabled_features %}
+        <a href="{% url 'academic_structure:index' %}" title="Gestion de la Scolarité"
+           class="sb-link {% if request.resolver_match.app_name == 'academic_structure' %}active{% endif %}">
+          <i class="bi bi-building"></i><span>Gestion de la Scolarité</span>
+        </a>
+        {% endif %}
+        {% if user.role_name != 'CONTROLEUR' %}
+        {% if 'rooms:list' not in disabled_features %}
+        <a href="{% url 'rooms:list' %}" title="Salles"
+           class="sb-link {% if request.resolver_match.app_name == 'rooms' %}active{% endif %}">
+          <i class="bi bi-door-open-fill"></i><span>Salles</span>
+        </a>
+        {% endif %}
+        {% if 'subjects:list' not in disabled_features %}
+        <a href="{% url 'subjects:list' %}" title="Modules (EC)"
+           class="sb-link {% if request.resolver_match.app_name == 'subjects' %}active{% endif %}">
+          <i class="bi bi-book-fill"></i><span>Modules (EC)</span>
+        </a>
+        {% endif %}
+        {% if 'grades:examens_concours_class_list' not in disabled_features %}
+        <a href="{% url 'grades:examens_concours_class_list' %}" title="Examens & Concours"
+           class="sb-link {% if request.resolver_match.url_name in 'examens_concours_class_list,examens_concours_detail,examens_concours_ec_notes' %}active{% endif %}">
+          <i class="bi bi-patch-check-fill"></i><span>Examens &amp; Concours</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}{# fin bloc masqué pour trésorier : PLANNING + PÉDAGOGIE #}
+
+    {% if user.role_name == 'ADMIN' or user.is_inst_admin or user.is_admin_direction or user.role_name == 'CONTROLEUR' or user.role_name == 'RESPONSABLE' or user.role_name == 'ASSISTANTE' %}
+    <div class="sb-divider"></div>
+
+    <!-- ── PERSONNES ── -->
+    {% if 'personnes' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group" data-group="personnes" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-people" style="font-size:.65rem;flex-shrink:0;"></i><span>Inscriptions</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-personnes">
+        {% if 'teachers:list' not in disabled_features %}
+        <a href="{% url 'teachers:list' %}" title="Nouveau & Liste des Enseignants"
+           class="sb-link {% if request.resolver_match.app_name == 'teachers' %}active{% endif %}">
+          <i class="bi bi-person-badge-fill"></i><span>Nouveau & Liste des Enseignants</span>
+        </a>
+        {% endif %}
+        {% if 'students:list' not in disabled_features %}
+        <a href="{% url 'students:list' %}" title="Inscriptions & Liste étudiants"
+           class="sb-link {% if request.resolver_match.app_name == 'students' and request.resolver_match.url_name != 'reinscription' and request.resolver_match.url_name != 'abandon_list' and request.resolver_match.url_name != 'suspension_list' and request.resolver_match.url_name != 'changement_filiere' and request.resolver_match.url_name != 'changement_filiere_confirm' %}active{% endif %}">
+          <i class="bi bi-people-fill"></i><span>Inscriptions &amp; Liste étudiants</span>
+        </a>
+        {% endif %}
+        {% if 'students:reinscription' not in disabled_features %}
+        <a href="{% url 'students:reinscription' %}" title="Réinscriptions étudiants"
+           class="sb-link {% if request.resolver_match.url_name == 'reinscription' %}active{% endif %}">
+          <i class="bi bi-arrow-repeat"></i><span>Réinscriptions étudiants</span>
+        </a>
+        {% endif %}
+        {% if 'students:changement_filiere' not in disabled_features %}
+        <a href="{% url 'students:changement_filiere' %}" title="Changement de filière"
+           class="sb-link {% if request.resolver_match.url_name == 'changement_filiere' or request.resolver_match.url_name == 'changement_filiere_confirm' %}active{% endif %}">
+          <i class="bi bi-signpost-split"></i><span>Changement de filière</span>
+        </a>
+        {% endif %}
+        {% if 'students:abandon_list' not in disabled_features %}
+        <a href="{% url 'students:abandon_list' %}" title="Abandons"
+           class="sb-link {% if request.resolver_match.url_name == 'abandon_list' %}active{% endif %}">
+          <i class="bi bi-person-x-fill"></i><span>Abandons</span>
+        </a>
+        {% endif %}
+        {% if 'students:suspension_list' not in disabled_features %}
+        <a href="{% url 'students:suspension_list' %}" title="Suspensions d'inscription"
+           class="sb-link {% if request.resolver_match.url_name == 'suspension_list' %}active{% endif %}">
+          <i class="bi bi-pause-circle-fill"></i><span>Suspensions d'inscription</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:financial_student_list' not in disabled_features %}
+        <a href="{% url 'accounting:financial_student_list' %}" title="Liste des étudiants"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name == 'financial_student_list' %}active{% endif %}">
+          <i class="bi bi-people-fill"></i><span>Liste des étudiants</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:attestation_passage_list' not in disabled_features %}
+        <a href="{% url 'accounting:attestation_passage_list' %}" title="Attestation de passage"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'attestation_passage_list,attestation_passage_pdf' %}active{% endif %}">
+          <i class="bi bi-file-earmark-check-fill"></i><span>Attestation de passage</span>
+        </a>
+        {% endif %}
+        {% if 'students:dossier_list' not in disabled_features %}
+        <a href="{% url 'students:dossier_list' %}" title="Dossiers étudiants"
+           class="sb-link {% if request.resolver_match.app_name == 'students' and request.resolver_match.url_name in 'dossier_list,dossier' %}active{% endif %}">
+          <i class="bi bi-person-lines-fill"></i><span>Dossiers étudiants</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if user.role_name == 'ADMIN' or user.is_inst_admin or user.is_admin_direction or user.role_name == 'CONTROLEUR' or user.role_name == 'CIAQ' %}
+    <div class="sb-divider"></div>
+    <!-- ── DIRECTION ADMINISTRATIVE & FINANCIÈRE ── -->
+    {% if 'comptabilite' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group" data-group="comptabilite" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-cash-stack" style="font-size:.65rem;flex-shrink:0;"></i><span>Direction Financière</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-comptabilite">
+        {% if 'accounting:dashboard' not in disabled_features %}
+        <a href="{% url 'accounting:dashboard' %}" title="Honoraires mensuels"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+          <i class="bi bi-cash-coin"></i><span>Honoraires mensuels</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:honoraires_annuels' not in disabled_features %}
+        <a href="{% url 'accounting:honoraires_annuels' %}" title="Honoraires annuels"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name == 'honoraires_annuels' %}active{% endif %}">
+          <i class="bi bi-bar-chart-line"></i><span>Honoraires annuels</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:mensualite_list' not in disabled_features %}
+        <a href="{% url 'accounting:mensualite_list' %}" title="Paiements Mensualités"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'mensualite_list,mensualite_payer' %}active{% endif %}">
+          <i class="bi bi-calendar-check-fill"></i><span>Paiements Mensualités</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:soutenance_dashboard' not in disabled_features %}
+        <a href="{% url 'accounting:soutenance_dashboard' %}" title="Gestion frais Soutenance"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'soutenance_dashboard,soutenance_payer' %}active{% endif %}">
+          <i class="bi bi-mortarboard-fill"></i><span>Gestion frais Soutenance</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:taux_recouvrement' not in disabled_features %}
+        <a href="{% url 'accounting:taux_recouvrement' %}" title="Taux de recouvrement"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name == 'taux_recouvrement' %}active{% endif %}">
+          <i class="bi bi-graph-up-arrow"></i><span>Taux de recouvrement</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:boursier_list' not in disabled_features %}
+        <a href="{% url 'accounting:boursier_list' %}" title="Suivi des boursiers"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'boursier_list,boursier_update' %}active{% endif %}">
+          <i class="bi bi-award-fill"></i><span>Suivi des boursiers</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:validation_inscription_list' not in disabled_features %}
+        <a href="{% url 'accounting:validation_inscription_list' %}" title="Validation Inscription"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'validation_inscription_list,validation_inscription_create,validation_inscription_detail,certificat_inscription_pdf,attestation_passage_pdf' %}active{% endif %}">
+          <i class="bi bi-person-check-fill"></i>
+          <span>Validation Inscription
+            {% if pending_inscriptions_count > 0 %}
+            <span class="badge ms-1" style="background:var(--accent);color:var(--navy);font-size:.65rem;border-radius:10px;padding:2px 6px;">{{ pending_inscriptions_count }}</span>
+            {% endif %}
+          </span>
+        </a>
+        {% endif %}
+        {% if 'accounting:repartition_annee_list' not in disabled_features %}
+        <a href="{% url 'accounting:repartition_annee_list' %}" title="Répartition Année Académique"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'repartition_annee_list,repartition_annee_create,repartition_annee_edit' %}active{% endif %}">
+          <i class="bi bi-calendar-range-fill"></i><span style="white-space:normal;line-height:1.3;">Répartition Année Académique</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:rate_list' not in disabled_features %}
+        <a href="{% url 'accounting:rate_list' %}" title="Taux horaires"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'rate_list,rate_create,rate_edit,rate_delete' %}active{% endif %}">
+          <i class="bi bi-gear-fill"></i><span>Taux horaires</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:partenaire_bourse_list' not in disabled_features %}
+        <a href="{% url 'accounting:partenaire_bourse_list' %}" title="Partenaires de bourse"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'partenaire_bourse_list,partenaire_bourse_create,partenaire_bourse_edit,partenaire_bourse_delete' %}active{% endif %}">
+          <i class="bi bi-mortarboard-fill"></i><span>Partenaires de bourse</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:caisse_dashboard' not in disabled_features %}
+        <a href="{% url 'accounting:caisse_dashboard' %}" title="La Caisse"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'caisse_dashboard,caisse_payment_create,caisse_recu_pdf' %}active{% endif %}">
+          <i class="bi bi-safe2-fill"></i><span>La Caisse</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:caisse_movement_list' not in disabled_features %}
+        <a href="{% url 'accounting:caisse_movement_list' %}" title="Entrée & Sortie Caisse"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'caisse_movement_list,caisse_movement_create,caisse_movement_decaisser,caisse_movement_delete' %}active{% endif %}">
+          <i class="bi bi-arrow-left-right"></i><span>Entrée & Sortie Caisse</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:suivi_budget_directions' not in disabled_features %}
+        <a href="{% url 'accounting:suivi_budget_directions' %}" title="Suivi budgétaire par direction"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'suivi_budget_directions,suivi_budget_direction_detail' %}active{% endif %}">
+          <i class="bi bi-bar-chart-steps"></i><span>Suivi budgétaire par direction</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:compte_comptable_list' not in disabled_features %}
+        <a href="{% url 'accounting:compte_comptable_list' %}" title="Comptes comptables"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'compte_comptable_list,compte_comptable_create,compte_comptable_edit,compte_comptable_delete' %}active{% endif %}">
+          <i class="bi bi-journal-bookmark-fill"></i><span>Comptes comptables</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:demande_depense_list' not in disabled_features %}
+        <a href="{% url 'accounting:demande_depense_list' %}" title="Demandes de dépense"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'demande_depense_list,demande_depense_create,demande_depense_detail,demande_depense_pdf,demande_depense_valider,demande_depense_rejeter,demande_depense_decaisser,demande_depense_edit,demande_depense_delete' %}active{% endif %}">
+          <i class="bi bi-receipt-cutoff"></i><span>Demandes de dépense</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:rapports_financiers' not in disabled_features %}
+        <a href="{% url 'accounting:rapports_financiers' %}" title="Rapports financiers"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'rapports_financiers,rapports_financiers_export_excel' %}active{% endif %}">
+          <i class="bi bi-graph-up"></i><span>Rapports financiers</span>
+        </a>
+        {% endif %}
+        {% if 'students:controle_scan' not in disabled_features %}
+        <a href="{% url 'students:controle_scan' %}" title="Contrôle Accueil"
+           class="sb-link {% if request.resolver_match.app_name == 'students' and request.resolver_match.url_name == 'controle_scan' %}active{% endif %}">
+          <i class="bi bi-qr-code-scan"></i><span>Contrôle Accueil</span>
+        </a>
+        {% endif %}
+        {% if user.role_name == 'CONTROLEUR' or user.role_name == 'ADMIN' or user.is_inst_admin %}
+        {% if 'accounting:etat_journalier' not in disabled_features %}
+        <a href="{% url 'accounting:etat_journalier' %}" title="État journalier"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'etat_journalier,etat_journalier_pdf,cloturer_journee' %}active{% endif %}">
+          <i class="bi bi-bar-chart-line-fill"></i><span>État journalier</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:clotures_list' not in disabled_features %}
+        <a href="{% url 'accounting:clotures_list' %}" title="Historique clôtures"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name == 'clotures_list' %}active{% endif %}">
+          <i class="bi bi-archive-fill"></i><span>Clôtures</span>
+        </a>
+        {% endif %}
+        {% endif %}
+
+        <div style="padding:6px 12px 2px;font-size:.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.03em;">Gestion des Salaires Personnel</div>
+        {% if 'hr:salaire_list' not in disabled_features %}
+        <a href="{% url 'hr:salaire_list' %}" title="Gestion des salaires"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name in 'salaire_list,salaire_edit' %}active{% endif %}">
+          <i class="bi bi-cash-stack"></i><span>Gestion des Salaires</span>
+        </a>
+        {% endif %}
+        {% if 'hr:bulletin_list' not in disabled_features %}
+        <a href="{% url 'hr:bulletin_list' %}" title="Bulletins de salaire"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name in 'bulletin_list,bulletin_detail' %}active{% endif %}">
+          <i class="bi bi-file-earmark-text-fill"></i><span>Bulletins de Salaire</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% elif user.is_comptable %}
+    <div class="sb-divider"></div>
+    {% if 'comptabilite' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group" data-group="comptabilite" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-cash-stack" style="font-size:.65rem;flex-shrink:0;"></i><span>Direction Financière</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-comptabilite">
+        {% if 'accounting:financial_student_list' not in disabled_features %}
+        <a href="{% url 'accounting:financial_student_list' %}" title="Liste des étudiants"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name == 'financial_student_list' %}active{% endif %}">
+          <i class="bi bi-people-fill"></i><span>Liste des étudiants</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:attestation_passage_list' not in disabled_features %}
+        <a href="{% url 'accounting:attestation_passage_list' %}" title="Attestation de passage"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'attestation_passage_list,attestation_passage_pdf' %}active{% endif %}">
+          <i class="bi bi-file-earmark-check-fill"></i><span>Attestation de passage</span>
+        </a>
+        {% endif %}
+        {% if 'students:dossier_list' not in disabled_features %}
+        <a href="{% url 'students:dossier_list' %}" title="Dossiers étudiants"
+           class="sb-link {% if request.resolver_match.app_name == 'students' and request.resolver_match.url_name in 'dossier_list,dossier' %}active{% endif %}">
+          <i class="bi bi-person-lines-fill"></i><span>Dossiers étudiants</span>
+        </a>
+        {% endif %}
+        {% if 'students:abandon_list' not in disabled_features %}
+        <a href="{% url 'students:abandon_list' %}" title="Abandons"
+           class="sb-link {% if request.resolver_match.app_name == 'students' and request.resolver_match.url_name == 'abandon_list' %}active{% endif %}">
+          <i class="bi bi-person-x-fill"></i><span>Abandons</span>
+        </a>
+        {% endif %}
+        {% if 'students:suspension_list' not in disabled_features %}
+        <a href="{% url 'students:suspension_list' %}" title="Suspensions d'inscription"
+           class="sb-link {% if request.resolver_match.app_name == 'students' and request.resolver_match.url_name == 'suspension_list' %}active{% endif %}">
+          <i class="bi bi-pause-circle-fill"></i><span>Suspensions d'inscription</span>
+        </a>
+        {% endif %}
+        {% if user.is_tresorier or user.is_caissier %}
+        {% if 'accounting:mensualite_list' not in disabled_features %}
+        <a href="{% url 'accounting:mensualite_list' %}" title="Paiements Mensualités"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'mensualite_list,mensualite_payer' %}active{% endif %}">
+          <i class="bi bi-calendar-check-fill"></i><span>Paiements Mensualités</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:soutenance_dashboard' not in disabled_features %}
+        <a href="{% url 'accounting:soutenance_dashboard' %}" title="Gestion frais Soutenance"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'soutenance_dashboard,soutenance_payer' %}active{% endif %}">
+          <i class="bi bi-mortarboard-fill"></i><span>Gestion frais Soutenance</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.is_tresorier %}
+        {% if 'accounting:taux_recouvrement' not in disabled_features %}
+        <a href="{% url 'accounting:taux_recouvrement' %}" title="Taux de recouvrement"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name == 'taux_recouvrement' %}active{% endif %}">
+          <i class="bi bi-graph-up-arrow"></i><span>Taux de recouvrement</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:boursier_list' not in disabled_features %}
+        <a href="{% url 'accounting:boursier_list' %}" title="Suivi des boursiers"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'boursier_list,boursier_update' %}active{% endif %}">
+          <i class="bi bi-award-fill"></i><span>Suivi des boursiers</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:validation_inscription_list' not in disabled_features %}
+        <a href="{% url 'accounting:validation_inscription_list' %}" title="Validation Inscription"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'validation_inscription_list,validation_inscription_create,validation_inscription_detail,certificat_inscription_pdf,attestation_passage_pdf' %}active{% endif %}">
+          <i class="bi bi-person-check-fill"></i>
+          <span>Validation Inscription
+            {% if pending_inscriptions_count > 0 %}
+            <span class="badge ms-1" style="background:var(--accent);color:var(--navy);font-size:.65rem;border-radius:10px;padding:2px 6px;">{{ pending_inscriptions_count }}</span>
+            {% endif %}
+          </span>
+        </a>
+        {% endif %}
+        {% if 'accounting:repartition_annee_list' not in disabled_features %}
+        <a href="{% url 'accounting:repartition_annee_list' %}" title="Répartition Année Académique"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'repartition_annee_list,repartition_annee_create,repartition_annee_edit' %}active{% endif %}">
+          <i class="bi bi-calendar-range-fill"></i><span style="white-space:normal;line-height:1.3;">Répartition Année Académique</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:partenaire_bourse_list' not in disabled_features %}
+        <a href="{% url 'accounting:partenaire_bourse_list' %}" title="Partenaires de bourse"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'partenaire_bourse_list,partenaire_bourse_create,partenaire_bourse_edit,partenaire_bourse_delete' %}active{% endif %}">
+          <i class="bi bi-mortarboard-fill"></i><span>Partenaires de bourse</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.is_tresorier or user.role_name == 'COMPTABLE' or user.is_admin or user.is_inst_admin %}
+        {% if 'accounting:etat_journalier' not in disabled_features %}
+        <a href="{% url 'accounting:etat_journalier' %}" title="État journalier"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'etat_journalier,etat_journalier_pdf,etat_journalier_excel,etat_journalier_word,cloturer_journee' %}active{% endif %}">
+          <i class="bi bi-bar-chart-line-fill"></i><span>État journalier</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.is_tresorier or user.is_admin or user.is_inst_admin %}
+        {% if 'accounting:clotures_list' not in disabled_features %}
+        <a href="{% url 'accounting:clotures_list' %}" title="Historique clôtures"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name == 'clotures_list' %}active{% endif %}">
+          <i class="bi bi-archive-fill"></i><span>Clôtures</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.is_caissier or user.is_admin or user.is_inst_admin %}
+        {% if 'accounting:caisse_dashboard' not in disabled_features %}
+        <a href="{% url 'accounting:caisse_dashboard' %}" title="La Caisse"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'caisse_dashboard,caisse_payment_create,caisse_recu_pdf' %}active{% endif %}">
+          <i class="bi bi-safe2-fill"></i><span>La Caisse</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.is_tresorier or user.is_caissier or user.is_admin or user.is_inst_admin %}
+        {% if 'accounting:caisse_movement_list' not in disabled_features %}
+        <a href="{% url 'accounting:caisse_movement_list' %}" title="Entrée & Sortie Caisse"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'caisse_movement_list,caisse_movement_create,caisse_movement_decaisser,caisse_movement_delete' %}active{% endif %}">
+          <i class="bi bi-arrow-left-right"></i><span>Entrée & Sortie Caisse</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:suivi_budget_directions' not in disabled_features %}
+        <a href="{% url 'accounting:suivi_budget_directions' %}" title="Suivi budgétaire par direction"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'suivi_budget_directions,suivi_budget_direction_detail' %}active{% endif %}">
+          <i class="bi bi-bar-chart-steps"></i><span>Suivi budgétaire par direction</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.is_tresorier or user.is_admin or user.is_inst_admin %}
+        {% if 'accounting:compte_comptable_list' not in disabled_features %}
+        <a href="{% url 'accounting:compte_comptable_list' %}" title="Comptes comptables"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'compte_comptable_list,compte_comptable_create,compte_comptable_edit,compte_comptable_delete' %}active{% endif %}">
+          <i class="bi bi-journal-bookmark-fill"></i><span>Comptes comptables</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.is_tresorier or user.is_caissier or user.is_admin or user.is_inst_admin %}
+        {% if 'accounting:demande_depense_list' not in disabled_features %}
+        <a href="{% url 'accounting:demande_depense_list' %}" title="Demandes de dépense"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'demande_depense_list,demande_depense_create,demande_depense_detail,demande_depense_pdf,demande_depense_valider,demande_depense_rejeter,demande_depense_decaisser,demande_depense_edit,demande_depense_delete' %}active{% endif %}">
+          <i class="bi bi-receipt-cutoff"></i><span>Demandes de dépense</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if user.is_tresorier or user.is_caissier or user.role_name == 'COMPTABLE' or user.is_admin or user.is_inst_admin %}
+        {% if 'accounting:rapports_financiers' not in disabled_features %}
+        <a href="{% url 'accounting:rapports_financiers' %}" title="Rapports financiers"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'rapports_financiers,rapports_financiers_export_excel' %}active{% endif %}">
+          <i class="bi bi-graph-up"></i><span>Rapports financiers</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if not user.is_tresorier %}
+        <div style="padding:6px 12px 2px;font-size:.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.03em;">Gestion des Salaires Personnel</div>
+        {% if 'hr:salaire_list' not in disabled_features %}
+        <a href="{% url 'hr:salaire_list' %}" title="Gestion des salaires"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name in 'salaire_list,salaire_edit' %}active{% endif %}">
+          <i class="bi bi-cash-stack"></i><span>Gestion des Salaires</span>
+        </a>
+        {% endif %}
+        {% if 'hr:bulletin_list' not in disabled_features %}
+        <a href="{% url 'hr:bulletin_list' %}" title="Bulletins de salaire"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name in 'bulletin_list,bulletin_detail' %}active{% endif %}">
+          <i class="bi bi-file-earmark-text-fill"></i><span>Bulletins de Salaire</span>
+        </a>
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if user.role_name == 'CONTROLEUR' or user.is_inst_admin or user.role_name == 'ADMIN_DAF' or user.role_name == 'ADMIN' %}
+    <div class="sb-divider"></div>
+    <!-- ── PILOTAGE ET SUIVI BUDGÉTAIRE ── -->
+    {% if 'budget' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group" data-group="budget" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-clipboard-data-fill" style="font-size:.65rem;flex-shrink:0;"></i><span>Pilotage et Suivi Budgétaire</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-budget">
+        {% if 'accounting:budget_dashboard' not in disabled_features %}
+        <a href="{% url 'accounting:budget_dashboard' %}" title="Pilotage budgétaire"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name == 'budget_dashboard' %}active{% endif %}">
+          <i class="bi bi-speedometer2"></i><span>Pilotage budgétaire</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:ligne_budgetaire_list' not in disabled_features %}
+        <a href="{% url 'accounting:ligne_budgetaire_list' %}" title="Lignes budgétaires"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'ligne_budgetaire_list,ligne_budgetaire_create,ligne_budgetaire_detail,ligne_budgetaire_edit' %}active{% endif %}">
+          <i class="bi bi-list-columns-reverse"></i><span>Lignes budgétaires</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:suivi_budget_directions' not in disabled_features %}
+        <a href="{% url 'accounting:suivi_budget_directions' %}" title="Suivi budgétaire par direction"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'suivi_budget_directions,suivi_budget_direction_detail' %}active{% endif %}">
+          <i class="bi bi-bar-chart-steps"></i><span>Suivi budgétaire par direction</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:engagement_list' not in disabled_features %}
+        <a href="{% url 'accounting:engagement_list' %}" title="Engagements"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'engagement_list,engagement_create,engagement_soumettre,engagement_valider,engagement_rejeter,engagement_annuler' %}active{% endif %}">
+          <i class="bi bi-journal-check"></i><span>Engagements</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:rectificatif_list' not in disabled_features %}
+        <a href="{% url 'accounting:rectificatif_list' %}" title="Rectificatifs"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'rectificatif_list,rectificatif_create,rectificatif_valider,rectificatif_rejeter' %}active{% endif %}">
+          <i class="bi bi-pencil-square"></i><span>Rectificatifs</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:source_financement_list' not in disabled_features %}
+        <a href="{% url 'accounting:source_financement_list' %}" title="Sources de financement"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'source_financement_list,source_financement_create,source_financement_edit,source_financement_delete' %}active{% endif %}">
+          <i class="bi bi-diagram-3"></i><span>Sources de financement</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:bsc_dashboard' not in disabled_features %}
+        <a href="{% url 'accounting:bsc_dashboard' %}" title="Balanced Scorecard"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name == 'bsc_dashboard' %}active{% endif %}">
+          <i class="bi bi-grid-3x3-gap-fill"></i><span>Balanced Scorecard</span>
+        </a>
+        {% endif %}
+
+        <div style="padding:6px 12px 2px;font-size:.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.03em;">Plan stratégique</div>
+        {% if 'strategic_plan:cadrage_list' not in disabled_features %}
+        <a href="{% url 'strategic_plan:cadrage_list' %}" title="Cadrages stratégiques"
+           class="sb-link {% if request.resolver_match.app_name == 'strategic_plan' and request.resolver_match.url_name in 'cadrage_list,cadrage_create,cadrage_edit,cadrage_delete' %}active{% endif %}">
+          <i class="bi bi-flag-fill"></i><span>Cadrages stratégiques</span>
+        </a>
+        {% endif %}
+        {% if 'strategic_plan:axe_list' not in disabled_features %}
+        <a href="{% url 'strategic_plan:axe_list' %}" title="Axes stratégiques"
+           class="sb-link {% if request.resolver_match.app_name == 'strategic_plan' and request.resolver_match.url_name in 'axe_list,axe_create,axe_edit,axe_delete' %}active{% endif %}">
+          <i class="bi bi-signpost-split-fill"></i><span>Axes stratégiques</span>
+        </a>
+        {% endif %}
+        {% if 'strategic_plan:objectif_list' not in disabled_features %}
+        <a href="{% url 'strategic_plan:objectif_list' %}" title="Objectifs stratégiques"
+           class="sb-link {% if request.resolver_match.app_name == 'strategic_plan' and request.resolver_match.url_name in 'objectif_list,objectif_create,objectif_edit,objectif_delete' %}active{% endif %}">
+          <i class="bi bi-bullseye"></i><span>Objectifs stratégiques</span>
+        </a>
+        {% endif %}
+        {% if 'strategic_plan:programme_list' not in disabled_features %}
+        <a href="{% url 'strategic_plan:programme_list' %}" title="Actions"
+           class="sb-link {% if request.resolver_match.app_name == 'strategic_plan' and request.resolver_match.url_name in 'programme_list,programme_create,programme_edit,programme_delete' %}active{% endif %}">
+          <i class="bi bi-diagram-2-fill"></i><span>Actions</span>
+        </a>
+        {% endif %}
+        {% if 'strategic_plan:projet_list' not in disabled_features %}
+        <a href="{% url 'strategic_plan:projet_list' %}" title="Activités"
+           class="sb-link {% if request.resolver_match.app_name == 'strategic_plan' and request.resolver_match.url_name in 'projet_list,projet_create,projet_edit,projet_delete,projet_detail,projet_gantt,projet_kanban' %}active{% endif %}">
+          <i class="bi bi-kanban-fill"></i><span>Activités</span>
+        </a>
+        {% endif %}
+        {% if 'indicators:indicateur_list' not in disabled_features %}
+        <a href="{% url 'indicators:indicateur_list' %}" title="Indicateurs"
+           class="sb-link {% if request.resolver_match.app_name == 'indicators' %}active{% endif %}">
+          <i class="bi bi-speedometer2"></i><span>Indicateurs</span>
+        </a>
+        {% endif %}
+
+        <div style="padding:6px 12px 2px;font-size:.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.03em;">Achats</div>
+        {% if 'procurement:demande_list' not in disabled_features %}
+        <a href="{% url 'procurement:demande_list' %}" title="Demandes d'achat"
+           class="sb-link {% if request.resolver_match.app_name == 'procurement' and request.resolver_match.url_name in 'demande_list,demande_create,demande_soumettre,demande_valider,demande_rejeter,demande_annuler' %}active{% endif %}">
+          <i class="bi bi-cart-plus-fill"></i><span>Demandes d'achat</span>
+        </a>
+        {% endif %}
+        {% if 'procurement:fournisseur_list' not in disabled_features %}
+        <a href="{% url 'procurement:fournisseur_list' %}" title="Fournisseurs"
+           class="sb-link {% if request.resolver_match.app_name == 'procurement' and request.resolver_match.url_name in 'fournisseur_list,fournisseur_create,fournisseur_edit,fournisseur_delete' %}active{% endif %}">
+          <i class="bi bi-truck"></i><span>Fournisseurs</span>
+        </a>
+        {% endif %}
+        {% if 'procurement:appel_offres_list' not in disabled_features %}
+        <a href="{% url 'procurement:appel_offres_list' %}" title="Appels d'offres"
+           class="sb-link {% if request.resolver_match.app_name == 'procurement' and request.resolver_match.url_name in 'appel_offres_list,appel_offres_create,offre_create,offre_retenir' %}active{% endif %}">
+          <i class="bi bi-megaphone-fill"></i><span>Appels d'offres</span>
+        </a>
+        {% endif %}
+        {% if 'procurement:commande_list' not in disabled_features %}
+        <a href="{% url 'procurement:commande_list' %}" title="Commandes"
+           class="sb-link {% if request.resolver_match.app_name == 'procurement' and request.resolver_match.url_name in 'commande_list,commande_create,commande_livrer,reception_create' %}active{% endif %}">
+          <i class="bi bi-box-seam-fill"></i><span>Commandes</span>
+        </a>
+        {% endif %}
+        {% if 'procurement:facture_list' not in disabled_features %}
+        <a href="{% url 'procurement:facture_list' %}" title="Factures & Paiements"
+           class="sb-link {% if request.resolver_match.app_name == 'procurement' and request.resolver_match.url_name in 'facture_list,facture_create,facture_valider,paiement_create,paiement_effectuer,paiement_annuler' %}active{% endif %}">
+          <i class="bi bi-receipt"></i><span>Factures & Paiements</span>
+        </a>
+        {% endif %}
+
+        <div style="padding:6px 12px 2px;font-size:.65rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.03em;">Qualité & Risques</div>
+        {% if 'quality:quality_dashboard' not in disabled_features %}
+        <a href="{% url 'quality:quality_dashboard' %}" title="Qualité"
+           class="sb-link {% if request.resolver_match.app_name == 'quality' and request.resolver_match.url_name == 'quality_dashboard' %}active{% endif %}">
+          <i class="bi bi-award-fill"></i><span>Qualité</span>
+        </a>
+        {% endif %}
+        {% if 'quality:critere_list' not in disabled_features %}
+        <a href="{% url 'quality:critere_list' %}" title="Critères qualité"
+           class="sb-link {% if request.resolver_match.app_name == 'quality' and request.resolver_match.url_name in 'critere_list,critere_create,critere_edit,critere_delete,evaluation_create' %}active{% endif %}">
+          <i class="bi bi-list-check"></i><span>Critères qualité</span>
+        </a>
+        {% endif %}
+        {% if 'quality:plan_list' not in disabled_features %}
+        <a href="{% url 'quality:plan_list' %}" title="Plans d'amélioration"
+           class="sb-link {% if request.resolver_match.app_name == 'quality' and request.resolver_match.url_name in 'plan_list,plan_create,plan_edit,plan_delete' %}active{% endif %}">
+          <i class="bi bi-clipboard-check"></i><span>Plans d'amélioration</span>
+        </a>
+        {% endif %}
+        {% if 'risks:matrice' not in disabled_features %}
+        <a href="{% url 'risks:matrice' %}" title="Matrice des risques"
+           class="sb-link {% if request.resolver_match.app_name == 'risks' and request.resolver_match.url_name == 'matrice' %}active{% endif %}">
+          <i class="bi bi-grid-3x3-gap"></i><span>Matrice des risques</span>
+        </a>
+        {% endif %}
+        {% if 'risks:risque_list' not in disabled_features %}
+        <a href="{% url 'risks:risque_list' %}" title="Risques"
+           class="sb-link {% if request.resolver_match.app_name == 'risks' and request.resolver_match.url_name in 'risque_list,risque_create,risque_edit,risque_delete,suivi_create' %}active{% endif %}">
+          <i class="bi bi-exclamation-triangle-fill"></i><span>Risques</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if user.role_name == 'ADMIN' or user.is_inst_admin or user.is_admin_direction or user.role_name == 'CONTROLEUR' or user.role_name == 'ASSISTANTE_DG' or user.role_name == 'ASSISTANTE_DIRECTION' or user.role_name == 'CIAQ' or user.is_comptable and not user.is_tresorier %}
+    <div class="sb-divider"></div>
+    <!-- ── GESTION RESSOURCES HUMAINES ── -->
+    {% if 'grh' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group {% if request.resolver_match.app_name == 'hr' %}sb-open{% endif %}" data-group="grh" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-people-fill" style="font-size:.65rem;flex-shrink:0;"></i>
+          <span>Gestion Ressources Humaines</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body {% if request.resolver_match.app_name == 'hr' %}sb-open{% endif %}" id="sb-body-grh">
+        {% if 'hr:dashboard' not in disabled_features %}
+        <a href="{% url 'hr:dashboard' %}" title="Tableau de bord RH"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+          <i class="bi bi-speedometer2"></i><span>Tableau de bord RH</span>
+        </a>
+        {% endif %}
+        {% if 'hr:personnel_list' not in disabled_features %}
+        <a href="{% url 'hr:personnel_list' %}" title="Gestion du personnel"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name in 'personnel_list,personnel_fiche_edit' %}active{% endif %}">
+          <i class="bi bi-person-vcard-fill"></i><span>Gestion du Personnel</span>
+        </a>
+        {% endif %}
+        {% if 'hr:pointage_jour' not in disabled_features %}
+        <a href="{% url 'hr:pointage_jour' %}" title="Pointage du jour"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name == 'pointage_jour' %}active{% endif %}">
+          <i class="bi bi-clock-fill"></i><span>Pointage du jour</span>
+        </a>
+        {% endif %}
+        {% if 'hr:presence_list' not in disabled_features %}
+        <a href="{% url 'hr:presence_list' %}" title="Liste des présences"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name in 'presence_list,presence_edit,employe_fiche' %}active{% endif %}">
+          <i class="bi bi-calendar-check-fill"></i><span>Liste des présences</span>
+        </a>
+        {% endif %}
+        {% if 'hr:conge_list' not in disabled_features %}
+        <a href="{% url 'hr:conge_list' %}" title="Demandes de congé"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name in 'conge_list,conge_create,conge_review' %}active{% endif %}">
+          <i class="bi bi-calendar-x-fill"></i><span>Congés</span>
+        </a>
+        {% endif %}
+        {% if 'hr:discipline_list' not in disabled_features %}
+        <a href="{% url 'hr:discipline_list' %}" title="Discipline"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name in 'discipline_list,discipline_detail' %}active{% endif %}">
+          <i class="bi bi-exclamation-octagon-fill"></i><span>Discipline</span>
+        </a>
+        {% endif %}
+        {% if 'hr:evaluation_list' not in disabled_features %}
+        <a href="{% url 'hr:evaluation_list' %}" title="Évaluations"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name in 'evaluation_list,evaluation_detail,evaluation_campaign_list' %}active{% endif %}">
+          <i class="bi bi-clipboard2-data-fill"></i><span>Évaluations</span>
+        </a>
+        {% endif %}
+        {% if 'hr:mission_list' not in disabled_features %}
+        <a href="{% url 'hr:mission_list' %}" title="Missions"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name == 'mission_list' %}active{% endif %}">
+          <i class="bi bi-airplane-fill"></i><span>Missions</span>
+        </a>
+        {% endif %}
+        {% if 'hr:interim_list' not in disabled_features %}
+        <a href="{% url 'hr:interim_list' %}" title="Intérims"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name == 'interim_list' %}active{% endif %}">
+          <i class="bi bi-arrow-left-right"></i><span>Intérims</span>
+        </a>
+        {% endif %}
+        {% if 'hr:handover_list' not in disabled_features %}
+        <a href="{% url 'hr:handover_list' %}" title="Passations de service"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name == 'handover_list' %}active{% endif %}">
+          <i class="bi bi-arrow-repeat"></i><span>Passations de service</span>
+        </a>
+        {% endif %}
+        {% if 'hr:internship_list' not in disabled_features %}
+        <a href="{% url 'hr:internship_list' %}" title="Stages"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name == 'internship_list' %}active{% endif %}">
+          <i class="bi bi-mortarboard-fill"></i><span>Stages</span>
+        </a>
+        {% endif %}
+        {% if 'hr:onboarding_list' not in disabled_features %}
+        <a href="{% url 'hr:onboarding_list' %}" title="Intégration"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name in 'onboarding_list,onboarding_detail' %}active{% endif %}">
+          <i class="bi bi-signpost-split-fill"></i><span>Intégration</span>
+        </a>
+        {% endif %}
+        {% if 'hr:recruitment_list' not in disabled_features %}
+        <a href="{% url 'hr:recruitment_list' %}" title="Recrutement"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name == 'recruitment_list' %}active{% endif %}">
+          <i class="bi bi-person-plus-fill"></i><span>Recrutement</span>
+        </a>
+        {% endif %}
+        {% if 'hr:cartes_personnel' not in disabled_features %}
+        <a href="{% url 'hr:cartes_personnel' %}" title="Cartes du personnel"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name in 'cartes_personnel,carte_employe' %}active{% endif %}">
+          <i class="bi bi-credit-card-2-front-fill"></i><span>Cartes du Personnel</span>
+        </a>
+        {% endif %}
+        {% if 'hr:document_request_list' not in disabled_features %}
+        <a href="{% url 'hr:document_request_list' %}" title="Documents &amp; Attestations RH"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name == 'document_request_list' %}active{% endif %}">
+          <i class="bi bi-folder-fill"></i><span>Documents &amp; Attestations RH</span>
+        </a>
+        {% endif %}
+        {% if 'hr:rapport_mensuel_pointage' not in disabled_features %}
+        <a href="{% url 'hr:rapport_mensuel_pointage' %}" title="Rapport mensuel de pointage"
+           class="sb-link {% if request.resolver_match.app_name == 'hr' and request.resolver_match.url_name == 'rapport_mensuel_pointage' %}active{% endif %}">
+          <i class="bi bi-bar-chart-line-fill"></i><span>Rapport mensuel</span>
+        </a>
+        {% endif %}
+        {% if 'hr:export_excel' not in disabled_features %}
+        <a href="{% url 'hr:export_excel' %}" title="Exporter registre Excel"
+           class="sb-link">
+          <i class="bi bi-file-earmark-excel-fill"></i><span>Export Excel</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:demande_depense_list' not in disabled_features %}
+        <a href="{% url 'accounting:demande_depense_list' %}" title="Demandes de dépense"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'demande_depense_list,demande_depense_create,demande_depense_detail,demande_depense_pdf,demande_depense_valider,demande_depense_rejeter,demande_depense_decaisser,demande_depense_edit,demande_depense_delete' %}active{% endif %}">
+          <i class="bi bi-receipt-cutoff"></i><span>Demandes de dépense</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% endif %}{# fin bloc admin avec institut sélectionné #}
+
+    {% if user.role_name == 'ADMIN' or user.is_inst_admin or user.is_admin_direction or user.role_name == 'CONTROLEUR' %}
+    <div class="sb-divider"></div>
+    <!-- ── ADMINISTRATION ── -->
+    {% if 'administration' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group" data-group="administration" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-shield-lock" style="font-size:.65rem;flex-shrink:0;"></i><span>Direction Générale</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-administration">
+        <!-- Gestion instituts : Super Admin (tous les instituts) et rôles admin d'institut/direction/contrôle (leur institut) -->
+        {% if user.role_name == 'ADMIN' or user.role_name == 'INST_ADMIN' or user.role_name == 'ASSISTANTE_DG' or user.is_admin_direction or user.role_name == 'CONTROLEUR' %}
+        {% if 'academic_structure:institut_list' not in disabled_features %}
+        <a href="{% url 'academic_structure:institut_list' %}" title="Gestion des instituts"
+           class="sb-link {% if request.resolver_match.url_name == 'institut_list' or request.resolver_match.url_name == 'abonnement_list' %}active{% endif %}">
+          <i class="bi bi-buildings-fill"></i><span>{% if user.role_name != 'ADMIN' %}Mon Institut{% else %}Gestion des instituts{% endif %}</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        <!-- Super Admin uniquement : Configuration Institut -->
+        {% if user.role_name == 'ADMIN' %}
+        <a href="{% url 'academic_structure:institut_config' %}" title="Configuration établissement"
+           class="sb-link {% if request.resolver_match.url_name == 'institut_config' %}active{% endif %}">
+          <i class="bi bi-sliders"></i><span>Configuration Institut</span>
+        </a>
+        <a href="{% url 'accounts:platform_activation_rotate' %}" title="Code d'activation de la plateforme"
+           class="sb-link {% if request.resolver_match.url_name in 'platform_activation_rotate,platform_activation_forgot' %}active{% endif %}">
+          <i class="bi bi-shield-lock-fill"></i><span>Code d'activation</span>
+        </a>
+        {% endif %}
+        <!-- Administrateur d'institut : emails de notification de SON institut (sans rapport avec le code d'activation ci-dessus) -->
+        {% if user.is_inst_admin %}
+        <a href="{% url 'academic_structure:institut_email_config' %}" title="Emails de notification de mon institut"
+           class="sb-link {% if request.resolver_match.url_name == 'institut_email_config' %}active{% endif %}">
+          <i class="bi bi-envelope-gear-fill"></i><span>Emails de notification</span>
+        </a>
+        <a href="{% url 'academic_structure:institut_payment_config' %}" title="Paiement en ligne de mon institut"
+           class="sb-link {% if request.resolver_match.url_name == 'institut_payment_config' %}active{% endif %}">
+          <i class="bi bi-credit-card-2-front-fill"></i><span>Paiement en ligne</span>
+        </a>
+        {% endif %}
+        <!-- Super Admin + Administrateur d'institut / direction / contrôleur interne -->
+        {% if user.role_name == 'ADMIN' or user.is_inst_admin or user.is_admin_direction or user.role_name == 'CONTROLEUR' %}
+        {% if 'accounts:users_list' not in disabled_features %}
+        <a href="{% url 'accounts:users_list' %}" title="Utilisateurs"
+           class="sb-link {% if request.resolver_match.url_name == 'users_list' %}active{% endif %}">
+          <i class="bi bi-person-badge-fill"></i><span>Utilisateurs</span>
+        </a>
+        {% endif %}
+        {% if 'accounts:direction_list' not in disabled_features %}
+        <a href="{% url 'accounts:direction_list' %}" title="Directions"
+           class="sb-link {% if request.resolver_match.url_name in 'direction_list,direction_create,direction_edit,direction_delete,direction_assign' %}active{% endif %}">
+          <i class="bi bi-diagram-3-fill"></i><span>Directions</span>
+        </a>
+        {% endif %}
+        {% if 'accounts:unassigned_users' not in disabled_features %}
+        <a href="{% url 'accounts:unassigned_users' %}" title="Utilisateurs non affectés"
+           class="sb-link {% if request.resolver_match.url_name == 'unassigned_users' or request.resolver_match.url_name == 'assign_user_department' %}active{% endif %}">
+          <i class="bi bi-person-x-fill"></i><span>Non affectés</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if 'academic_structure:departments_manage' not in disabled_features %}
+        <a href="{% url 'academic_structure:departments_manage' %}" title="Départements"
+           class="sb-link {% if request.resolver_match.url_name == 'departments_manage' %}active{% endif %}">
+          <i class="bi bi-building-gear"></i><span>Gestion des départements</span>
+        </a>
+        {% endif %}
+        {% if not user.is_etudiant and not user.is_enseignant %}
+        {% if 'accounting:demande_depense_list' not in disabled_features %}
+        <a href="{% url 'accounting:demande_depense_list' %}" title="Demandes de dépense"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'demande_depense_list,demande_depense_create,demande_depense_detail,demande_depense_pdf,demande_depense_valider,demande_depense_rejeter,demande_depense_decaisser,demande_depense_edit,demande_depense_delete' %}active{% endif %}">
+          <i class="bi bi-receipt-cutoff"></i><span>Demandes de dépense</span>
+        </a>
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% elif user.role_name == 'CIAQ' %}
+    <div class="sb-divider"></div>
+    {% if 'administration' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group" data-group="administration" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-shield-lock" style="font-size:.65rem;flex-shrink:0;"></i><span>Direction Générale</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-administration">
+        {% if 'accounts:audit_log' not in disabled_features %}
+        <a href="{% url 'accounts:audit_log' %}" title="Journal d'audit"
+           class="sb-link {% if request.resolver_match.url_name in 'audit_log,audit_user_detail,audit_backup_list' %}active{% endif %}">
+          <i class="bi bi-shield-check"></i><span>Journal d'audit</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:demande_depense_list' not in disabled_features %}
+        <a href="{% url 'accounting:demande_depense_list' %}" title="Demandes de dépense"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'demande_depense_list,demande_depense_create,demande_depense_detail,demande_depense_pdf,demande_depense_valider,demande_depense_rejeter,demande_depense_decaisser,demande_depense_edit,demande_depense_delete' %}active{% endif %}">
+          <i class="bi bi-receipt-cutoff"></i><span>Demandes de dépense</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+    {% endif %}
+
+    <!-- ── DIRECTION COMMUNICATION ── -->
+    {% if user.is_admin or user.is_inst_admin %}{% if user.role_name != 'ADMIN' or active_faculty %}{% if user.role_name != 'TRESORIER_GENERAL' %}
+    <div class="sb-divider"></div>
+    {% if 'communication' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group" data-group="communication" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-megaphone" style="font-size:.65rem;flex-shrink:0;"></i><span>Direction Communication</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-communication">
+        {% if 'accounting:demande_depense_list' not in disabled_features %}
+        <a href="{% url 'accounting:demande_depense_list' %}" title="Demandes de dépense"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'demande_depense_list,demande_depense_create,demande_depense_detail,demande_depense_pdf,demande_depense_valider,demande_depense_rejeter,demande_depense_decaisser,demande_depense_edit,demande_depense_delete' %}active{% endif %}">
+          <i class="bi bi-receipt-cutoff"></i><span>Demandes de dépense</span>
+        </a>
+        {% endif %}
+        {% if user.is_communication or user.is_super_admin or user.is_inst_admin %}
+        <a href="{% url 'admissions:candidature_list' %}" title="Candidatures en ligne"
+           class="sb-link {% if request.resolver_match.app_name == 'admissions' and request.resolver_match.url_name in 'candidature_list,candidature_detail' %}active{% endif %}">
+          <i class="bi bi-inbox-fill"></i><span>Candidatures en ligne</span>
+        </a>
+        <a href="{% url 'admissions:candidat_accounts_list' %}" title="Comptes candidats"
+           class="sb-link {% if request.resolver_match.app_name == 'admissions' and request.resolver_match.url_name in 'candidat_accounts_list,candidat_account_edit,candidat_account_delete' %}active{% endif %}">
+          <i class="bi bi-people-fill"></i><span>Comptes candidats</span>
+        </a>
+        <a href="{% url 'admissions:department_admissions_dates_list' %}" title="Dates d'inscription"
+           class="sb-link {% if request.resolver_match.app_name == 'admissions' and request.resolver_match.url_name in 'department_admissions_dates_list,department_admissions_dates_edit' %}active{% endif %}">
+          <i class="bi bi-calendar-range-fill"></i><span>Dates d'inscription</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}{% endif %}{% endif %}
+
+    <!-- ── SERVICE A LA COMMUNAUTE ── -->
+    {% if user.is_admin or user.is_inst_admin %}{% if user.role_name != 'ADMIN' or active_faculty %}{% if user.role_name != 'TRESORIER_GENERAL' %}
+    <div class="sb-divider"></div>
+    {% if 'service_communaute' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group" data-group="service_communaute" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-people-fill" style="font-size:.65rem;flex-shrink:0;"></i><span>Service à la Communauté</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-service_communaute">
+        {% if 'community_service:list' not in disabled_features %}
+        <a href="{% url 'community_service:list' %}" title="Activités"
+           class="sb-link {% if request.resolver_match.app_name == 'community_service' and request.resolver_match.url_name in 'list,create,edit,delete' %}active{% endif %}">
+          <i class="bi bi-list-ul"></i><span>Activités</span>
+        </a>
+        {% endif %}
+        {% if 'community_service:report' not in disabled_features %}
+        <a href="{% url 'community_service:report' %}" title="Rapport d'activités"
+           class="sb-link {% if request.resolver_match.app_name == 'community_service' and request.resolver_match.url_name == 'report' %}active{% endif %}">
+          <i class="bi bi-file-earmark-bar-graph"></i><span>Rapport d'activités</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}{% endif %}{% endif %}
+
+    <!-- ── CELLULE ORIENTATION INSERTION PROFESSIONNELLE (COIP) ── -->
+    <!--     Responsable COIP / Personnel COIP + rôles de supervision globale ── -->
+    {% if user.is_admin or user.is_inst_admin %}{% if user.role_name != 'ADMIN' or active_faculty %}{% if user.role_name != 'TRESORIER_GENERAL' %}
+    <div class="sb-divider"></div>
+    {% if 'coip' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group" data-group="coip" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-compass-fill" style="font-size:.65rem;flex-shrink:0;"></i><span>COIP</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-coip">
+        {% if 'coip:index' not in disabled_features %}
+        <a href="{% url 'coip:index' %}" title="Tableau de bord"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name == 'index' %}active{% endif %}">
+          <i class="bi bi-speedometer2"></i><span>Tableau de bord</span>
+        </a>
+        {% endif %}
+        {% if 'coip:alumni_list' not in disabled_features %}
+        <a href="{% url 'coip:alumni_list' %}" title="Alumni"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name in 'alumni_list,alumni_create,alumni_detail,alumni_edit,alumni_delete' %}active{% endif %}">
+          <i class="bi bi-mortarboard-fill"></i><span>Alumni</span>
+        </a>
+        {% endif %}
+        {% if user.role_name != 'ASSISTANTE_COIP' %}
+        {% if 'coip:partner_list' not in disabled_features %}
+        <a href="{% url 'coip:partner_list' %}" title="Partenariats"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name in 'partner_list,partner_create,partner_detail,partner_edit,partner_delete,partnership_list,partnership_create,partnership_detail,partnership_edit,partnership_delete' %}active{% endif %}">
+          <i class="bi bi-building"></i><span>Partenariats</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if 'coip:offer_list' not in disabled_features %}
+        <a href="{% url 'coip:offer_list' %}" title="Stages"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name in 'offer_list,offer_create,offer_edit,offer_delete,internship_list,internship_create,internship_edit,internship_delete' %}active{% endif %}">
+          <i class="bi bi-briefcase-fill"></i><span>Stages</span>
+        </a>
+        {% endif %}
+        {% if 'coip:orientation_session_list' not in disabled_features %}
+        <a href="{% url 'coip:orientation_session_list' %}" title="Orientation"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name in 'orientation_session_list,orientation_session_create,orientation_session_edit,orientation_session_delete' %}active{% endif %}">
+          <i class="bi bi-compass"></i><span>Orientation</span>
+        </a>
+        {% endif %}
+        {% if 'coip:recommendation_list' not in disabled_features %}
+        <a href="{% url 'coip:recommendation_list' %}" title="Recommandations"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name in 'recommendation_list,recommendation_detail,recommendation_pdf_generate' %}active{% endif %}">
+          <i class="bi bi-envelope-paper-fill"></i><span>Recommandations</span>
+        </a>
+        {% endif %}
+        {% if 'coip:opportunity_list' not in disabled_features %}
+        <a href="{% url 'coip:opportunity_list' %}" title="Opportunités"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name in 'opportunity_list,opportunity_create,opportunity_detail,opportunity_edit,opportunity_delete,job_application_update_status' %}active{% endif %}">
+          <i class="bi bi-megaphone-fill"></i><span>Opportunités</span>
+        </a>
+        {% endif %}
+        {% if 'coip:activity_list' not in disabled_features %}
+        <a href="{% url 'coip:activity_list' %}" title="Activités COIP"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name in 'activity_list,activity_create,activity_detail,activity_edit,activity_delete,activity_participant_toggle_present,activity_participant_remove' %}active{% endif %}">
+          <i class="bi bi-calendar-event-fill"></i><span>Activités COIP</span>
+        </a>
+        {% endif %}
+        {% if 'coip:visit_list' not in disabled_features %}
+        <a href="{% url 'coip:visit_list' %}" title="Sorties pédagogiques"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name in 'visit_list,visit_create,visit_detail,visit_edit,visit_delete,visit_participant_toggle,visit_participant_remove' %}active{% endif %}">
+          <i class="bi bi-bus-front-fill"></i><span>Sorties pédagogiques</span>
+        </a>
+        {% endif %}
+        {% if user.role_name != 'ASSISTANTE_COIP' %}
+        {% if 'coip:report_list' not in disabled_features %}
+        <a href="{% url 'coip:report_list' %}" title="Rapports"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name == 'report_list' %}active{% endif %}">
+          <i class="bi bi-bar-chart-fill"></i><span>Rapports</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if 'coip:archive_list' not in disabled_features %}
+        <a href="{% url 'coip:archive_list' %}" title="Archives"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name in 'archive_list,archive_create,archive_detail,archive_edit,archive_delete' %}active{% endif %}">
+          <i class="bi bi-archive-fill"></i><span>Archives</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}{% endif %}{% endif %}
+
+    <!-- ── DIRECTION SYSTEMES D'INFORMATION ── -->
+    {% if user.is_admin or user.is_inst_admin %}{% if user.role_name != 'ADMIN' or active_faculty %}{% if user.role_name != 'TRESORIER_GENERAL' %}
+    <div class="sb-divider"></div>
+    {% if 'dsi' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group {% if request.resolver_match.url_name == 'supervision_generale' %}sb-open{% endif %}" data-group="dsi" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-hdd-network" style="font-size:.65rem;flex-shrink:0;"></i><span>Direction des SI</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-dsi">
+        {% if 'accounts:supervision_generale' not in disabled_features %}
+        <a href="{% url 'accounts:supervision_generale' %}" title="Supervision générale"
+           class="sb-link {% if request.resolver_match.url_name == 'supervision_generale' %}active{% endif %}">
+          <i class="bi bi-shield-shaded"></i><span>Supervision générale</span>
+        </a>
+        {% endif %}
+        {% if 'accounts:audit_log' not in disabled_features %}
+        <a href="{% url 'accounts:audit_log' %}" title="Journal d'audit"
+           class="sb-link {% if request.resolver_match.url_name in 'audit_log,audit_user_detail,audit_backup_list' %}active{% endif %}">
+          <i class="bi bi-shield-check"></i><span>Journal d'audit</span>
+        </a>
+        {% endif %}
+        {% if 'accounts:audit_rapport' not in disabled_features %}
+        <a href="{% url 'accounts:audit_rapport' %}" title="Rapport d'audit général"
+           class="sb-link {% if request.resolver_match.url_name == 'audit_rapport' %}active{% endif %}">
+          <i class="bi bi-file-earmark-bar-graph-fill"></i><span>Rapport d'audit</span>
+        </a>
+        {% endif %}
+        {% if 'accounting:demande_depense_list' not in disabled_features %}
+        <a href="{% url 'accounting:demande_depense_list' %}" title="Demandes de dépense"
+           class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'demande_depense_list,demande_depense_create,demande_depense_detail,demande_depense_pdf,demande_depense_valider,demande_depense_rejeter,demande_depense_decaisser,demande_depense_edit,demande_depense_delete' %}active{% endif %}">
+          <i class="bi bi-receipt-cutoff"></i><span>Demandes de dépense</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}{% endif %}{% endif %}
+
+    <!-- ── API DE CONSOMMATION (Administrateurs + chefs de département ; -->
+    <!--     traitement des demandes réservé à INST_ADMIN / CONTROLEUR)   ── -->
+    {% if user.is_admin or user.is_responsable %}{% if user.role_name != 'ADMIN' or active_faculty %}
+    {% if 'api_gateway' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group" data-group="api_gateway" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-hdd-network-fill" style="font-size:.65rem;flex-shrink:0;"></i><span>API de Consommation</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-api_gateway">
+        {% if 'api_gateway:catalog_list' not in disabled_features %}
+        <a href="{% url 'api_gateway:catalog_list' %}" title="Catalogue des API"
+           class="sb-link {% if request.resolver_match.app_name == 'api_gateway' and request.resolver_match.url_name in 'catalog_list,grant_create,grant_created' %}active{% endif %}">
+          <i class="bi bi-collection"></i><span>Catalogue des API</span>
+        </a>
+        {% endif %}
+        {% if user.role_name == 'INST_ADMIN' or user.role_name == 'CONTROLEUR' or user.role_name == 'ADMIN' %}
+        {% if 'api_gateway:access_requests_list' not in disabled_features %}
+        <a href="{% url 'api_gateway:access_requests_list' %}" title="Demandes d'accès"
+           class="sb-link {% if request.resolver_match.app_name == 'api_gateway' and request.resolver_match.url_name in 'access_requests_list,access_request_process' %}active{% endif %}">
+          <i class="bi bi-inbox"></i><span>Demandes d'accès</span>
+        </a>
+        {% endif %}
+        {% if 'api_gateway:grants_list' not in disabled_features %}
+        <a href="{% url 'api_gateway:grants_list' %}" title="Accès accordés"
+           class="sb-link {% if request.resolver_match.app_name == 'api_gateway' and request.resolver_match.url_name in 'grants_list,grant_revoke' %}active{% endif %}">
+          <i class="bi bi-key"></i><span>Accès accordés</span>
+        </a>
+        {% endif %}
+        {% else %}
+        {% if 'api_gateway:my_access_requests' not in disabled_features %}
+        <a href="{% url 'api_gateway:my_access_requests' %}" title="Mes demandes d'accès"
+           class="sb-link {% if request.resolver_match.app_name == 'api_gateway' and request.resolver_match.url_name in 'my_access_requests,my_access_request_create' %}active{% endif %}">
+          <i class="bi bi-clock-history"></i><span>Mes demandes d'accès</span>
+        </a>
+        {% endif %}
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}{% endif %}
+
+    <div class="sb-divider"></div>
+
+    <!-- ── NOTIFICATIONS ── -->
+    {% if 'notifications' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group" data-group="notifications" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-bell" style="font-size:.65rem;flex-shrink:0;"></i><span>Notifications</span>
+          {% if unread_notifications_count > 0 %}
+          <span class="badge" style="background:var(--accent);color:var(--navy);font-size:.6rem;border-radius:10px;padding:1px 5px;margin-left:2px;">{{ unread_notifications_count }}</span>
+          {% endif %}
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-notifications">
+        {% if 'notifications:list' not in disabled_features %}
+        <a href="{% url 'notifications:list' %}" title="Notifications"
+           class="sb-link {% if request.resolver_match.url_name == 'list' and request.resolver_match.app_name == 'notifications' %}active{% endif %}">
+          <i class="bi bi-bell-fill"></i>
+          <span>Notifications
+            {% if unread_notifications_count > 0 %}
+            <span class="badge ms-1" style="background:var(--accent);color:var(--navy);font-size:.65rem;border-radius:10px;padding:2px 6px;">{{ unread_notifications_count }}</span>
+            {% endif %}
+          </span>
+        </a>
+        {% endif %}
+        {% if user.role_name == 'CONTROLEUR' or user.role_name == 'RESPONSABLE' or user.role_name == 'ASSISTANTE' or user.is_inst_admin or user.is_admin_direction %}
+        {% if 'notifications:notify_absence' not in disabled_features %}
+        <a href="{% url 'notifications:notify_absence' %}" title="Notifier absence / retard"
+           class="sb-link {% if request.resolver_match.url_name == 'notify_absence' %}active{% endif %}">
+          <i class="bi bi-megaphone-fill"></i><span>Absence / Retard enseignant</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if 'api_gateway:my_access_requests' not in disabled_features %}
+        <a href="{% url 'api_gateway:my_access_requests' %}" title="Demander un accès API"
+           class="sb-link {% if request.resolver_match.app_name == 'api_gateway' and request.resolver_match.url_name in 'my_access_requests,my_access_request_create' %}active{% endif %}">
+          <i class="bi bi-hdd-network"></i><span>Demander un accès API</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── ESPACE PERSONNEL COIP (étudiants et enseignants) ── -->
+    {% if user.is_etudiant or user.role_name == 'ENSEIGNANT' %}
+    {% if 'coip' not in disabled_tabs %}
+    <div class="sb-group">
+      <button class="sb-section-label sb-toggle-group" data-group="coip_perso" type="button">
+        <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+          <i class="bi bi-compass-fill" style="font-size:.65rem;flex-shrink:0;"></i><span>Orientation &amp; Insertion Pro.</span>
+        </span>
+        <i class="bi bi-chevron-down sb-chevron"></i>
+      </button>
+      <div class="sb-group-body" id="sb-body-coip_perso">
+        {% if user.is_etudiant %}
+        {% if 'coip:my_recommendations' not in disabled_features %}
+        <a href="{% url 'coip:my_recommendations' %}" title="Mes recommandations"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name == 'my_recommendations' %}active{% endif %}">
+          <i class="bi bi-envelope-paper"></i><span>Mes recommandations</span>
+        </a>
+        {% endif %}
+        {% if 'coip:my_orientation_sessions' not in disabled_features %}
+        <a href="{% url 'coip:my_orientation_sessions' %}" title="Mes séances d'orientation"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name == 'my_orientation_sessions' %}active{% endif %}">
+          <i class="bi bi-compass"></i><span>Mes séances d'orientation</span>
+        </a>
+        {% endif %}
+        {% if 'coip:opportunities_browse' not in disabled_features %}
+        <a href="{% url 'coip:opportunities_browse' %}" title="Opportunités"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name in 'opportunities_browse,opportunity_apply,my_applications' %}active{% endif %}">
+          <i class="bi bi-megaphone"></i><span>Opportunités</span>
+        </a>
+        {% endif %}
+        {% endif %}
+        {% if 'coip:activities_browse' not in disabled_features %}
+        <a href="{% url 'coip:activities_browse' %}" title="Activités COIP"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name in 'activities_browse,activity_register,activity_unregister' %}active{% endif %}">
+          <i class="bi bi-calendar-event"></i><span>Activités COIP</span>
+        </a>
+        {% endif %}
+        {% if 'coip:visits_browse' not in disabled_features %}
+        <a href="{% url 'coip:visits_browse' %}" title="Sorties pédagogiques"
+           class="sb-link {% if request.resolver_match.app_name == 'coip' and request.resolver_match.url_name in 'visits_browse,visit_register,visit_unregister' %}active{% endif %}">
+          <i class="bi bi-bus-front"></i><span>Sorties pédagogiques</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% endif %}
+
+  </div>
+
+  <!-- Footer utilisateur : déplacé dans le dropdown topbar -->
+
+  <!-- ── Portail d'admission : candidatures / preuves de paiement ── -->
+  {% if user.is_responsable %}
+  <a href="{% url 'admissions:candidature_list' %}" title="Candidatures en ligne"
+     class="sb-link {% if request.resolver_match.app_name == 'admissions' and request.resolver_match.url_name in 'candidature_list,candidature_detail' %}active{% endif %}">
+    <i class="bi bi-inbox-fill"></i><span>Candidatures en ligne</span>
+  </a>
+  <a href="{% url 'admissions:mes_filieres_list' %}" title="Mes filières (portail)"
+     class="sb-link {% if request.resolver_match.app_name == 'admissions' and request.resolver_match.url_name in 'mes_filieres_list,filiere_content_edit' %}active{% endif %}">
+    <i class="bi bi-mortarboard-fill"></i><span>Mes filières (portail)</span>
+  </a>
+  <a href="{% url 'admissions:candidat_accounts_list' %}" title="Comptes candidats"
+     class="sb-link {% if request.resolver_match.app_name == 'admissions' and request.resolver_match.url_name in 'candidat_accounts_list,candidat_account_edit,candidat_account_delete' %}active{% endif %}">
+    <i class="bi bi-people-fill"></i><span>Comptes candidats</span>
+  </a>
+  <a href="{% url 'admissions:department_admissions_dates_list' %}" title="Dates d'inscription"
+     class="sb-link {% if request.resolver_match.app_name == 'admissions' and request.resolver_match.url_name in 'department_admissions_dates_list,department_admissions_dates_edit' %}active{% endif %}">
+    <i class="bi bi-calendar-range-fill"></i><span>Dates d'inscription</span>
+  </a>
+  {% endif %}
+  {% if user.is_caissier or user.is_tresorier %}
+  <a href="{% url 'accounting:payment_proof_list' %}" title="Preuves de paiement"
+     class="sb-link {% if request.resolver_match.app_name == 'accounting' and request.resolver_match.url_name in 'payment_proof_list,payment_proof_detail' %}active{% endif %}">
+    <i class="bi bi-receipt"></i><span>Preuves de paiement</span>
+  </a>
+  {% endif %}
+
+  <!-- ── RAPPORTS (toujours en bas) ── -->
+  {% if user.role_name == 'ADMIN' or user.is_inst_admin or user.is_admin_direction or user.role_name == 'CONTROLEUR' or user.is_responsable or user.role_name == 'CIAQ' %}
+  <div class="sb-divider"></div>
+  {% if 'rapports' not in disabled_tabs %}
+  <div class="sb-group">
+    <button class="sb-section-label sb-toggle-group" data-group="rapports" type="button">
+      <span style="display:flex;align-items:center;gap:5px;flex:1;min-width:0;">
+        <i class="bi bi-bar-chart" style="font-size:.65rem;flex-shrink:0;"></i><span>Rapports</span>
+      </span>
+      <i class="bi bi-chevron-down sb-chevron"></i>
+    </button>
+    <div class="sb-group-body" id="sb-body-rapports">
+      {% if 'reports:index' not in disabled_features %}
+      <a href="{% url 'reports:index' %}" title="Rapports"
+         class="sb-link {% if request.resolver_match.app_name == 'reports' %}active{% endif %}">
+        <i class="bi bi-bar-chart-line-fill"></i><span>Rapports &amp; Exports</span>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+
+</nav>
+
+<!-- ══ MAIN ══ -->
+<div id="main">
+
+  <!-- Topbar -->
+  <div id="topbar">
+    <button id="sb-toggle" onclick="toggleSidebar()" title="Réduire / Agrandir le menu">
+      <i class="bi bi-list"></i>
+    </button>
+
+    <!-- Bouton retour -->
+    <button onclick="history.back()" title="Retour à la page précédente" id="btn-back"
+            style="display:flex;align-items:center;gap:5px;padding:5px 12px;cursor:pointer;
+                   border:1.5px solid #cbd5e0;border-radius:8px;background:#fff;
+                   color:#475569;font-size:.78rem;font-weight:600;margin-right:6px;
+                   transition:all .15s;white-space:nowrap;"
+            onmouseover="this.style.background='#f1f5f9';this.style.borderColor='#94a3b8';this.style.color='#1e3a5f';"
+            onmouseout="this.style.background='#fff';this.style.borderColor='#cbd5e0';this.style.color='#475569';">
+      <i class="bi bi-arrow-left-short" style="font-size:1.1rem;"></i>
+      <span>Retour</span>
+    </button>
+
+    <nav class="topbar-breadcrumb" aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+          <a href="{% url 'dashboard:index' %}"><i class="bi bi-house me-1"></i>Accueil</a>
+        </li>
+        {% block breadcrumb %}{% endblock %}
+      </ol>
+    </nav>
+
+    <div class="topbar-right">
+      <!-- ── Sélecteur d'institut (Contrôleur Interne multi-instituts) ───────── -->
+      {% if user.role_name == 'CONTROLEUR' and controlled_instituts|length > 1 %}
+      <div class="dropdown me-2" id="institut-switcher">
+        <button class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"
+          style="display:flex;align-items:center;gap:7px;padding:5px 12px;border-radius:8px;border:1.5px solid var(--navy);background:#eff6ff;cursor:pointer;font-size:.78rem;font-weight:600;color:var(--navy);">
+          <i class="bi bi-buildings-fill" style="font-size:.85rem;"></i>
+          <span>{% if institut_config %}{{ institut_config.nom|truncatechars:20 }}{% else %}Choisir un institut{% endif %}</span>
+          <i class="bi bi-chevron-down" style="font-size:.6rem;"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:260px;border-radius:12px;border:1px solid var(--border);padding:6px;">
+          <li style="padding:6px 10px 4px;">
+            <div style="font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#94a3b8;">Institut contrôlé</div>
+          </li>
+          {% for inst in controlled_instituts %}
+          <li>
+            <form method="post" action="{% url 'accounts:choose_institut' %}" style="margin:0;">
+              {% csrf_token %}
+              <input type="hidden" name="institut_id" value="{{ inst.pk }}">
+              <input type="hidden" name="next" value="{{ request.path }}">
+              <button type="submit" class="dropdown-item" style="border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:9px;{% if institut_config.pk == inst.pk %}background:#eff6ff;color:var(--navy);font-weight:700;{% endif %}">
+                <div style="width:28px;height:28px;border-radius:7px;background:{% if institut_config.pk == inst.pk %}var(--navy){% else %}#f1f5f9{% endif %};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <i class="bi bi-building" style="font-size:.7rem;color:{% if institut_config.pk == inst.pk %}#fff{% else %}#64748b{% endif %};"></i>
+                </div>
+                <div style="font-size:.82rem;font-weight:600;">{{ inst.nom|truncatechars:24 }}</div>
+                {% if institut_config.pk == inst.pk %}
+                <i class="bi bi-check2 ms-auto" style="color:var(--navy);"></i>
+                {% endif %}
+              </button>
+            </form>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <!-- ── Sélecteur de département (Admin / Enseignant / Assistante) ─────── -->
+      {% if user.is_inst_admin or user.role_name == 'CIAQ' or user.role_name == 'ENSEIGNANT' or user.role_name == 'ASSISTANTE' or user.role_name == 'RESPONSABLE' or user.role_name == 'CONTROLEUR' or user.is_comptable or user.role_name == 'ADMIN' and active_faculty %}
+      <div class="dropdown me-2" id="dept-switcher">
+        <button class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"
+          style="display:flex;align-items:center;gap:7px;padding:5px 12px;border-radius:8px;border:1.5px solid {% if active_department %}var(--navy){% else %}#fbbf24{% endif %};background:{% if active_department %}#eff6ff{% else %}#fffbeb{% endif %};cursor:pointer;font-size:.78rem;font-weight:600;color:{% if active_department %}var(--navy){% else %}#92400e{% endif %};">
+          <i class="bi bi-building" style="font-size:.85rem;"></i>
+          <span id="dept-label">{% if active_department %}{{ active_department.name|truncatechars:20 }}{% else %}Choisir un département{% endif %}</span>
+          <i class="bi bi-chevron-down" style="font-size:.6rem;"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:260px;border-radius:12px;border:1px solid var(--border);padding:6px;">
+          <li style="padding:6px 10px 4px;">
+            <div style="font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#94a3b8;">Département actif</div>
+          </li>
+          {% for dept in all_departments %}
+          <li>
+            <form method="post" action="{% url 'academic_structure:select_department' %}" style="margin:0;">
+              {% csrf_token %}
+              <input type="hidden" name="department_id" value="{{ dept.pk }}">
+              <input type="hidden" name="next" value="{{ request.path }}">
+              <button type="submit" class="dropdown-item" style="border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:9px;{% if active_department.pk == dept.pk %}background:#eff6ff;color:var(--navy);font-weight:700;{% endif %}">
+                <div style="width:28px;height:28px;border-radius:7px;background:{% if active_department.pk == dept.pk %}var(--navy){% else %}#f1f5f9{% endif %};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <i class="bi bi-building" style="font-size:.7rem;color:{% if active_department.pk == dept.pk %}#fff{% else %}#64748b{% endif %};"></i>
+                </div>
+                <div>
+                  <div style="font-size:.82rem;font-weight:600;">{{ dept.name|truncatechars:22 }}</div>
+                  <div style="font-size:.7rem;color:#94a3b8;">{{ dept.code }}</div>
+                </div>
+                {% if active_department.pk == dept.pk %}
+                <i class="bi bi-check2 ms-auto" style="color:var(--navy);"></i>
+                {% endif %}
+              </button>
+            </form>
+          </li>
+          {% empty %}
+          <li><span class="dropdown-item-text" style="font-size:.8rem;color:#94a3b8;padding:8px 12px;">Aucun département</span></li>
+          {% endfor %}
+          <li><hr class="dropdown-divider my-1"></li>
+          {% if user.is_admin or user.is_inst_admin %}
+          <li>
+            <a class="dropdown-item" href="{% url 'academic_structure:departments_manage' %}" style="border-radius:8px;font-size:.8rem;display:flex;align-items:center;gap:8px;padding:7px 12px;color:#475569;">
+              <i class="bi bi-gear" style="color:#7c3aed;"></i>Gérer les départements
+            </a>
+          </li>
+          {% endif %}
+          {% if active_department %}
+          <li>
+            <form method="post" action="{% url 'academic_structure:select_department' %}" style="margin:0;">
+              {% csrf_token %}
+              <input type="hidden" name="department_id" value="">
+              <button type="submit" class="dropdown-item" style="border-radius:8px;font-size:.8rem;display:flex;align-items:center;gap:8px;padding:7px 12px;color:#dc2626;">
+                <i class="bi bi-x-circle"></i>Désélectionner
+              </button>
+            </form>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <span class="topbar-date">
+        <i class="bi bi-calendar3 me-1"></i>{% now "l j F Y" %}
+      </span>
+      {% if institut_config %}
+      <div style="display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:8px;background:#f8fafc;border:1px solid #e2e8f0;max-width:200px;">
+        {% if institut_config.logo %}
+        <img src="{{ institut_config.logo.url }}" alt="{{ institut_config.sigle|default:'Logo' }}"
+             style="width:24px;height:24px;object-fit:contain;border-radius:4px;flex-shrink:0;">
+        {% else %}
+        <div style="width:24px;height:24px;border-radius:4px;background:var(--navy);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-building-fill" style="font-size:.65rem;color:#fff;"></i>
+        </div>
+        {% endif %}
+        <span style="font-size:.72rem;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{{ institut_config.nom }}">
+          {{ institut_config.sigle|default:institut_config.nom|truncatechars:18 }}
+        </span>
+      </div>
+      {% endif %}
+      <!-- ── Dropdown utilisateur ── -->
+      <div class="dropdown">
+        <button class="topbar-user border-0 bg-transparent text-decoration-none dropdown-toggle"
+                data-bs-toggle="dropdown" aria-expanded="false" id="userDropdown"
+                style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 8px;border-radius:10px;transition:background .15s;"
+                onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">
+          <div class="tu-avatar">{{ user.get_full_name|default:user.username|slice:":1"|upper }}</div>
+          <span class="tu-name">{{ user.get_full_name|default:user.username }}</span>
+          <i class="bi bi-chevron-down ms-1" style="font-size:.65rem;color:#94a3b8;"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="userDropdown"
+            style="min-width:230px;border-radius:12px;border:1px solid #e2e8f0;padding:8px;margin-top:6px;">
+          <!-- Infos utilisateur -->
+          <li>
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;background:#f8fafc;margin-bottom:4px;">
+              <div style="width:38px;height:38px;border-radius:10px;background:var(--navy);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;color:#fff;flex-shrink:0;">
+                {{ user.get_full_name|default:user.username|slice:":1"|upper }}
+              </div>
+              <div style="min-width:0;">
+                <div style="font-weight:700;font-size:.85rem;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                  {{ user.get_full_name|default:user.username }}
+                </div>
+                <div style="font-size:.75rem;color:#64748b;">{{ user.role }}</div>
+              </div>
+            </div>
+          </li>
+          <li><hr class="dropdown-divider" style="margin:4px 0;border-color:#f1f5f9;"></li>
+          <li>
+            <a href="{% url 'accounts:profile' %}" class="dropdown-item" style="border-radius:8px;font-size:.82rem;display:flex;align-items:center;gap:9px;padding:8px 12px;color:#475569;">
+              <i class="bi bi-person-fill" style="color:var(--navy);font-size:.88rem;"></i>Mon profil
+            </a>
+          </li>
+          <li>
+            <a href="{% url 'accounts:password_change' %}" class="dropdown-item" style="border-radius:8px;font-size:.82rem;display:flex;align-items:center;gap:9px;padding:8px 12px;color:#475569;">
+              <i class="bi bi-key-fill" style="color:#7c3aed;font-size:.88rem;"></i>Changer mot de passe
+            </a>
+          </li>
+          <li><hr class="dropdown-divider" style="margin:4px 0;border-color:#f1f5f9;"></li>
+          <li>
+            <form method="post" action="{% url 'accounts:logout' %}" style="margin:0;">
+              {% csrf_token %}
+              <button type="submit" class="dropdown-item" style="border-radius:8px;font-size:.82rem;display:flex;align-items:center;gap:9px;padding:8px 12px;color:#dc2626;width:100%;border:none;background:none;cursor:pointer;">
+                <i class="bi bi-box-arrow-right" style="font-size:.88rem;"></i>Déconnexion
+              </button>
+            </form>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Bannière département manquant ──────────────────────────────────────── -->
+  {% if user.is_authenticated and not user.is_candidat and not active_department and not user.role_name == 'ADMIN' and user.role_name != 'CONTROLEUR' and not user.is_comptable or user.is_authenticated and not active_department and user.role_name == 'ADMIN' and active_faculty %}
+  {% with current_url=request.resolver_match.url_name %}
+  {% if current_url != 'select_department' and current_url != 'departments_manage' and current_url != 'login' and current_url != 'index' and request.resolver_match.app_name != 'accounting' %}
+  <div id="dept-banner" style="background:linear-gradient(90deg,#fffbeb,#fef3c7);border-bottom:2px solid #fbbf24;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:34px;height:34px;border-radius:8px;background:#fde68a;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-exclamation-triangle-fill" style="color:#d97706;font-size:.95rem;"></i>
+      </div>
+      <div>
+        <div style="font-weight:700;font-size:.86rem;color:#92400e;">
+          {% if user.role_name == 'ADMIN' or user.is_inst_admin or user.is_admin_direction or user.role_name == 'CIAQ' or user.role_name == 'CONTROLEUR' or user.role_name == 'ENSEIGNANT' or user.role_name == 'ASSISTANTE' %}
+            Aucun département sélectionné
+          {% else %}Votre compte n'est pas associé à un département{% endif %}
+        </div>
+        <div style="font-size:.78rem;color:#b45309;">
+          {% if user.role_name == 'ADMIN' or user.is_inst_admin or user.is_admin_direction or user.role_name == 'CIAQ' or user.role_name == 'CONTROLEUR' or user.role_name == 'ENSEIGNANT' or user.role_name == 'ASSISTANTE' %}
+            Sélectionnez un département pour voir les informations qui vous concernent.
+          {% else %}
+            Contactez l'administrateur pour être associé à un département.
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% if user.role_name == 'ADMIN' or user.is_inst_admin or user.is_admin_direction or user.role_name == 'CIAQ' or user.role_name == 'CONTROLEUR' or user.role_name == 'ENSEIGNANT' or user.role_name == 'ASSISTANTE' %}
+    <a href="{% url 'academic_structure:select_department' %}?next={{ request.path }}"
+       style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;background:var(--navy);color:#fff;border-radius:8px;font-size:.8rem;font-weight:700;text-decoration:none;white-space:nowrap;">
+      <i class="bi bi-building"></i>Sélectionner un département
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endwith %}
+  {% endif %}
+
+  <!-- Bannière mode visite institut (Super Admin) -->
+  {% if user.role_name == 'ADMIN' and active_faculty %}
+  <div style="background:linear-gradient(90deg,#00173B 0%,#1e3a5f 100%);color:#fff;padding:10px 24px;display:flex;align-items:center;gap:12px;font-size:.83rem;">
+    <i class="bi bi-eye-fill" style="font-size:1rem;color:#D4AF37;flex-shrink:0;"></i>
+    <span>Vous consultez l'interface de <strong>{{ active_faculty.institut_config.nom|default:active_faculty.name }}</strong></span>
+    <span style="flex:1;"></span>
+    <form method="post" action="{% url 'dashboard:select_institute' %}" style="margin:0;">
+      {% csrf_token %}
+      <input type="hidden" name="faculty_id" value="">
+      <input type="hidden" name="next" value="{% url 'dashboard:index' %}">
+      <button type="submit" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;padding:4px 14px;font-size:.78rem;cursor:pointer;display:flex;align-items:center;gap:6px;">
+        <i class="bi bi-box-arrow-left"></i> Quitter cet institut
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- Contenu -->
+  <div class="page-content">
+
+    {% if messages %}
+    <!-- Toast container (messages standards : succès, info, avertissements, erreurs métier) -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index:9999;">
+      {% for msg in messages %}
+      {% if not 'Accès refusé' in msg.message and not 'Accès réservé' in msg.message and not 'Accès non autorisé' in msg.message and not 'existe déjà' in msg.message %}
+      <div class="toast align-items-center border-0 show mb-2"
+           role="alert"
+           data-bs-autohide="true"
+           data-bs-delay="4000"
+           style="min-width:320px;max-width:420px;border-radius:12px;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.18);">
+        <div class="d-flex align-items-center gap-3 px-3 py-3"
+             style="background:{% if msg.tags == 'success' %}#1a8c3e{% elif msg.tags == 'error' or msg.tags == 'danger' %}#c0392b{% elif msg.tags == 'warning' %}#b45309{% else %}#1d4ed8{% endif %};color:#fff;">
+          <i class="bi bi-{% if msg.tags == 'success' %}check-circle-fill{% elif msg.tags == 'error' or msg.tags == 'danger' %}x-circle-fill{% elif msg.tags == 'warning' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %}"
+             style="font-size:1.3rem;flex-shrink:0;"></i>
+          <span style="font-size:.9rem;font-weight:600;flex:1;">{{ msg }}</span>
+          <button type="button" class="btn-close btn-close-white btn-sm"
+                  data-bs-dismiss="toast" aria-label="Fermer"></button>
+        </div>
+        <div style="height:3px;background:{% if msg.tags == 'success' %}#16a34a{% elif msg.tags == 'error' or msg.tags == 'danger' %}#dc2626{% elif msg.tags == 'warning' %}#d97706{% else %}#3b82f6{% endif %};animation:toast-progress 4s linear forwards;"></div>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+    <style>
+    @keyframes toast-progress { from { width:100%; } to { width:0%; } }
+    </style>
+
+    <!-- Popup modale : accès non autorisé (bloquante, remplace le toast pour ces messages) -->
+    {% for msg in messages %}
+    {% if 'Accès refusé' in msg.message or 'Accès réservé' in msg.message or 'Accès non autorisé' in msg.message %}
+    <div class="modal fade access-denied-modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:14px;overflow:hidden;border:none;">
+          <div class="modal-header" style="background:#c0392b;color:#fff;border:none;">
+            <h5 class="modal-title" style="font-size:1.05rem;"><i class="bi bi-shield-lock-fill me-2"></i>Accès non autorisé</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body" style="padding:24px;">
+            <p style="font-size:.95rem;font-weight:600;color:#1e293b;margin-bottom:10px;">{{ msg }}</p>
+            <p style="font-size:.87rem;color:#64748b;margin-bottom:0;">
+              Vous n'êtes pas autorisé(e) à accéder à cette fonctionnalité. Veuillez contacter votre administrateur pour plus d'informations.
+            </p>
+          </div>
+          <div class="modal-footer" style="border:none;padding:14px 24px 20px;">
+            <button type="button" class="btn btn-sm" style="background:var(--navy,#1e3a5f);color:#fff;padding:8px 20px;" data-bs-dismiss="modal">J'ai compris</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    <!-- Popup modale : compte déjà existant (informatif, pas une erreur) -->
+    {% for msg in messages %}
+    {% if 'existe déjà' in msg.message %}
+    <div class="modal fade account-exists-modal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:14px;overflow:hidden;border:none;">
+          <div class="modal-header" style="background:#1d4ed8;color:#fff;border:none;">
+            <h5 class="modal-title" style="font-size:1.05rem;"><i class="bi bi-person-check-fill me-2"></i>Compte déjà existant</h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+          </div>
+          <div class="modal-body" style="padding:24px;">
+            <p style="font-size:.95rem;font-weight:600;color:#1e293b;margin-bottom:10px;">{{ msg }}</p>
+            <p style="font-size:.87rem;color:#64748b;margin-bottom:0;">
+              Utilisez une autre adresse email, ou modifiez directement le compte existant depuis la liste.
+            </p>
+          </div>
+          <div class="modal-footer" style="border:none;padding:14px 24px 20px;">
+            <button type="button" class="btn btn-sm" style="background:var(--navy,#1e3a5f);color:#fff;padding:8px 20px;" data-bs-dismiss="modal">J'ai compris</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('.access-denied-modal, .account-exists-modal').forEach(function (el) {
+        new bootstrap.Modal(el).show();
+      });
+    });
+    </script>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </div>
+
+  <footer id="main-footer">
+    &copy; {% now "Y" %} Plateforme de Gestion Académique &nbsp;|&nbsp;
+    Design by <strong style="color:#475569;">Dr Latyr NDIAYE</strong> — Spécialiste : Télécommunications
+    <div style="color:#94a3b8;font-size:.7rem;margin-top:2px;">ERP-RYTAL, App-GEST V1.0</div>
+  </footer>
+
+</div><!-- /#main -->
+
+{% else %}
+{% block auth_content %}{% endblock %}
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+/* ── DataTables : config globale ─────────────────────────────────────────
+   - Supprime les popups d'alerte (TN/18 colspan, etc.)
+   - Surcharge les defaults : langue FR, order off sur la dernière colonne
+   - IMPORTANT : ce bloc doit s'exécuter AVANT {% templatetag openblock %} block extra_js {% templatetag closeblock %},
+     car jQuery déclenche les handlers $(document).ready() dans leur ordre
+     d'enregistrement. S'il était placé après, les .DataTable() des pages
+     s'initialiseraient avant que errMode soit passé à 'none', et le popup
+     d'alerte s'afficherait quand même.
+*/
+$(function () {
+  $.fn.dataTable.ext.errMode = 'none';          // plus de popup alert
+  $.extend(true, $.fn.dataTable.defaults, {
+    language: {
+      url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json',
+      emptyTable: '<span style="color:#94a3b8;"><i class="bi bi-inbox me-1"></i>Aucune donnée disponible</span>',
+      zeroRecords: '<span style="color:#94a3b8;"><i class="bi bi-search me-1"></i>Aucun résultat trouvé</span>',
+    },
+    columnDefs: [{ targets: -1, orderable: false, searchable: false }],
+    pageLength: 25,
+    dom: "<'row mb-2'<'col-sm-6'l><'col-sm-6 d-flex justify-content-end'f>>" +
+         "<'row'<'col-12'tr>>" +
+         "<'row mt-2'<'col-sm-5'i><'col-sm-7 d-flex justify-content-end'p>>",
+  });
+});
+</script>
+
+<script>
+(function () {
+  const KEY = 'isi_sb_mini';
+  const body = document.body;
+
+  function applyState(mini) {
+    if (window.innerWidth <= 768) {
+      body.classList.toggle('sb-open', mini);
+    } else {
+      body.classList.toggle('sb-mini', mini);
+      localStorage.setItem(KEY, mini ? '1' : '0');
+    }
+  }
+
+  window.toggleSidebar = function () {
+    if (window.innerWidth <= 768) {
+      applyState(!body.classList.contains('sb-open'));
+    } else {
+      applyState(!body.classList.contains('sb-mini'));
+    }
+  };
+
+  if (window.innerWidth > 768 && localStorage.getItem(KEY) === '1') {
+    body.classList.add('sb-mini');
+  }
+
+  window.addEventListener('resize', function () {
+    if (window.innerWidth > 768) body.classList.remove('sb-open');
+    else body.classList.remove('sb-mini');
+  });
+})();
+</script>
+
+{% block extra_js %}{% endblock %}
+
+<script>
+(function () {
+  var LS_KEY = 'isi_sb_groups';
+
+  function loadState() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch(e) { return {}; }
+  }
+  function saveState(state) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e) {}
+  }
+
+  function openGroup(btn, body) {
+    btn.classList.add('sb-open');
+    body.classList.add('sb-open');
+  }
+  function closeGroup(btn, body) {
+    btn.classList.remove('sb-open');
+    body.classList.remove('sb-open');
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var state = loadState();
+    var allBtns = Array.from(document.querySelectorAll('.sb-toggle-group'));
+
+    /* ── Initialisation : trouver le groupe à ouvrir (accordéon strict) ── */
+    var toOpen = null;
+    // Priorité 1 : le groupe qui a un lien actif sur la page courante
+    allBtns.forEach(function (btn) {
+      var body = document.getElementById('sb-body-' + btn.getAttribute('data-group'));
+      if (body && body.querySelector('.sb-link.active')) toOpen = btn;
+    });
+    // Priorité 2 : dernier groupe mémorisé ouvert (si pas de lien actif trouvé)
+    if (!toOpen) {
+      allBtns.forEach(function (btn) {
+        var group = btn.getAttribute('data-group');
+        if (state[group] === true) toOpen = btn;
+      });
+    }
+    // Ouvrir UNE SEULE section et scroller vers elle
+    if (toOpen) {
+      var toOpenBody = document.getElementById('sb-body-' + toOpen.getAttribute('data-group'));
+      openGroup(toOpen, toOpenBody);
+      // Après l'animation, scroll pour que le bouton de section soit visible
+      setTimeout(function () {
+        var sbNav = toOpen.closest('.sb-nav') || document.querySelector('.sb-nav');
+        if (sbNav) {
+          var btnTop = toOpen.offsetTop;
+          var navScrollTop = sbNav.scrollTop;
+          var navHeight = sbNav.clientHeight;
+          // Si le bouton est hors de vue (au-dessus), scroller pour le montrer
+          if (btnTop < navScrollTop || btnTop > navScrollTop + navHeight - 40) {
+            sbNav.scrollTo({ top: Math.max(0, btnTop - 12), behavior: 'smooth' });
+          }
+        }
+      }, 50);
+    }
+
+    allBtns.forEach(function (btn) {
+      var group = btn.getAttribute('data-group');
+      var body = document.getElementById('sb-body-' + group);
+      if (!body) return;
+
+      btn.addEventListener('click', function () {
+        var isOpen = btn.classList.contains('sb-open');
+        if (isOpen) {
+          closeGroup(btn, body);
+          state[group] = false;
+        } else {
+          /* Fermer tous les autres groupes ouverts (accordéon) */
+          allBtns.forEach(function (otherBtn) {
+            if (otherBtn === btn) return;
+            var otherGroup = otherBtn.getAttribute('data-group');
+            var otherBody  = document.getElementById('sb-body-' + otherGroup);
+            if (otherBody && otherBtn.classList.contains('sb-open')) {
+              closeGroup(otherBtn, otherBody);
+              state[otherGroup] = false;
+            }
+          });
+          openGroup(btn, body);
+          state[group] = true;
+        }
+        saveState(state);
+      });
+    });
+  });
+})();
+</script>
+
+{% if user.is_authenticated %}
+<div id="rytal-widget" class="no-print">
+  <button id="rytal-bubble" type="button" title="RYTAL-{{ institut_config.sigle|default:'ISI' }}">
+    <i class="bi bi-chat-dots-fill"></i>
+  </button>
+  <div id="rytal-panel" class="d-none">
+    <div id="rytal-panel-header">
+      <span>RYTAL-{{ institut_config.sigle|default:'ISI' }}</span>
+      <div class="d-flex align-items-center gap-2">
+        <button id="rytal-clear" type="button" title="Effacer la conversation" aria-label="Effacer la conversation">
+          <i class="bi bi-trash3"></i>
+        </button>
+        <button id="rytal-close" type="button" aria-label="Fermer">&times;</button>
+      </div>
+    </div>
+    <div id="rytal-messages"></div>
+    <div id="rytal-typing" class="d-none">RYTAL réfléchit…</div>
+    <form id="rytal-form">
+      <input id="rytal-input" type="text" maxlength="2000" placeholder="Écrire un message…" autocomplete="off">
+      <button type="submit" id="rytal-send" aria-label="Envoyer"><i class="bi bi-send-fill"></i></button>
+    </form>
+  </div>
+</div>
+<script>
+  const CHATBOT_HISTORY_URL = "{% url 'chatbot:history' %}";
+  const CHATBOT_SEND_URL    = "{% url 'chatbot:send' %}";
+  const CHATBOT_RESET_URL   = "{% url 'chatbot:reset' %}";
+  const CHATBOT_CSRF_TOKEN  = "{{ csrf_token }}";
+</script>
+<script src="{% static 'js/chatbot.js' %}"></script>
+{% endif %}
+
+{% if user.is_authenticated and user.role_name != 'ADMIN' %}
+<script>
+(function() {
+  var CHECK_INTERVAL = 30000; // 30 secondes
+  var ENDPOINT = '/accounts/session-check/';
+
+  function checkSession() {
+    fetch(ENDPOINT, { credentials: 'same-origin', cache: 'no-store' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.active) {
+          // Afficher un overlay avant de rediriger
+          var overlay = document.createElement('div');
+          overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.85);display:flex;align-items:center;justify-content:center;';
+          overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:36px 40px;text-align:center;max-width:380px;">' +
+            '<div style="font-size:2.5rem;margin-bottom:12px;">🔒</div>' +
+            '<div style="font-weight:700;font-size:1.1rem;color:#0f172a;margin-bottom:8px;">Session terminée</div>' +
+            '<div style="font-size:.88rem;color:#64748b;margin-bottom:20px;">Votre accès a été révoqué par l\'administrateur. Vous allez être redirigé vers la page de connexion.</div>' +
+            '<div style="width:40px;height:4px;background:#e2e8f0;border-radius:2px;margin:0 auto;overflow:hidden;">' +
+            '<div style="width:100%;height:100%;background:#0f172a;animation:progress 3s linear forwards;" id="sp"></div></div>' +
+            '</div>';
+          document.body.appendChild(overlay);
+          var style = document.createElement('style');
+          style.textContent = '@keyframes progress{from{transform:translateX(-100%)}to{transform:translateX(0)}}';
+          document.head.appendChild(style);
+          setTimeout(function() { window.location.href = data.redirect || '/accounts/login/'; }, 3000);
+        }
+      })
+      .catch(function() {}); // Ignorer les erreurs réseau
+  }
+
+  setInterval(checkSession, CHECK_INTERVAL);
+})();
+</script>
+{% endif %}
+</body>
+</html>

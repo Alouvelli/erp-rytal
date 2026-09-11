@@ -1,0 +1,307 @@
+{% extends "base/base.html" %}
+{% block title %}Supervision Générale – DSI{% endblock %}
+
+{% block content %}
+<style>
+.sup-kpi { background:#fff;border-radius:14px;border:1px solid #e2e8f0;padding:18px 20px;display:flex;align-items:center;gap:14px; }
+.sup-kpi .kpi-icon { width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.2rem; }
+.sup-kpi .kpi-val  { font-size:1.7rem;font-weight:800;line-height:1; }
+.sup-kpi .kpi-lbl  { font-size:.75rem;color:#64748b;margin-top:2px; }
+.tab-btn { padding:8px 18px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;font-size:.82rem;font-weight:600;color:#475569;cursor:pointer;transition:all .15s; }
+.tab-btn.active { background:var(--navy);color:#fff;border-color:var(--navy); }
+.sev-badge { display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:700; }
+.sev-LOW      { background:#dcfce7;color:#166534; }
+.sev-MEDIUM   { background:#fef3c7;color:#92400e; }
+.sev-HIGH     { background:#fee2e2;color:#991b1b; }
+.sev-CRITICAL { background:#7f1d1d;color:#fff; }
+.action-badge { display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:.7rem;font-weight:600; }
+.sup-table { width:100%;border-collapse:collapse;font-size:.8rem; }
+.sup-table th { background:#f8fafc;padding:9px 12px;text-align:left;font-weight:700;font-size:.73rem;color:#64748b;text-transform:uppercase;letter-spacing:.04em;border-bottom:1.5px solid #e2e8f0; }
+.sup-table td { padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#374151;vertical-align:middle; }
+.sup-table tr:hover td { background:#f8fafc; }
+.filter-bar { background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end; }
+.filter-bar select, .filter-bar input { border:1.5px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:.8rem;color:#374151;outline:none; }
+.filter-bar select:focus, .filter-bar input:focus { border-color:var(--navy); }
+</style>
+
+<!-- En-tête -->
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#1e3a5f,#3b82f6);display:flex;align-items:center;justify-content:center;">
+      <i class="bi bi-shield-shaded" style="color:#fff;font-size:1.15rem;"></i>
+    </div>
+    <div>
+      <h1 style="font-size:1.25rem;font-weight:800;color:#1e293b;margin:0;">Supervision Générale</h1>
+      <div style="font-size:.75rem;color:#64748b;">Direction des Systèmes d'Information</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;">
+    {% if kpis.critical_threats > 0 %}
+    <span style="display:flex;align-items:center;gap:6px;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:6px 14px;font-size:.8rem;font-weight:700;color:#dc2626;">
+      <i class="bi bi-exclamation-triangle-fill"></i>{{ kpis.critical_threats }} menace(s) critique(s) active(s)
+    </span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- KPIs -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:22px;">
+  <div class="sup-kpi">
+    <div class="kpi-icon" style="background:#eff6ff;"><i class="bi bi-list-ul" style="color:#3b82f6;"></i></div>
+    <div><div class="kpi-val" style="color:#3b82f6;">{{ kpis.total_logs }}</div><div class="kpi-lbl">Total logs</div></div>
+  </div>
+  <div class="sup-kpi">
+    <div class="kpi-icon" style="background:#f0fdf4;"><i class="bi bi-calendar-check" style="color:#22c55e;"></i></div>
+    <div><div class="kpi-val" style="color:#22c55e;">{{ kpis.logs_today }}</div><div class="kpi-lbl">Logs aujourd'hui</div></div>
+  </div>
+  <div class="sup-kpi">
+    <div class="kpi-icon" style="background:#faf5ff;"><i class="bi bi-person-check" style="color:#7c3aed;"></i></div>
+    <div><div class="kpi-val" style="color:#7c3aed;">{{ kpis.logins_today }}</div><div class="kpi-lbl">Connexions aujourd'hui</div></div>
+  </div>
+  <div class="sup-kpi">
+    <div class="kpi-icon" style="background:#fef2f2;"><i class="bi bi-shield-exclamation" style="color:#ef4444;"></i></div>
+    <div><div class="kpi-val" style="color:#ef4444;">{{ kpis.total_threats }}</div><div class="kpi-lbl">Menaces actives</div></div>
+  </div>
+  <div class="sup-kpi">
+    <div class="kpi-icon" style="background:#fff7ed;"><i class="bi bi-clock-history" style="color:#f59e0b;"></i></div>
+    <div><div class="kpi-val" style="color:#f59e0b;">{{ kpis.threats_24h }}</div><div class="kpi-lbl">Menaces / 24h</div></div>
+  </div>
+  <div class="sup-kpi">
+    <div class="kpi-icon" style="background:#fef2f2;"><i class="bi bi-key" style="color:#dc2626;"></i></div>
+    <div><div class="kpi-val" style="color:#dc2626;">{{ kpis.brute_force_7d }}</div><div class="kpi-lbl">Force brute / 7j</div></div>
+  </div>
+</div>
+
+<!-- Top IPs suspectes -->
+{% if kpis.top_ips %}
+<div style="background:#fff;border:1px solid #fca5a5;border-radius:12px;padding:14px 18px;margin-bottom:20px;">
+  <div style="font-size:.8rem;font-weight:700;color:#dc2626;margin-bottom:10px;display:flex;align-items:center;gap:6px;">
+    <i class="bi bi-geo-alt-fill"></i> Adresses IP les plus suspectes (non résolues)
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:8px;">
+    {% for item in kpis.top_ips %}
+    <span style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:4px 12px;font-size:.78rem;font-weight:600;color:#dc2626;">
+      {{ item.ip_address|default:"IP inconnue" }} <span style="opacity:.7;">({{ item.n }})</span>
+    </span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Onglets -->
+<div style="display:flex;gap:8px;margin-bottom:18px;">
+  <a href="?tab=logs" class="tab-btn {% if onglet == 'logs' %}active{% endif %}">
+    <i class="bi bi-journal-text me-1"></i>Logs d'activité
+  </a>
+  <a href="?tab=threats" class="tab-btn {% if onglet == 'threats' %}active{% endif %}">
+    <i class="bi bi-shield-exclamation me-1"></i>Menaces détectées
+    {% if kpis.total_threats > 0 %}<span style="background:#ef4444;color:#fff;border-radius:10px;padding:1px 7px;font-size:.68rem;margin-left:4px;">{{ kpis.total_threats }}</span>{% endif %}
+  </a>
+</div>
+
+{% if onglet == 'logs' %}
+<!-- ── Logs d'activité ────────────────────────────────────────────────────── -->
+<form method="get" action="">
+  <input type="hidden" name="tab" value="logs">
+  <div class="filter-bar mb-3">
+    <div>
+      <label style="font-size:.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:3px;">Action</label>
+      <select name="action">
+        <option value="">Toutes les actions</option>
+        {% for val,lbl in action_choices %}<option value="{{ val }}" {% if action_filter == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="font-size:.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:3px;">Utilisateur</label>
+      <input type="text" name="user" value="{{ user_filter }}" placeholder="Nom, prénom ou login…" style="min-width:180px;">
+    </div>
+    <div>
+      <label style="font-size:.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:3px;">Du</label>
+      <input type="date" name="date_from" value="{{ date_from }}">
+    </div>
+    <div>
+      <label style="font-size:.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:3px;">Au</label>
+      <input type="date" name="date_to" value="{{ date_to }}">
+    </div>
+    <button type="submit" style="background:var(--navy);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.8rem;font-weight:600;cursor:pointer;">
+      <i class="bi bi-search me-1"></i>Filtrer
+    </button>
+    <a href="?tab=logs" style="display:flex;align-items:center;gap:4px;font-size:.78rem;color:#64748b;text-decoration:none;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;">
+      <i class="bi bi-x-circle"></i> Réinitialiser
+    </a>
+  </div>
+</form>
+
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;">
+  <div class="table-responsive">
+    <table class="sup-table">
+      <thead>
+        <tr>
+          <th>Horodatage</th>
+          <th>Utilisateur</th>
+          <th>Action</th>
+          <th>Objet</th>
+          <th>Adresse IP</th>
+          <th>Navigateur</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in audit_page %}
+        <tr>
+          <td style="white-space:nowrap;color:#64748b;font-size:.75rem;">{{ log.timestamp|date:"d/m/Y H:i:s" }}</td>
+          <td>
+            {% if log.user %}
+            <span style="font-weight:600;color:#1e293b;">{{ log.user.get_full_name|default:log.user.username }}</span>
+            <div style="font-size:.7rem;color:#94a3b8;">{{ log.user.role }}</div>
+            {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+          </td>
+          <td>
+            {% if log.action == 'LOGIN' %}<span class="action-badge" style="background:#dcfce7;color:#166534;"><i class="bi bi-box-arrow-in-right me-1"></i>Connexion</span>
+            {% elif log.action == 'LOGOUT' %}<span class="action-badge" style="background:#f1f5f9;color:#475569;"><i class="bi bi-box-arrow-right me-1"></i>Déconnexion</span>
+            {% elif log.action == 'CREATE' %}<span class="action-badge" style="background:#dbeafe;color:#1d4ed8;"><i class="bi bi-plus-circle me-1"></i>Création</span>
+            {% elif log.action == 'UPDATE' %}<span class="action-badge" style="background:#fef3c7;color:#92400e;"><i class="bi bi-pencil me-1"></i>Modification</span>
+            {% elif log.action == 'DELETE' %}<span class="action-badge" style="background:#fee2e2;color:#991b1b;"><i class="bi bi-trash me-1"></i>Suppression</span>
+            {% elif log.action == 'VIEW' %}<span class="action-badge" style="background:#f3f4f6;color:#374151;"><i class="bi bi-eye me-1"></i>Consultation</span>
+            {% elif log.action == 'VALIDATE' %}<span class="action-badge" style="background:#d1fae5;color:#065f46;"><i class="bi bi-check-circle me-1"></i>Validation</span>
+            {% else %}<span class="action-badge" style="background:#f3f4f6;color:#374151;">{{ log.get_action_display }}</span>{% endif %}
+          </td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ log.object_repr }}">
+            {% if log.model_name %}<span style="font-size:.7rem;color:#7c3aed;font-weight:600;">{{ log.model_name }}</span><br>{% endif %}
+            {{ log.object_repr|default:"—"|truncatechars:40 }}
+          </td>
+          <td style="font-family:monospace;font-size:.75rem;color:#475569;">{{ log.ip_address|default:"—" }}</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.72rem;color:#94a3b8;" title="{{ log.user_agent }}">{{ log.user_agent|truncatechars:30|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;padding:32px;color:#94a3b8;font-size:.85rem;"><i class="bi bi-inbox" style="font-size:1.5rem;display:block;margin-bottom:8px;"></i>Aucun log trouvé</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <!-- Pagination -->
+  {% if audit_page.has_other_pages %}
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid #f1f5f9;font-size:.78rem;color:#64748b;">
+    <span>Page {{ audit_page.number }} / {{ audit_page.paginator.num_pages }} — {{ audit_page.paginator.count }} entrée(s)</span>
+    <div style="display:flex;gap:6px;">
+      {% if audit_page.has_previous %}<a href="?tab=logs&audit_page={{ audit_page.previous_page_number }}&action={{ action_filter }}&user={{ user_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" style="padding:4px 10px;border:1px solid #e2e8f0;border-radius:6px;text-decoration:none;color:var(--navy);">‹ Préc.</a>{% endif %}
+      {% if audit_page.has_next %}<a href="?tab=logs&audit_page={{ audit_page.next_page_number }}&action={{ action_filter }}&user={{ user_filter }}&date_from={{ date_from }}&date_to={{ date_to }}" style="padding:4px 10px;border:1px solid #e2e8f0;border-radius:6px;text-decoration:none;color:var(--navy);">Suiv. ›</a>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% else %}
+<!-- ── Menaces détectées ───────────────────────────────────────────────────── -->
+<form method="get" action="">
+  <input type="hidden" name="tab" value="threats">
+  <div class="filter-bar mb-3">
+    <div>
+      <label style="font-size:.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:3px;">Sévérité</label>
+      <select name="severity">
+        <option value="">Toutes</option>
+        {% for val,lbl in sev_choices %}<option value="{{ val }}" {% if sev_filter == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="font-size:.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:3px;">Type</label>
+      <select name="event_type">
+        <option value="">Tous les types</option>
+        {% for val,lbl in type_choices %}<option value="{{ val }}" {% if type_filter == val %}selected{% endif %}>{{ lbl }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="font-size:.72rem;font-weight:700;color:#64748b;display:block;margin-bottom:3px;">Statut</label>
+      <select name="resolved">
+        <option value="">Tous</option>
+        <option value="0" {% if resolved_filter == '0' %}selected{% endif %}>Non résolus</option>
+        <option value="1" {% if resolved_filter == '1' %}selected{% endif %}>Résolus</option>
+      </select>
+    </div>
+    <button type="submit" style="background:var(--navy);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.8rem;font-weight:600;cursor:pointer;">
+      <i class="bi bi-search me-1"></i>Filtrer
+    </button>
+    <a href="?tab=threats" style="display:flex;align-items:center;gap:4px;font-size:.78rem;color:#64748b;text-decoration:none;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;">
+      <i class="bi bi-x-circle"></i> Réinitialiser
+    </a>
+  </div>
+</form>
+
+<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;">
+  <div class="table-responsive">
+    <table class="sup-table">
+      <thead>
+        <tr>
+          <th>Horodatage</th>
+          <th>Sévérité</th>
+          <th>Type de menace</th>
+          <th>Adresse IP</th>
+          <th>Identifiant tenté</th>
+          <th>Détails</th>
+          <th>Statut</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for evt in sec_page %}
+        <tr>
+          <td style="white-space:nowrap;color:#64748b;font-size:.75rem;">{{ evt.timestamp|date:"d/m/Y H:i:s" }}</td>
+          <td><span class="sev-badge sev-{{ evt.severity }}">
+            {% if evt.severity == 'CRITICAL' %}<i class="bi bi-exclamation-octagon-fill"></i>
+            {% elif evt.severity == 'HIGH' %}<i class="bi bi-exclamation-triangle-fill"></i>
+            {% elif evt.severity == 'MEDIUM' %}<i class="bi bi-exclamation-circle-fill"></i>
+            {% else %}<i class="bi bi-info-circle-fill"></i>{% endif %}
+            {{ evt.get_severity_display }}
+          </span></td>
+          <td style="font-weight:600;color:#1e293b;font-size:.8rem;">
+            {% if evt.event_type == 'BRUTE_FORCE' %}<i class="bi bi-hammer" style="color:#dc2626;"></i>
+            {% elif evt.event_type == 'FAILED_LOGIN' %}<i class="bi bi-key" style="color:#f59e0b;"></i>
+            {% elif evt.event_type == 'UNAUTHORIZED' %}<i class="bi bi-slash-circle" style="color:#ef4444;"></i>
+            {% else %}<i class="bi bi-bug" style="color:#7c3aed;"></i>{% endif %}
+            {{ evt.get_event_type_display }}
+          </td>
+          <td style="font-family:monospace;font-size:.75rem;color:#475569;">{{ evt.ip_address|default:"—" }}</td>
+          <td style="font-size:.78rem;color:#374151;">{{ evt.username_tried|default:"—"|truncatechars:25 }}</td>
+          <td style="max-width:220px;font-size:.75rem;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ evt.details }}">{{ evt.details|truncatechars:50|default:"—" }}</td>
+          <td>
+            {% if evt.resolved %}
+            <span style="display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#166534;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:700;">
+              <i class="bi bi-check-circle-fill"></i> Résolu
+            </span>
+            <div style="font-size:.68rem;color:#94a3b8;margin-top:2px;">{{ evt.resolved_at|date:"d/m H:i" }} par {{ evt.resolved_by.get_full_name|default:evt.resolved_by.username|default:"—" }}</div>
+            {% else %}
+            <span style="display:inline-flex;align-items:center;gap:4px;background:#fee2e2;color:#991b1b;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:700;">
+              <i class="bi bi-exclamation-circle-fill"></i> Actif
+            </span>
+            {% endif %}
+          </td>
+          <td>
+            {% if not evt.resolved %}
+            <form method="post" action="?tab=threats&severity={{ sev_filter }}&event_type={{ type_filter }}&resolved={{ resolved_filter }}" style="margin:0;">
+              {% csrf_token %}
+              <input type="hidden" name="resolve_id" value="{{ evt.pk }}">
+              <button type="submit" title="Marquer comme résolu"
+                      style="background:#f0fdf4;border:1px solid #86efac;color:#166534;border-radius:7px;padding:4px 10px;font-size:.72rem;font-weight:600;cursor:pointer;">
+                <i class="bi bi-check2"></i> Résoudre
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8;font-size:.85rem;"><i class="bi bi-shield-check" style="font-size:1.8rem;color:#22c55e;display:block;margin-bottom:8px;"></i>Aucune menace détectée</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if sec_page.has_other_pages %}
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid #f1f5f9;font-size:.78rem;color:#64748b;">
+    <span>Page {{ sec_page.number }} / {{ sec_page.paginator.num_pages }} — {{ sec_page.paginator.count }} menace(s)</span>
+    <div style="display:flex;gap:6px;">
+      {% if sec_page.has_previous %}<a href="?tab=threats&sec_page={{ sec_page.previous_page_number }}&severity={{ sev_filter }}&event_type={{ type_filter }}&resolved={{ resolved_filter }}" style="padding:4px 10px;border:1px solid #e2e8f0;border-radius:6px;text-decoration:none;color:var(--navy);">‹ Préc.</a>{% endif %}
+      {% if sec_page.has_next %}<a href="?tab=threats&sec_page={{ sec_page.next_page_number }}&severity={{ sev_filter }}&event_type={{ type_filter }}&resolved={{ resolved_filter }}" style="padding:4px 10px;border:1px solid #e2e8f0;border-radius:6px;text-decoration:none;color:var(--navy);">Suiv. ›</a>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

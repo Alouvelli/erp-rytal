@@ -1,0 +1,59 @@
+{% extends 'base/base.html' %}
+{% block title %}Modifier {{ user_obj.get_full_name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003d82;"><i class="bi bi-pencil-square"></i></span>
+    Compte candidat — {{ user_obj.get_full_name }}
+  </h1>
+  <a href="{% url 'admissions:candidat_accounts_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<div class="card-section p-4" style="max-width: 600px;">
+  {% if candidature %}
+  <p class="text-muted small">Filière visée : <strong>{{ candidature.program.name }}</strong></p>
+  {% else %}
+  <p class="text-muted small fst-italic">Aucune candidature soumise pour le moment.</p>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">Prénom</label>
+      <input type="text" name="first_name" class="form-control" value="{{ user_obj.first_name }}" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">Nom</label>
+      <input type="text" name="last_name" class="form-control" value="{{ user_obj.last_name }}" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">Email</label>
+      <input type="email" name="email" class="form-control" value="{{ user_obj.email }}" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">Téléphone</label>
+      <input type="text" name="phone" class="form-control" value="{{ user_obj.phone }}">
+    </div>
+
+    <div class="form-check mb-3">
+      <input type="checkbox" name="is_active" value="1" class="form-check-input" id="id_is_active"
+             {% if user_obj.is_active %}checked{% endif %}>
+      <label class="form-check-label small fw-semibold" for="id_is_active">
+        Compte actif / vérifié
+      </label>
+      <div class="form-text">
+        Cochez pour activer manuellement le compte si le candidat n'a pas reçu ou pas pu
+        utiliser son lien de vérification par email.
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+  </form>
+</div>
+{% endblock %}

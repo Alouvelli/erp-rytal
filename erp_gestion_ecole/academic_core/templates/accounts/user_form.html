@@ -1,0 +1,384 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if form.instance.pk %}Modifier{% else %}Nouvel{% endif %} utilisateur{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:users_list' %}">Utilisateurs</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Modifier{% else %}Nouvel utilisateur{% endif %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);">
+      <i class="bi bi-person-{% if form.instance.pk %}gear{% else %}plus-fill{% endif %}"></i>
+    </span>
+    {% if form.instance.pk %}Modifier l'utilisateur{% else %}Nouvel utilisateur{% endif %}
+  </h1>
+  <a href="{% url 'accounts:users_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+{% if existing_user %}
+<div class="alert alert-warning d-flex gap-3 align-items-start mb-3">
+  <i class="bi bi-person-exclamation fs-4 flex-shrink-0"></i>
+  <div class="flex-grow-1">
+    <div class="fw-bold">Un compte existe déjà avec cet email/identifiant</div>
+    <div class="mt-1" style="font-size:.87rem;">
+      <strong>{{ existing_user.get_full_name }}</strong>
+      {% if existing_user.role %} — {{ existing_user.role.get_name_display }}{% endif %}
+      {% if existing_user.department %} — {{ existing_user.department.name }}{% endif %}
+    </div>
+    {% if existing_user_in_target_institut %}
+    <div class="mt-2">
+      <a href="{% url 'accounts:user_edit' existing_user.pk %}" class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-pencil me-1"></i>Modifier cet utilisateur existant
+      </a>
+    </div>
+    {% else %}
+    <div class="mt-1" style="font-size:.82rem;color:#92400e;">
+      Ce compte n'appartient pas à {{ existing_user_target_institut_label|default:"cet institut" }} —
+      il ne peut pas être modifié depuis cette page. Contactez un Super Administrateur
+      pour le réaffecter si nécessaire.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  <div class="row g-3">
+
+    <!-- Colonne principale -->
+    <div class="col-lg-8">
+
+      <!-- Identité -->
+      <div class="card-section mb-3">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:24px;height:24px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;color:#fff;">
+              <i class="bi bi-person"></i>
+            </span>
+            Identité
+          </h6>
+        </div>
+        <div style="padding:18px;">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">{{ form.first_name.label }} <span class="text-danger">*</span></label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.first_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ form.last_name.label }} <span class="text-danger">*</span></label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.last_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              {{ form.email }}
+              {% if form.email.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.email.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ form.phone.label }}</label>
+              {{ form.phone }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ form.gender.label }}</label>
+              {{ form.gender }}
+              {% if form.gender.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.gender.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compte -->
+      <div class="card-section mb-3">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:24px;height:24px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;color:#fff;">
+              <i class="bi bi-key"></i>
+            </span>
+            Accès &amp; Authentification
+          </h6>
+        </div>
+        <div style="padding:18px;">
+          <div class="row g-3">
+            {% if form.username %}
+            <div class="col-md-12">
+              <label class="form-label">{{ form.username.label }} <span class="text-danger">*</span></label>
+              {{ form.username }}
+              {% if form.username.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.username.errors.0 }}</div>{% endif %}
+            </div>
+            {% endif %}
+            {% if form.password1 %}
+            <div class="col-md-6">
+              <label class="form-label">{{ form.password1.label }} <span class="text-danger">*</span></label>
+              <div class="input-group">
+                {{ form.password1 }}
+                <button type="button" class="btn btn-outline-secondary"
+                        onclick="togglePwd('{{ form.password1.id_for_label }}', this)"
+                        tabindex="-1" title="Afficher / masquer">
+                  <i class="bi bi-eye-fill"></i>
+                </button>
+              </div>
+              {% if form.password1.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.password1.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ form.password2.label }} <span class="text-danger">*</span></label>
+              <div class="input-group">
+                {{ form.password2 }}
+                <button type="button" class="btn btn-outline-secondary"
+                        onclick="togglePwd('{{ form.password2.id_for_label }}', this)"
+                        tabindex="-1" title="Afficher / masquer">
+                  <i class="bi bi-eye-fill"></i>
+                </button>
+              </div>
+              {% if form.password2.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.password2.errors.0 }}</div>{% endif %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Modifier le mot de passe (mode édition uniquement) -->
+      {% if form.instance.pk %}
+      <div class="card-section mb-3">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:24px;height:24px;border-radius:6px;background:#dc2626;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;color:#fff;">
+              <i class="bi bi-shield-lock"></i>
+            </span>
+            Réinitialiser le mot de passe
+          </h6>
+        </div>
+        <div style="padding:18px;">
+          <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.78rem;border-radius:8px;">
+            <i class="bi bi-info-circle me-1"></i>
+            Laissez vide pour conserver le mot de passe actuel.
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">{{ form.new_password1.label }}</label>
+              <div class="input-group">
+                {{ form.new_password1 }}
+                <button type="button" class="btn btn-outline-secondary"
+                        onclick="togglePwd('id_new_password1', this)"
+                        tabindex="-1" title="Afficher / masquer">
+                  <i class="bi bi-eye-fill"></i>
+                </button>
+              </div>
+              {% if form.new_password1.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.new_password1.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ form.new_password2.label }}</label>
+              <div class="input-group">
+                {{ form.new_password2 }}
+                <button type="button" class="btn btn-outline-secondary"
+                        onclick="togglePwd('id_new_password2', this)"
+                        tabindex="-1" title="Afficher / masquer">
+                  <i class="bi bi-eye-fill"></i>
+                </button>
+              </div>
+              {% if form.new_password2.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.new_password2.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- Colonne droite -->
+    <div class="col-lg-4">
+
+      <!-- Institut d'appartenance -->
+      <div class="card-section mb-3">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:24px;height:24px;border-radius:6px;background:#00173B;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;color:#fff;">
+              <i class="bi bi-buildings-fill"></i>
+            </span>
+            Institut d'appartenance
+          </h6>
+        </div>
+        <div style="padding:18px;">
+          <label class="form-label">{{ form.target_institut.label }} <span class="text-danger">*</span></label>
+          {% if form.institut_locked %}
+            <input type="text" class="form-control" value="{{ form.institut_display }}" readonly disabled>
+            <input type="hidden" name="target_institut" id="id_target_institut" value="{{ form.target_institut.value|default:'' }}">
+          {% else %}
+            {{ form.target_institut }}
+          {% endif %}
+          {% if form.target_institut.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.target_institut.errors.0 }}</div>{% endif %}
+          <div class="form-text" style="font-size:.76rem;margin-top:6px;">
+            <i class="bi bi-info-circle me-1"></i>
+            L'utilisateur sera enregistré dans la base de données de cet institut.
+          </div>
+        </div>
+      </div>
+
+      <!-- Rôle & Département -->
+      <div class="card-section mb-3">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:24px;height:24px;border-radius:6px;background:#7c3aed;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;color:#fff;">
+              <i class="bi bi-shield-check"></i>
+            </span>
+            Rôle &amp; Département
+          </h6>
+        </div>
+        <div style="padding:18px;">
+          <div class="mb-3">
+            <label class="form-label">{{ form.role.label }} <span class="text-danger">*</span></label>
+            {{ form.role }}
+            {% if form.role.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.role.errors.0 }}</div>{% endif %}
+          </div>
+
+          <!-- Département — visible si rôle avec département -->
+          <div id="dept-field" style="display:none;">
+            <label class="form-label">{{ form.department.label }}</label>
+            {{ form.department }}
+            <div class="form-text" style="font-size:.72rem;">
+              <i class="bi bi-info-circle me-1"></i>
+              Requis pour un administrateur ou responsable de département.
+            </div>
+            {% if form.department.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.department.errors.0 }}</div>{% endif %}
+          </div>
+
+          <!-- Classe assignée — visible pour le Responsable de classe et son Adjoint -->
+          <div id="class-field" style="display:none;margin-top:12px;">
+            <label class="form-label">{{ form.responsable_class.label }}</label>
+            {{ form.responsable_class }}
+            <div class="form-text" style="font-size:.72rem;">
+              <i class="bi bi-info-circle me-1"></i>
+              Requis pour un Responsable de classe ou son Adjoint : détermine la classe dont il peut valider le cahier de texte.
+            </div>
+            {% if form.responsable_class.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.responsable_class.errors.0 }}</div>{% endif %}
+          </div>
+
+          <!-- Institut administré — uniquement pour INST_ADMIN / ASSISTANTE_DG -->
+          {% if is_super_admin %}
+          <div id="institut-field" style="display:none;margin-top:12px;">
+            <div class="p-3" style="background:#ede9fe;border-radius:10px;border:1px solid #c4b5fd;">
+              <label class="form-label fw-semibold" style="font-size:.84rem;color:#4c1d95;">
+                <i class="bi bi-buildings-fill me-1"></i>{{ form.institut_config.label }}
+              </label>
+              {{ form.institut_config }}
+              <div class="form-text" style="font-size:.72rem;color:#6d28d9;">
+                <i class="bi bi-info-circle me-1"></i>
+                Uniquement pour les administrateurs d'institut (INST_ADMIN / ASSISTANTE_DG).
+              </div>
+              {% if form.institut_config.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.institut_config.errors.0 }}</div>{% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+
+      <!-- Statut -->
+      <div class="card-section mb-3">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:24px;height:24px;border-radius:6px;background:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;color:#fff;">
+              <i class="bi bi-toggle-on"></i>
+            </span>
+            Statut du compte
+          </h6>
+        </div>
+        <div style="padding:16px 18px;">
+          <div class="form-check form-switch">
+            {{ form.is_active }}
+            <label class="form-check-label" for="{{ form.is_active.id_for_label }}" style="font-size:.84rem;font-weight:600;">
+              Compte actif
+            </label>
+          </div>
+          <div style="font-size:.74rem;color:#94a3b8;margin-top:6px;">
+            Un compte inactif ne peut pas se connecter.
+          </div>
+        </div>
+      </div>
+
+      {% if form.avatar %}
+      <!-- Photo de profil -->
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:24px;height:24px;border-radius:6px;background:#64748b;display:inline-flex;align-items:center;justify-content:center;font-size:.75rem;color:#fff;">
+              <i class="bi bi-image"></i>
+            </span>
+            Photo de profil
+          </h6>
+        </div>
+        <div style="padding:16px 18px;">
+          {% if form.instance.avatar %}
+          <img src="{{ form.instance.avatar.url }}" alt="Avatar"
+            style="width:60px;height:60px;border-radius:50%;object-fit:cover;margin-bottom:10px;border:2px solid var(--border);">
+          {% endif %}
+          {{ form.avatar }}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <div class="d-flex gap-2 justify-content-end mt-3">
+    <a href="{% url 'accounts:users_list' %}" class="btn btn-outline-secondary">Annuler</a>
+    <button type="submit" class="btn btn-primary" style="padding:8px 28px;">
+      <i class="bi bi-check-lg me-2"></i>
+      {% if form.instance.pk %}Enregistrer les modifications{% else %}Créer l'utilisateur{% endif %}
+    </button>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Rôle → afficher les champs conditionnels
+const roleSelect    = document.getElementById('id_role');
+const deptField     = document.getElementById('dept-field');
+const classField    = document.getElementById('class-field');
+const institutField = document.getElementById('institut-field');
+
+function toggleRoleFields() {
+  if (!roleSelect) return;
+  const val          = roleSelect.value;
+  const selectedText = roleSelect.options[roleSelect.selectedIndex]?.text || '';
+
+  // Département : RESPONSABLE ou ASSISTANTE
+  const needsDept = val === 'RESPONSABLE' || val === 'ASSISTANTE' ||
+                    selectedText.toLowerCase().includes('département');
+  if (deptField) {
+    deptField.style.display   = needsDept ? 'block' : 'none';
+    deptField.style.animation = needsDept ? 'fadeInUp .2s ease both' : 'none';
+  }
+
+  // Classe assignée : RESPONSABLE_CLASSE et son Adjoint
+  const needsClass = val === 'RESPONSABLE_CLASSE' || val === 'ADJOINT_RESPONSABLE_CLASSE';
+  if (classField) {
+    classField.style.display   = needsClass ? 'block' : 'none';
+    classField.style.animation = needsClass ? 'fadeInUp .2s ease both' : 'none';
+  }
+
+  // Institut : INST_ADMIN uniquement
+  const needsInstitut = val === 'INST_ADMIN';
+  if (institutField) {
+    institutField.style.display   = needsInstitut ? 'block' : 'none';
+    institutField.style.animation = needsInstitut ? 'fadeInUp .2s ease both' : 'none';
+  }
+}
+
+roleSelect?.addEventListener('change', toggleRoleFields);
+document.addEventListener('DOMContentLoaded', toggleRoleFields);
+
+function togglePwd(fieldId, btn) {
+  const input = document.getElementById(fieldId);
+  if (!input) return;
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.querySelector('i').className = show ? 'bi bi-eye-slash-fill' : 'bi bi-eye-fill';
+}
+</script>
+{% endblock %}

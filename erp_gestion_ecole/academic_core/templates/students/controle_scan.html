@@ -1,0 +1,978 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Contrôle Accueil — DAF{% endblock %}
+
+{% block extra_head %}
+<style>
+  #scanner-wrap {
+    position: relative;
+    width: 100%; max-width: 460px; aspect-ratio: 1 / 1;
+    background: #0d1117;
+    border-radius: 16px; overflow: hidden;
+    margin: 0 auto;
+    border: 3px solid #0ea5e9;
+    box-shadow: 0 0 0 4px rgba(14,165,233,.2);
+  }
+  #scanner-wrap video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #scanner-canvas { display: none; }
+
+  #cam-placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: rgba(255,255,255,.5); gap: 10px; text-align: center; padding: 20px;
+  }
+
+  #viewfinder {
+    position: absolute; inset: 0;
+    display: none; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  #viewfinder.active { display: flex; }
+  #viewfinder::before {
+    content: '';
+    width: 56%; height: 56%;
+    border: 2.5px solid #0ea5e9;
+    border-radius: 10px;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,.5);
+    animation: pulse-border 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-border {
+    0%,100% { border-color:#0ea5e9; box-shadow:0 0 0 9999px rgba(0,0,0,.5),0 0 12px 2px rgba(14,165,233,.6); }
+    50%      { border-color:#38bdf8; box-shadow:0 0 0 9999px rgba(0,0,0,.6),0 0 22px 4px rgba(14,165,233,.9); }
+  }
+  #scan-line {
+    position: absolute; left: 22%; right: 22%; height: 2px;
+    background: linear-gradient(90deg, transparent, #0ea5e9, transparent);
+    animation: scan-anim 2s ease-in-out infinite;
+    border-radius: 999px;
+    box-shadow: 0 0 8px 2px #0ea5e9;
+  }
+  @keyframes scan-anim {
+    0%   { top: 22%; opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 1; }
+    100% { top: 78%; opacity: 0; }
+  }
+
+  /* Boutons caméra */
+  .cam-btn {
+    border: none; border-radius: 10px; padding: 9px 18px;
+    font-weight: 600; font-size: .88rem; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: opacity .15s, transform .1s;
+  }
+  .cam-btn:active { transform: scale(.95); }
+  .cam-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* Status card */
+  .status-card { border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,.12); }
+  .status-paid      { border: 2.5px solid #16a34a; }
+  .status-unpaid    { border: 2.5px solid #dc2626; }
+  .status-suspended { border: 2.5px solid #d97706; }
+
+  .badge-paid      { background:#16a34a; color:#fff; }
+  .badge-unpaid    { background:#dc2626; color:#fff; }
+  .badge-suspended { background:#d97706; color:#fff; }
+
+  .student-photo {
+    width: 80px; height: 80px; object-fit: cover;
+    border-radius: 12px; border: 3px solid #e2e8f0; flex-shrink: 0;
+  }
+  .photo-placeholder {
+    width: 80px; height: 80px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg,#e0f2fe,#bae6fd);
+    display: flex; align-items: center; justify-content: center;
+    border: 3px solid #e2e8f0;
+  }
+  .installment-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 999px; font-size: .72rem; font-weight: 600;
+  }
+  .installment-paid   { background:#dcfce7; color:#15803d; }
+  .installment-unpaid { background:#fee2e2; color:#b91c1c; }
+
+  /* Tabs */
+  .ctrl-tab {
+    padding: 8px 20px; border-radius: 8px; border: 2px solid #e2e8f0;
+    background: #fff; font-weight: 600; font-size: .88rem;
+    cursor: pointer; transition: all .15s; color: #374151;
+    display: inline-flex; align-items: center; gap: 7px;
+  }
+  .ctrl-tab.active {
+    background: #0d2244; border-color: #0d2244; color: #fff;
+  }
+  .ctrl-tab:hover:not(.active) { border-color: #93c5fd; color: #1d4ed8; }
+
+  #result-section { display: none; }
+  #error-msg      { display: none; }
+  #cam-status     { display: none; }
+
+  /* Effet de flash sur scan réussi */
+  @keyframes flash-green {
+    0%   { box-shadow: 0 0 0 4px rgba(22,163,74,.8); }
+    100% { box-shadow: 0 0 0 4px rgba(14,165,233,.2); }
+  }
+  #scanner-wrap.qr-found { animation: flash-green .4s ease-out; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <div style="width:46px;height:46px;border-radius:12px;
+                background:linear-gradient(135deg,#0d2244,#1a3a6b);
+                display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <i class="bi bi-qr-code-scan" style="color:#0ea5e9;font-size:1.3rem;"></i>
+    </div>
+    <div>
+      <h4 class="mb-0 fw-bold">Contrôle Accueil</h4>
+      <small class="text-muted">Direction Administrative &amp; Financière — vérification carte étudiant</small>
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- ── Colonne gauche : scanner / saisie ── -->
+    <div class="col-lg-5">
+
+      <!-- Tabs -->
+      <div class="d-flex gap-2 mb-3 flex-wrap">
+        <button type="button" class="ctrl-tab active" id="tab-qr"
+                onclick="switchTab('qr')">
+          <i class="bi bi-qr-code"></i> QR Accueil
+        </button>
+        <button type="button" class="ctrl-tab" id="tab-cam"
+                onclick="switchTab('cam')">
+          <i class="bi bi-camera-fill"></i> Scanner QR
+        </button>
+        <button type="button" class="ctrl-tab" id="tab-manual"
+                onclick="switchTab('manual')">
+          <i class="bi bi-keyboard"></i> Saisie manuelle
+        </button>
+      </div>
+
+      <!-- ── Panel QR Accueil (mode principal — affichage automatique) ── -->
+      <div id="panel-qr">
+        <div style="max-width:640px;margin:0 auto;background:#fff;border-radius:16px;
+                    box-shadow:0 4px 24px rgba(0,0,0,.12);border:3px solid #0d2244;overflow:hidden;">
+          <div style="background:#0d2244;color:#fff;text-align:center;padding:10px;font-weight:700;font-size:.85rem;">
+            <i class="bi bi-qr-code me-1"></i>QR du jour — {{ today|date:"d/m/Y" }}
+          </div>
+          <div style="display:flex;flex-wrap:wrap;">
+            <div style="flex:0 0 auto;padding:20px;text-align:center;border-right:1px solid #e2e8f0;margin:0 auto;">
+              <img src="data:image/png;base64,{{ qr_b64 }}" alt="QR Contrôle Accueil"
+                   style="width:220px;max-width:100%;border-radius:8px;">
+            </div>
+            <!-- ── Dernier résultat de pointage (mis à jour automatiquement) ── -->
+            <div id="live-result-wrap" style="flex:1;min-width:240px;padding:18px;">
+              <div id="live-placeholder" style="text-align:center;color:#94a3b8;padding:28px 8px;">
+                <i class="bi bi-qr-code-scan" style="font-size:2rem;"></i>
+                <div style="margin-top:8px;font-size:.83rem;">En attente d'un scan…</div>
+              </div>
+
+              <!-- Résultat ÉTUDIANT (statut paiement + dernier mois payé) -->
+              <div id="live-student" style="display:none;">
+                <div id="live-stu-band" class="text-white text-center"
+                     style="border-radius:10px 10px 0 0;padding:8px;font-weight:700;font-size:.82rem;">
+                  <i id="live-stu-icon" class="me-1"></i><span id="live-stu-label"></span>
+                </div>
+                <div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;padding:14px;">
+                  <div class="d-flex gap-2 align-items-center mb-2">
+                    <div id="live-stu-photo-wrap"></div>
+                    <div>
+                      <div class="fw-bold" id="live-stu-name" style="font-size:.92rem;"></div>
+                      <div class="text-muted" id="live-stu-classe" style="font-size:.76rem;"></div>
+                    </div>
+                  </div>
+                  <div style="font-size:.78rem;color:#475569;" id="live-stu-detail"></div>
+                  <div style="font-size:.78rem;font-weight:700;margin-top:6px;color:#1e3a5f;" id="live-stu-dernier-paye"></div>
+                  <div style="font-size:.72rem;color:#94a3b8;margin-top:6px;" id="live-scan-time"></div>
+                </div>
+              </div>
+
+              <!-- Résultat PERSONNEL (arrivée/départ) -->
+              <div id="live-staff" style="display:none;">
+                <div id="live-staff-band" class="text-white text-center"
+                     style="border-radius:10px 10px 0 0;padding:8px;font-weight:700;font-size:.82rem;">
+                  <i id="live-staff-icon" class="me-1"></i><span id="live-staff-label"></span>
+                </div>
+                <div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 10px 10px;padding:14px;">
+                  <div class="d-flex gap-2 align-items-center">
+                    <div id="live-staff-photo-wrap"></div>
+                    <div>
+                      <div class="fw-bold" id="live-staff-name" style="font-size:.92rem;"></div>
+                      <div class="text-muted" id="live-staff-role" style="font-size:.76rem;"></div>
+                    </div>
+                  </div>
+                  <div style="font-size:.78rem;color:#475569;margin-top:6px;" id="live-staff-detail"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="text-center mt-3" style="font-size:.85rem;color:#475569;">
+          <i class="bi bi-phone me-1"></i>
+          Chaque étudiant ou membre du personnel scanne ce QR avec
+          <strong>son propre téléphone</strong> (page « Pointage à l'accueil »)
+          pour se pointer lui-même — le résultat s'affiche automatiquement
+          ci-dessus, à côté du QR.
+        </div>
+        <div class="text-center mt-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="location.reload()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Actualiser
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Panel caméra (secours — l'agent scanne une carte) ── -->
+      <div id="panel-cam" style="display:none;">
+        <div id="scanner-wrap">
+          <video id="video" playsinline muted></video>
+          <canvas id="scanner-canvas"></canvas>
+
+          <!-- Placeholder avant démarrage -->
+          <div id="cam-placeholder">
+            <i class="bi bi-camera-video-off" style="font-size:2.5rem;"></i>
+            <span style="font-size:.85rem;">Cliquez sur <strong>Démarrer</strong><br>pour activer la caméra</span>
+          </div>
+
+          <!-- Viseur actif -->
+          <div id="viewfinder"><div id="scan-line"></div></div>
+        </div>
+
+        <!-- Message statut caméra -->
+        <div id="cam-status" class="mt-2 px-2" style="font-size:.82rem;"></div>
+
+        <!-- Contrôles -->
+        <div class="d-flex gap-2 mt-3 justify-content-center flex-wrap">
+          <button type="button" class="cam-btn" id="btn-start"
+                  style="background:#0d2244;color:#fff;"
+                  onclick="startCamera()">
+            <i class="bi bi-camera-video-fill"></i> Démarrer
+          </button>
+          <button type="button" class="cam-btn" id="btn-stop"
+                  style="background:#6b7280;color:#fff;"
+                  onclick="stopCamera()" disabled>
+            <i class="bi bi-stop-circle-fill"></i> Arrêter
+          </button>
+          <button type="button" class="cam-btn" id="btn-switch"
+                  style="background:#0ea5e9;color:#fff;"
+                  onclick="switchCamera()" disabled>
+            <i class="bi bi-arrow-repeat"></i> Changer
+          </button>
+        </div>
+
+        <p class="text-center text-muted mt-2 mb-0" style="font-size:.78rem;">
+          <i class="bi bi-info-circle me-1"></i>
+          Pointez vers le QR code au <strong>verso</strong> de la carte étudiant
+        </p>
+      </div>
+
+      <!-- ── Panel saisie manuelle ── -->
+      <div id="panel-manual" style="display:none;">
+        <div class="card border-0 shadow-sm p-4">
+          <label class="form-label fw-bold mb-2" style="font-size:.9rem;">
+            <i class="bi bi-search me-1 text-primary"></i>
+            Rechercher un étudiant
+          </label>
+          <div class="input-group">
+            <input type="text" id="manual-input" class="form-control form-control-lg"
+                   placeholder="Matricule ou nom de l'étudiant…"
+                   autocomplete="off"
+                   onkeydown="if(event.key==='Enter'&&!event.repeat) doManualLookup()">
+            <button type="button" id="btn-verify" class="btn btn-primary fw-semibold px-4"
+                    onclick="doManualLookup()">
+              <span id="btn-verify-text"><i class="bi bi-search me-1"></i>Vérifier</span>
+              <span id="btn-verify-spin" style="display:none;">
+                <span class="spinner-border spinner-border-sm me-1"></span>Recherche…
+              </span>
+            </button>
+          </div>
+          <small class="text-muted mt-2 d-block">
+            Exemples : <code>411-25-0042/ISI</code> · <code>Diallo</code> · <code>Moussa</code>
+          </small>
+        </div>
+      </div>
+
+      <!-- Message d'erreur (d-none masque sans conflit Bootstrap) -->
+      <div id="error-msg" class="alert alert-danger mt-3 d-none align-items-start gap-2 mb-0">
+        <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+        <div>
+          <div class="fw-semibold" id="error-title"></div>
+          <div id="error-text" style="font-size:.83rem;"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Colonne droite : résultat ── -->
+    <div class="col-lg-7" id="result-section">
+
+      <!-- ── Carte PERSONNEL (présence enregistrée) ── -->
+      <div id="staff-card" style="display:none;border-radius:16px;overflow:hidden;
+           box-shadow:0 4px 24px rgba(0,0,0,.12);border:2.5px solid #16a34a;">
+        <!-- Bandeau dynamique (couleur selon statut) -->
+        <div class="p-3 text-white text-center" id="staff-header-bar"
+             style="background:#16a34a;font-size:1.1rem;font-weight:700;">
+          <i id="staff-header-icon" class="bi bi-check-circle-fill me-2"></i>
+          <span id="staff-header-label">PRÉSENCE ENREGISTRÉE</span>
+        </div>
+        <div class="p-4 bg-white">
+          <div class="d-flex gap-3 align-items-center mb-3">
+            <div id="staff-avatar-wrap"></div>
+            <div>
+              <div class="fw-bold fs-5" id="staff-name"></div>
+              <div class="text-muted" id="staff-role" style="font-size:.85rem;"></div>
+              <div class="text-muted" id="staff-email" style="font-size:.78rem;"></div>
+            </div>
+          </div>
+          <hr class="my-3">
+          <div class="row g-3 text-center">
+            <div class="col-4">
+              <div id="staff-heure-box" style="border-radius:12px;padding:14px 10px;border:1.5px solid #bbf7d0;background:#f0fdf4;">
+                <i class="bi bi-clock-fill" id="staff-heure-icon" style="color:#16a34a;font-size:1.3rem;"></i>
+                <div class="fw-bold mt-1" id="staff-heure" style="font-size:1.2rem;color:#15803d;"></div>
+                <div style="font-size:.72rem;color:#6b7280;">Heure d'arrivée</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div id="staff-statut-box" style="border-radius:12px;padding:14px 10px;border:1.5px solid #bbf7d0;background:#f0fdf4;">
+                <i class="bi bi-person-check-fill" id="staff-statut-icon" style="color:#16a34a;font-size:1.3rem;"></i>
+                <div class="fw-bold mt-1" id="staff-statut-label" style="font-size:.95rem;color:#15803d;"></div>
+                <div style="font-size:.72rem;color:#6b7280;">Statut</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div style="background:#f0fdf4;border-radius:12px;padding:14px 10px;border:1.5px solid #bbf7d0;">
+                <i class="bi bi-calendar-check-fill" style="color:#16a34a;font-size:1.3rem;"></i>
+                <div class="fw-bold mt-1" id="staff-date" style="font-size:1.1rem;color:#15803d;"></div>
+                <div style="font-size:.72rem;color:#6b7280;">Date</div>
+              </div>
+            </div>
+          </div>
+          <div id="staff-depart-box" style="display:none;border-radius:12px;padding:12px 14px;
+               border:1.5px solid #bfdbfe;background:#eff6ff;margin-top:12px;text-align:center;">
+            <i class="bi bi-box-arrow-right" style="color:#1d4ed8;font-size:1.2rem;"></i>
+            <span class="fw-bold ms-1" id="staff-depart-heure" style="font-size:1.1rem;color:#1d4ed8;"></span>
+            <span style="font-size:.75rem;color:#6b7280;"> — Heure de départ</span>
+          </div>
+          <div id="staff-already-msg" style="display:none;"
+               class="alert alert-warning mt-3 mb-0 py-2" style="font-size:.82rem;">
+            <i class="bi bi-info-circle me-1"></i>
+            Présence déjà enregistrée pour aujourd'hui.
+          </div>
+        </div>
+        <div class="px-4 py-2 text-center"
+             style="background:#f8fafc;border-top:1px solid #e2e8f0;">
+          <small class="text-muted">
+            <i class="bi bi-clock me-1"></i> Scanné le <span id="staff-scan-time"></span>
+          </small>
+          <button type="button" class="btn btn-sm btn-outline-secondary ms-3"
+                  onclick="resetScan()">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Nouveau scan
+          </button>
+        </div>
+      </div>
+
+      <!-- ── Carte ÉTUDIANT (statut paiement) ── -->
+      <div class="status-card" id="student-card">
+
+        <!-- Bandeau statut global -->
+        <div id="status-header" class="p-3 text-white text-center"
+             style="font-size:1.1rem;font-weight:700;">
+          <i id="status-icon" class="me-2"></i>
+          <span id="status-label"></span>
+        </div>
+
+        <!-- Corps -->
+        <div class="p-4 bg-white">
+          <div class="d-flex gap-3 align-items-center mb-3">
+            <div id="photo-wrap"></div>
+            <div>
+              <div class="fw-bold fs-5" id="stu-name"></div>
+              <div class="text-muted" id="stu-mat" style="font-size:.88rem;"></div>
+              <div class="text-muted" id="stu-classe" style="font-size:.88rem;"></div>
+              <div id="stu-suspended-badge" class="mt-1" style="display:none;">
+                <span class="badge bg-warning text-dark">
+                  <i class="bi bi-exclamation-triangle-fill me-1"></i>Suspendu pour impayé
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <hr class="my-3">
+
+          <!-- Badge paiement -->
+          <div class="text-center mb-3">
+            <div id="payment-badge"
+                 class="d-inline-flex align-items-center gap-2 px-4 py-3 rounded-3 fw-bold fs-6 w-100 justify-content-center">
+              <i id="payment-icon"></i>
+              <span id="payment-statut"></span>
+            </div>
+            <div class="mt-2 text-muted" id="payment-detail" style="font-size:.85rem;"></div>
+            <div class="mt-1 fw-semibold" id="payment-month"
+                 style="font-size:.82rem;color:#64748b;"></div>
+          </div>
+
+          <!-- Historique échéances -->
+          <div id="echeances-section" style="display:none;">
+            <hr class="my-3">
+            <div class="fw-semibold mb-2" style="font-size:.83rem;color:#475569;">
+              <i class="bi bi-clock-history me-1"></i> Historique des échéances
+            </div>
+            <div id="echeances-list" class="d-flex flex-wrap gap-2"></div>
+          </div>
+        </div>
+
+        <!-- Footer carte -->
+        <div class="px-4 py-2 text-center"
+             style="background:#f8fafc;border-top:1px solid #e2e8f0;">
+          <small class="text-muted">
+            <i class="bi bi-clock me-1"></i>
+            Contrôlé le <span id="scan-time"></span>
+          </small>
+          <button type="button" class="btn btn-sm btn-outline-secondary ms-3"
+                  onclick="resetScan()">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Nouveau scan
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script>
+'use strict';
+
+const LOOKUP_URL = "{% url 'students:controle_scan_lookup' %}";
+const POLL_URL   = "{% url 'students:controle_scan_poll' %}";
+const CSRF_TOKEN = "{{ csrf_token }}";
+
+// ── Résultat de pointage en direct (à côté du QR) ────────────────────────────
+let lastSeenScanId = 0;
+let liveRenderToken = 0;   // incrémenté à chaque nouveau résultat affiché, pour
+                           // que l'auto-effacement à 3s n'efface jamais un
+                           // résultat plus récent arrivé entre-temps.
+
+function liveResetPanels() {
+  document.getElementById('live-placeholder').style.display = 'none';
+  document.getElementById('live-student').style.display     = 'none';
+  document.getElementById('live-staff').style.display       = 'none';
+}
+
+function liveShowPlaceholder() {
+  liveResetPanels();
+  document.getElementById('live-placeholder').style.display = '';
+}
+
+function liveScheduleAutoClear() {
+  const myToken = ++liveRenderToken;
+  setTimeout(() => {
+    if (myToken === liveRenderToken) liveShowPlaceholder();
+  }, 10000);
+}
+
+function livePhotoHtml(url, initialsSource, tint) {
+  if (url) {
+    return `<img src="${url}" style="width:56px;height:56px;object-fit:cover;border-radius:10px;border:2px solid #e2e8f0;" alt="Photo">`;
+  }
+  const initials = (initialsSource || '').trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase();
+  return `<div style="width:56px;height:56px;border-radius:10px;background:${tint};display:flex;align-items:center;justify-content:center;border:2px solid #e2e8f0;flex-shrink:0;"><span style="font-weight:700;color:#0369a1;">${initials}</span></div>`;
+}
+
+function renderLiveStudent(payload, scannedAt) {
+  liveResetPanels();
+  document.getElementById('live-student').style.display = '';
+
+  const s = payload.student, p = payload.paiement;
+  const isSusp  = !!s.suspendu;
+  const isValid = !isSusp && p.is_valid;
+  const bg    = isSusp ? '#d97706' : isValid ? '#16a34a' : '#dc2626';
+  const icon  = isSusp ? 'bi-exclamation-triangle-fill' : isValid ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
+  const label = isSusp ? 'ACCÈS SUSPENDU' : isValid ? 'VALIDÉ' : 'INVALIDÉ';
+
+  document.getElementById('live-stu-band').style.background = bg;
+  document.getElementById('live-stu-icon').className = 'bi ' + icon + ' me-1';
+  document.getElementById('live-stu-label').textContent = label;
+
+  document.getElementById('live-stu-photo-wrap').innerHTML =
+    livePhotoHtml(s.photo, s.nom, 'linear-gradient(135deg,#e0f2fe,#bae6fd)');
+  document.getElementById('live-stu-name').textContent = s.nom;
+  document.getElementById('live-stu-classe').textContent =
+    [s.filiere, s.classe].filter(Boolean).join(' - ');
+  document.getElementById('live-stu-detail').textContent =
+    isSusp ? 'Compte suspendu pour impayé.' : (p.statut_detail || '');
+  document.getElementById('live-stu-dernier-paye').textContent =
+    'Dernier mois payé : ' + (p.dernier_mois_paye || '—');
+  document.getElementById('live-scan-time').textContent = 'Scanné à ' + scannedAt;
+  liveScheduleAutoClear();
+}
+
+function renderLiveStaff(payload, scannedAt) {
+  liveResetPanels();
+  document.getElementById('live-staff').style.display = '';
+
+  const STATUT_STYLE = {
+    PRESENT: { bg: '#16a34a', icon: 'bi-check-circle-fill', label: 'ARRIVÉE ENREGISTRÉE' },
+    RETARD:  { bg: '#d97706', icon: 'bi-clock-history',     label: 'RETARD ENREGISTRÉ'    },
+    ABSENT:  { bg: '#dc2626', icon: 'bi-x-circle-fill',      label: 'ABSENT ENREGISTRÉ'    },
+  };
+  const styl     = STATUT_STYLE[payload.statut] || STATUT_STYLE.PRESENT;
+  const isDepart = payload.action === 'depart';
+  const bg    = isDepart ? '#1d4ed8' : styl.bg;
+  const label = isDepart ? 'DÉPART ENREGISTRÉ'
+    : payload.action === 'deja_complet' ? 'DÉJÀ POINTÉ AUJOURD\'HUI' : styl.label;
+  const icon  = isDepart ? 'bi-box-arrow-right'
+    : payload.action === 'deja_complet' ? 'bi-info-circle-fill' : styl.icon;
+
+  document.getElementById('live-staff-band').style.background = bg;
+  document.getElementById('live-staff-icon').className = 'bi ' + icon + ' me-1';
+  document.getElementById('live-staff-label').textContent = label;
+
+  document.getElementById('live-staff-photo-wrap').innerHTML =
+    livePhotoHtml(payload.avatar, payload.nom, 'linear-gradient(135deg,#dcfce7,#bbf7d0)');
+  document.getElementById('live-staff-name').textContent = payload.nom;
+  document.getElementById('live-staff-role').textContent = payload.role || '—';
+  document.getElementById('live-staff-detail').textContent =
+    'Heure : ' + (payload.heure || '—') + ' — Scanné à ' + scannedAt;
+  liveScheduleAutoClear();
+}
+
+function pollLiveResult() {
+  fetch(POLL_URL + '?after=' + lastSeenScanId, { cache: 'no-store' })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok || !data.event || data.event.id === lastSeenScanId) return;
+      lastSeenScanId = data.event.id;
+      if (data.event.type === 'student') {
+        renderLiveStudent(data.event.data, data.event.scanned_at);
+      } else {
+        renderLiveStaff(data.event.data, data.event.scanned_at);
+      }
+    })
+    .catch(() => {});
+}
+
+setInterval(pollLiveResult, 3000);
+pollLiveResult();
+
+// ── État caméra ───────────────────────────────────────────────────────────────
+let mediaStream  = null;
+let scanning     = false;
+let facingMode   = 'environment';
+let lastQR       = null;
+let lastQRTime   = 0;
+let jsqrReady    = false;
+let lookupBusy   = false;   // anti-doublon pendant requête en cours
+
+const videoEl  = document.getElementById('video');
+const canvasEl = document.getElementById('scanner-canvas');
+const ctx2d    = canvasEl.getContext('2d');
+
+// Démarrage automatique au chargement de la page
+// On démarre la caméra indépendamment du chargement de jsQR
+window.addEventListener('load', () => {
+  jsqrReady = (typeof jsQR === 'function');
+  if (!jsqrReady) {
+    setCamStatus('warning',
+      'Bibliothèque QR non disponible (pas d\'accès internet ?). '
+      + 'Le scan QR est désactivé — utilisez la <strong>saisie manuelle</strong>.');
+  }
+  // Démarrer la caméra quoi qu'il arrive (utile pour la vidéo même sans jsQR)
+  startCamera();
+});
+
+// ── Utilitaires UI ────────────────────────────────────────────────────────────
+function setCamStatus(type, msg) {
+  const el = document.getElementById('cam-status');
+  el.style.display = msg ? '' : 'none';
+  el.innerHTML = msg
+    ? `<span class="text-${type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'success'}">`
+      + `<i class="bi bi-${type === 'error' ? 'exclamation-triangle' : type === 'warning' ? 'exclamation-circle' : 'check-circle'} me-1"></i>${msg}</span>`
+    : '';
+}
+
+function setCamRunning(running) {
+  document.getElementById('btn-start').disabled  = running;
+  document.getElementById('btn-stop').disabled   = !running;
+  document.getElementById('btn-switch').disabled = !running;
+  document.getElementById('cam-placeholder').style.display = running ? 'none' : '';
+  document.getElementById('viewfinder').classList.toggle('active', running);
+}
+
+// ── Caméra ────────────────────────────────────────────────────────────────────
+async function startCamera() {
+  stopCamera();
+  setCamStatus('', '');
+
+  try {
+    // Tenter l'accès caméra — le try/catch gère tous les cas d'échec
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: facingMode },
+        width:  { ideal: 1280 },
+        height: { ideal: 1280 },
+      }
+    });
+    videoEl.srcObject = mediaStream;
+    await videoEl.play();
+    scanning = true;
+    setCamRunning(true);
+    setCamStatus('success', 'Caméra active — positionnez le QR code dans le cadre');
+    requestAnimationFrame(scanFrame);
+  } catch (err) {
+    let msg = 'Impossible d\'accéder à la caméra.';
+    if (!navigator.mediaDevices) {
+      msg = 'Caméra indisponible sur cette connexion HTTP. Utilisez la <strong>saisie manuelle</strong>.';
+    } else if (err.name === 'NotAllowedError') {
+      msg = 'Permission caméra refusée. Autorisez-la dans votre navigateur puis cliquez <strong>Démarrer</strong>.';
+    } else if (err.name === 'NotFoundError') {
+      msg = 'Aucune caméra détectée sur cet appareil.';
+    } else if (err.name === 'NotReadableError') {
+      msg = 'La caméra est déjà utilisée par une autre application.';
+    }
+    setCamStatus('error', msg);
+    setCamRunning(false);
+  }
+}
+
+function stopCamera() {
+  scanning = false;
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(t => t.stop());
+    mediaStream = null;
+    videoEl.srcObject = null;
+  }
+  setCamRunning(false);
+  setCamStatus('', '');
+}
+
+function switchCamera() {
+  facingMode = facingMode === 'environment' ? 'user' : 'environment';
+  startCamera();
+}
+
+function scanFrame() {
+  if (!scanning || !jsqrReady) return;
+
+  if (videoEl.readyState >= videoEl.HAVE_ENOUGH_DATA
+      && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+
+    canvasEl.width  = videoEl.videoWidth;
+    canvasEl.height = videoEl.videoHeight;
+    ctx2d.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+    const imgData = ctx2d.getImageData(0, 0, canvasEl.width, canvasEl.height);
+    const code    = jsQR(imgData.data, imgData.width, imgData.height,
+                         { inversionAttempts: 'dontInvert' });
+
+    if (code && code.data && code.data.length > 4) {
+      // Valider : le QR ISI est un JSON avec "type":"student" ou "type":"presence"
+      const raw = code.data.trim();
+      let isValid = false;
+      try {
+        const parsed = JSON.parse(raw);
+        isValid = (parsed.type === 'student' || parsed.type === 'presence')
+                  && (parsed.id || parsed.mat);
+      } catch (e) {
+        // QR non-JSON : accepter si ça ressemble à un matricule (contient tiret)
+        isValid = /\d{3}-\d{2}-\d{4}/.test(raw);
+      }
+
+      if (isValid && !lookupBusy) {
+        const now = Date.now();
+        if (raw !== lastQR || now - lastQRTime > 4000) {
+          lastQR     = raw;
+          lastQRTime = now;
+          // Flash visuel sur le scanner
+          document.getElementById('scanner-wrap').classList.add('qr-found');
+          setTimeout(() => document.getElementById('scanner-wrap').classList.remove('qr-found'), 500);
+          doLookup({ qr_data: raw });
+        }
+      }
+    }
+  }
+  requestAnimationFrame(scanFrame);
+}
+
+window.addEventListener('beforeunload', stopCamera);
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.getElementById('panel-qr').style.display     = tab === 'qr'     ? '' : 'none';
+  document.getElementById('panel-cam').style.display    = tab === 'cam'    ? '' : 'none';
+  document.getElementById('panel-manual').style.display = tab === 'manual' ? '' : 'none';
+  document.getElementById('tab-qr').classList.toggle('active', tab === 'qr');
+  document.getElementById('tab-cam').classList.toggle('active', tab === 'cam');
+  document.getElementById('tab-manual').classList.toggle('active', tab === 'manual');
+  if (tab !== 'cam') stopCamera();
+  hideError();
+}
+
+// ── Saisie manuelle ───────────────────────────────────────────────────────────
+function doManualLookup() {
+  const val = document.getElementById('manual-input').value.trim();
+  if (!val) {
+    showError('Saisissez un matricule ou un nom.', '');
+    return;
+  }
+  doLookup({ matricule: val });
+}
+
+// ── Requête AJAX ──────────────────────────────────────────────────────────────
+async function doLookup(payload) {
+  if (lookupBusy) return;
+  lookupBusy = true;
+  hideError();
+  setSearchLoading(true);
+
+  try {
+    const resp = await fetch(LOOKUP_URL, {
+      method:  'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken':  CSRF_TOKEN,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!resp.ok) {
+      showError('Erreur serveur (' + resp.status + ').', 'Veuillez réessayer.');
+      return;
+    }
+
+    const data = await resp.json();
+    if (!data.found) {
+      showError('Introuvable.', data.message || 'Aucune personne trouvée avec cette référence.');
+      return;
+    }
+    if (data.type === 'staff') {
+      renderStaff(data);
+    } else {
+      renderResult(data);
+    }
+  } catch (err) {
+    showError('Erreur réseau.', err.message);
+  } finally {
+    lookupBusy = false;
+    setSearchLoading(false);
+  }
+}
+
+function setSearchLoading(on) {
+  const btnText = document.getElementById('btn-verify-text');
+  const btnSpin = document.getElementById('btn-verify-spin');
+  const btn     = document.getElementById('btn-verify');
+  if (btnText) btnText.style.display = on ? 'none' : '';
+  if (btnSpin) btnSpin.style.display = on ? '' : 'none';
+  if (btn)     btn.disabled = on;
+}
+
+// ── Rendu du résultat ─────────────────────────────────────────────────────────
+function renderResult(data) {
+  const s = data.student;
+  const p = data.paiement;
+
+  document.getElementById('stu-name').textContent   = s.nom;
+  document.getElementById('stu-mat').textContent    = 'Matricule : ' + s.matricule;
+  const classeLabel = [s.filiere, s.classe].filter(Boolean).join(' - ');
+  document.getElementById('stu-classe').textContent =
+    classeLabel ? ('Classe : ' + classeLabel + (s.annee ? ' — ' + s.annee : '')) : '';
+
+  // Photo
+  const photoWrap = document.getElementById('photo-wrap');
+  if (s.photo) {
+    photoWrap.innerHTML = `<img src="${s.photo}" class="student-photo" alt="Photo">`;
+  } else {
+    const initials = s.nom.trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase();
+    photoWrap.innerHTML =
+      `<div class="photo-placeholder"><span style="font-size:1.5rem;font-weight:700;color:#0369a1;">${initials}</span></div>`;
+  }
+
+  document.getElementById('stu-suspended-badge').style.display = s.suspendu ? '' : 'none';
+
+  const isSusp  = !!s.suspendu;
+  const isValid = !isSusp && p.is_valid;
+  const type    = isSusp ? 'suspended' : isValid ? 'paid' : 'unpaid';
+  const bgColor = isSusp ? '#d97706'   : isValid ? '#16a34a' : '#dc2626';
+  const icon    = isSusp ? 'bi-exclamation-triangle-fill'
+                         : isValid ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
+  const label   = isSusp ? 'ACCÈS SUSPENDU' : isValid ? 'VALIDÉ' : 'INVALIDÉ';
+
+  const card = document.getElementById('student-card');
+  card.className = 'status-card status-' + type;
+
+  const header = document.getElementById('status-header');
+  header.style.background = bgColor;
+  document.getElementById('status-icon').className  = 'bi ' + icon + ' me-2';
+  document.getElementById('status-label').textContent = label;
+
+  const badge = document.getElementById('payment-badge');
+  badge.className = 'badge-' + type +
+    ' d-inline-flex align-items-center gap-2 px-4 py-3 rounded-3 fw-bold fs-6 w-100 justify-content-center';
+  document.getElementById('payment-icon').className  = 'bi ' + icon;
+  document.getElementById('payment-statut').textContent =
+    isSusp ? 'Compte suspendu' : (isValid ? 'VALIDÉ' : 'INVALIDÉ');
+  document.getElementById('payment-detail').textContent =
+    isSusp ? 'Cet étudiant est suspendu pour impayé.' : (p.statut_detail || '');
+  document.getElementById('payment-month').textContent =
+    p.mois_reference ? ('Mois de référence : ' + p.mois_reference) : '';
+
+  // Échéances
+  const ecList = document.getElementById('echeances-list');
+  ecList.innerHTML = '';
+  if (p.echeances && p.echeances.length) {
+    document.getElementById('echeances-section').style.display = '';
+    p.echeances.forEach(ec => {
+      const span = document.createElement('span');
+      span.className = 'installment-badge ' + (ec.paye ? 'installment-paid' : 'installment-unpaid');
+      span.title = ec.paye ? ('Payé le ' + (ec.date_paiement || '?')) : 'Non réglé';
+      span.innerHTML =
+        `<i class="bi bi-${ec.paye ? 'check-circle' : 'x-circle'}"></i> ${ec.mois}`;
+      ecList.appendChild(span);
+    });
+  } else {
+    document.getElementById('echeances-section').style.display = 'none';
+  }
+
+  const now = new Date();
+  document.getElementById('scan-time').textContent =
+    now.toLocaleDateString('fr-FR') + ' à '
+    + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+  hideError();
+  const resultSec = document.getElementById('result-section');
+  resultSec.style.display = '';
+  resultSec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ── Rendu PERSONNEL ───────────────────────────────────────────────────────────
+function renderStaff(data) {
+  const s = data.staff;
+  const p = data.presence;
+
+  // Avatar
+  const avatarWrap = document.getElementById('staff-avatar-wrap');
+  if (s.avatar) {
+    avatarWrap.innerHTML = `<img src="${s.avatar}" class="student-photo" alt="Photo">`;
+  } else {
+    const initials = s.nom.trim().split(/\s+/).map(w => w[0] || '').slice(0, 2).join('').toUpperCase();
+    avatarWrap.innerHTML =
+      `<div class="photo-placeholder"><span style="font-size:1.5rem;font-weight:700;color:#15803d;">${initials}</span></div>`;
+  }
+
+  document.getElementById('staff-name').textContent  = s.nom;
+  document.getElementById('staff-role').textContent  = s.role || '—';
+  document.getElementById('staff-email').textContent = s.email || '';
+  document.getElementById('staff-heure').textContent = p.heure_arrivee || '--:--';
+  document.getElementById('staff-date').textContent  = p.date || '';
+  document.getElementById('staff-statut-label').textContent = p.statut_label || '—';
+
+  // Bloc départ (uniquement si une heure de départ a été enregistrée)
+  const departBox = document.getElementById('staff-depart-box');
+  if (p.heure_depart) {
+    document.getElementById('staff-depart-heure').textContent = p.heure_depart;
+    departBox.style.display = '';
+  } else {
+    departBox.style.display = 'none';
+  }
+
+  // Palette couleurs selon statut
+  const STATUT_STYLE = {
+    PRESENT:  { bg: '#16a34a', light: '#f0fdf4', border: '#bbf7d0', text: '#15803d', icon: 'bi-check-circle-fill',   label: 'PRÉSENCE ENREGISTRÉE' },
+    RETARD:   { bg: '#d97706', light: '#fffbeb', border: '#fde68a', text: '#b45309', icon: 'bi-clock-history',        label: 'RETARD ENREGISTRÉ'    },
+    ABSENT:   { bg: '#dc2626', light: '#fef2f2', border: '#fecaca', text: '#b91c1c', icon: 'bi-x-circle-fill',        label: 'ABSENT ENREGISTRÉ'    },
+  };
+  const st   = p.statut || 'PRESENT';
+  const styl = STATUT_STYLE[st] || STATUT_STYLE.PRESENT;
+
+  // Libellé bandeau selon l'action de pointage (arrivée / départ / déjà complet)
+  const ACTION_LABEL = {
+    arrivee:      styl.label,
+    depart:       'DÉPART ENREGISTRÉ',
+    deja_complet: 'ARRIVÉE ET DÉPART DÉJÀ ENREGISTRÉS AUJOURD\'HUI',
+  };
+  const actionBg = p.action === 'depart' ? '#1d4ed8' : styl.bg;
+
+  // Bandeau header
+  const headerBar = document.getElementById('staff-header-bar');
+  headerBar.style.background = actionBg;
+  const headerIcon = p.action === 'depart' ? 'bi-box-arrow-right'
+                    : p.action === 'deja_complet' ? 'bi-info-circle-fill'
+                    : styl.icon;
+  document.getElementById('staff-header-icon').className = `bi ${headerIcon} me-2`;
+
+  // Boîte heure
+  const heureBox = document.getElementById('staff-heure-box');
+  heureBox.style.background   = styl.light;
+  heureBox.style.borderColor  = styl.border;
+  document.getElementById('staff-heure').style.color      = styl.text;
+  document.getElementById('staff-heure-icon').style.color = styl.bg;
+
+  // Boîte statut
+  const statutBox = document.getElementById('staff-statut-box');
+  statutBox.style.background  = styl.light;
+  statutBox.style.borderColor = styl.border;
+  document.getElementById('staff-statut-label').style.color = styl.text;
+  document.getElementById('staff-statut-icon').style.color  = styl.bg;
+
+  // Bordure carte
+  document.getElementById('staff-card').style.borderColor = actionBg;
+
+  // Message si déjà pointé (arrivée + départ) / label header selon l'action
+  document.getElementById('staff-already-msg').style.display = p.action === 'deja_complet' ? '' : 'none';
+  document.getElementById('staff-header-label').textContent  =
+    ACTION_LABEL[p.action] || styl.label;
+
+  const now = new Date();
+  document.getElementById('staff-scan-time').textContent =
+    now.toLocaleDateString('fr-FR') + ' à '
+    + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+  // Masquer la carte étudiant, afficher la carte personnel
+  document.getElementById('student-card').style.display = 'none';
+  document.getElementById('staff-card').style.display   = '';
+
+  hideError();
+  const resultSec = document.getElementById('result-section');
+  resultSec.style.display = '';
+  resultSec.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  // Auto-reset après 6 secondes pour le prochain scan
+  setTimeout(resetScan, 6000);
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+function resetScan() {
+  document.getElementById('result-section').style.display = 'none';
+  document.getElementById('student-card').style.display   = '';
+  document.getElementById('staff-card').style.display     = 'none';
+  const inp = document.getElementById('manual-input');
+  if (inp) inp.value = '';
+  lastQR = null; lastQRTime = 0;
+  hideError();
+}
+
+// ── Messages d'erreur ─────────────────────────────────────────────────────────
+function showError(title, detail) {
+  document.getElementById('error-title').textContent = title || 'Erreur';
+  document.getElementById('error-text').textContent  = detail || '';
+  const el = document.getElementById('error-msg');
+  el.classList.remove('d-none');
+  el.classList.add('d-flex');
+  document.getElementById('result-section').style.display = 'none';
+}
+function hideError() {
+  const el = document.getElementById('error-msg');
+  el.classList.add('d-none');
+  el.classList.remove('d-flex');
+}
+</script>
+{% endblock %}

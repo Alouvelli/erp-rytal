@@ -1,0 +1,137 @@
+{% extends 'base/base.html' %}
+{% block title %}Mon Dossier de Candidature{% endblock %}
+{% block content %}
+<div class="page-header justify-content-center">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003d82;"><i class="bi bi-folder2-open"></i></span>
+    Mon Dossier de Candidature
+  </h1>
+</div>
+
+<div class="card-section p-4 mx-auto" style="max-width: 760px;">
+  <p class="text-muted small mb-4">Filière : <strong>{{ candidature.program.name }}</strong></p>
+
+  <!-- Étape 1 : Soumission du dossier de candidature -->
+  <div class="d-flex gap-3 mb-4">
+    <div class="text-center" style="width:32px;flex-shrink:0;">
+      <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto" style="width:32px;height:32px;font-weight:700;color:#fff;
+        background:{% if candidature.is_validated %}#16a34a{% elif candidature.status == 'REJECTED' %}#dc2626{% else %}#f59e0b{% endif %};">
+        {% if candidature.is_validated %}<i class="bi bi-check-lg"></i>{% elif candidature.status == 'REJECTED' %}<i class="bi bi-x-lg"></i>{% else %}1{% endif %}
+      </div>
+    </div>
+    <div class="flex-grow-1">
+      <h2 class="h6 fw-bold mb-1">1. Soumission du dossier de candidature</h2>
+      {% if candidature.status == 'REJECTED' %}
+        <span class="badge bg-danger">Rejetée</span>
+        {% if candidature.motif_rejet %}<p class="text-danger small mt-2 mb-0">Motif : {{ candidature.motif_rejet }}</p>{% endif %}
+      {% elif candidature.is_validated %}
+        <span class="badge bg-success">Validée par le chef de département</span>
+      {% else %}
+        <span class="badge bg-warning text-dark">En attente de validation par le chef de département</span>
+        {% if documents_completes %}
+        <p class="text-muted small mt-2 mb-2"><i class="bi bi-check-circle-fill text-success me-1"></i>Vos pièces justificatives ont été transmises.</p>
+        <a href="{% url 'candidat:candidat_documents' %}" class="btn btn-sm btn-outline-primary mt-1">Modifier mes pièces</a>
+        {% else %}
+        <p class="text-muted small mt-2 mb-2">
+          Pièces requises : CNI/Passeport, diplôme du BAC, et selon votre année d'entrée,
+          relevé du BAC + 2 photos d'identité (1ère année) ou vos bulletins des semestres
+          antérieurs (2ième à 5ième année).
+        </p>
+        <a href="{% url 'candidat:candidat_documents' %}" class="btn btn-sm btn-primary mt-1">Soumettre mes pièces</a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  {% if candidature.status != 'REJECTED' %}
+  <!-- Étape 2 : Inscription dans la filière demandée -->
+  <div class="d-flex gap-3 mb-4">
+    <div class="text-center" style="width:32px;flex-shrink:0;">
+      <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto" style="width:32px;height:32px;font-weight:700;color:#fff;
+        background:{% if enrollment and enrollment.status != 'PENDING' and enrollment.status != 'REJECTED' %}#16a34a{% elif enrollment.status == 'REJECTED' %}#dc2626{% elif not candidature.is_validated %}#cbd5e1{% else %}#f59e0b{% endif %};">
+        {% if enrollment and enrollment.status != 'PENDING' and enrollment.status != 'REJECTED' %}<i class="bi bi-check-lg"></i>
+        {% elif enrollment.status == 'REJECTED' %}<i class="bi bi-x-lg"></i>
+        {% elif not candidature.is_validated %}<i class="bi bi-lock-fill" style="font-size:.75rem;"></i>
+        {% else %}2{% endif %}
+      </div>
+    </div>
+    <div class="flex-grow-1">
+      <h2 class="h6 fw-bold mb-1">2. Inscription dans la filière demandée</h2>
+      {% if not candidature.is_validated %}
+        <span class="badge bg-secondary">Verrouillée — en attente de l'étape 1</span>
+      {% elif not enrollment %}
+        <span class="badge bg-warning text-dark">À compléter</span>
+        <p class="text-muted small mt-2 mb-2">Complétez le formulaire d'inscription pour <strong>{{ candidature.program.name }}</strong>.</p>
+        <a href="{% url 'candidat:candidat_inscription' %}" class="btn btn-sm btn-primary mt-1">Compléter mon inscription</a>
+      {% elif enrollment.status == 'PENDING' %}
+        <span class="badge bg-warning text-dark">En attente de validation</span>
+        <p class="text-muted small mt-2 mb-0">Votre dossier d'inscription est examiné par le Trésorier Général.</p>
+      {% elif enrollment.status == 'REJECTED' %}
+        <span class="badge bg-danger">Inscription rejetée</span>
+      {% else %}
+        <span class="badge bg-success">Validée — frais fixés</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if enrollment and enrollment.status != 'PENDING' and enrollment.status != 'REJECTED' %}
+  <!-- Étape 3 : Paiement des frais d'inscription -->
+  <div class="d-flex gap-3 mb-4">
+    <div class="text-center" style="width:32px;flex-shrink:0;">
+      <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto" style="width:32px;height:32px;font-weight:700;color:#fff;
+        background:{% if payment_proof or enrollment.status == 'VALIDATED' %}#16a34a{% else %}#f59e0b{% endif %};">
+        {% if payment_proof or enrollment.status == 'VALIDATED' %}<i class="bi bi-check-lg"></i>{% else %}3{% endif %}
+      </div>
+    </div>
+    <div class="flex-grow-1">
+      <h2 class="h6 fw-bold mb-1">3. Paiement des frais d'inscription</h2>
+      {% if payment_proof or enrollment.status == 'VALIDATED' %}
+        <span class="badge bg-success">Effectué</span>
+      {% else %}
+        <span class="badge bg-warning text-dark">À effectuer</span>
+        <p class="text-muted small mt-2 mb-2">
+          Montant à régler : <strong>{{ montant_a_regler|default:"—" }} FCFA</strong>.
+          Réglez par Wave, Orange Money, carte bancaire (VISA) ou virement bancaire.
+        </p>
+        <a href="{% url 'candidat:candidat_paiement' %}" class="btn btn-sm btn-primary mt-1">Procéder au paiement</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Étape 4 : Envoi des preuves de paiement -->
+  <div class="d-flex gap-3">
+    <div class="text-center" style="width:32px;flex-shrink:0;">
+      <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto" style="width:32px;height:32px;font-weight:700;color:#fff;
+        background:{% if enrollment.status == 'VALIDATED' %}#16a34a{% elif payment_proof.status == 'REJECTED' %}#dc2626{% else %}#f59e0b{% endif %};">
+        {% if enrollment.status == 'VALIDATED' %}<i class="bi bi-check-lg"></i>{% elif payment_proof.status == 'REJECTED' %}<i class="bi bi-x-lg"></i>{% else %}4{% endif %}
+      </div>
+    </div>
+    <div class="flex-grow-1">
+      <h2 class="h6 fw-bold mb-1">4. Envoi des preuves de paiement</h2>
+      {% if enrollment.status == 'VALIDATED' %}
+        <span class="badge bg-success">Inscription finalisée — vous êtes étudiant(e)</span>
+        <p class="text-muted small mt-2 mb-2">Félicitations, vous êtes inscrit(e) et ajouté(e) à la liste de votre classe.</p>
+        <a href="{% url 'accounting:inscription_recu' pk=enrollment.pk %}" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-file-earmark-pdf me-1"></i>Télécharger mon reçu
+        </a>
+      {% elif payment_proof and payment_proof.status == 'PENDING' %}
+        <span class="badge bg-warning text-dark">En attente de validation</span>
+        <p class="text-muted small mt-2 mb-0">Votre justificatif a été transmis et est en cours de validation par le Caissier.</p>
+      {% elif payment_proof and payment_proof.status == 'REJECTED' %}
+        <span class="badge bg-danger">Justificatif rejeté</span>
+        {% if payment_proof.motif_rejet %}<p class="text-danger small mt-2 mb-2">Motif : {{ payment_proof.motif_rejet }}</p>{% endif %}
+        <a href="{% url 'candidat:candidat_paiement' %}" class="btn btn-sm btn-primary mt-1">Déposer un nouveau justificatif</a>
+      {% else %}
+        <span class="badge bg-secondary">En attente du paiement</span>
+        <p class="text-muted small mt-2 mb-2">
+          Une fois votre paiement effectué (étape 3), indiquez sa référence et joignez le
+          reçu (image ou PDF).
+        </p>
+        <a href="{% url 'candidat:candidat_paiement' %}" class="btn btn-sm btn-outline-primary mt-1">Transmettre ma preuve de paiement</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

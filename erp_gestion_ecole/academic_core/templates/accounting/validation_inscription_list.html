@@ -1,0 +1,515 @@
+{% extends 'base/base.html' %}
+{% block title %}Validation des inscriptions{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Direction Administrative Financière</a></li>
+<li class="breadcrumb-item active">Validation des inscriptions</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h4 class="mb-0 fw-bold" style="color:var(--navy);">
+      <i class="bi bi-person-check-fill me-2" style="color:var(--accent);"></i>Validation des inscriptions
+    </h4>
+    <p class="text-muted mb-0" style="font-size:.82rem;">Gérer et valider les inscriptions après paiement des frais</p>
+  </div>
+  {% if user.role_name != 'COMPTABLE' %}
+  <a href="{% url 'accounting:validation_inscription_create' %}" class="btn btn-sm" style="background:var(--navy);color:#fff;border-radius:8px;font-size:.82rem;">
+    <i class="bi bi-plus-lg me-1"></i>Nouvelle inscription
+  </a>
+  {% endif %}
+</div>
+
+<!-- Compteurs -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3" style="border-radius:12px;border-left:3px solid var(--navy)!important;">
+      <div style="font-size:1.6rem;font-weight:800;color:var(--navy);">{{ counts.all }}</div>
+      <div style="font-size:.75rem;color:#64748b;">Toutes</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3" style="border-radius:12px;border-left:3px solid #f59e0b!important;cursor:pointer;" onclick="switchTab('pending')">
+      <div style="font-size:1.6rem;font-weight:800;color:#d97706;">{{ counts.pending }}</div>
+      <div style="font-size:.75rem;color:#64748b;">En attente</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3" style="border-radius:12px;border-left:3px solid #22c55e!important;cursor:pointer;" onclick="switchTab('validated')">
+      <div style="font-size:1.6rem;font-weight:800;color:#16a34a;">{{ counts.validated }}</div>
+      <div style="font-size:.75rem;color:#64748b;">Validées</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card border-0 shadow-sm text-center py-3" style="border-radius:12px;border-left:3px solid #ef4444!important;cursor:pointer;" onclick="switchTab('validated')">
+      <div style="font-size:1.6rem;font-weight:800;color:#dc2626;">{{ counts.rejected }}</div>
+      <div style="font-size:.75rem;color:#64748b;">Rejetées</div>
+    </div>
+  </div>
+</div>
+
+<!-- Filtres -->
+<div class="card border-0 shadow-sm mb-3" style="border-radius:12px;">
+  <div class="card-body py-2">
+    <form method="get" class="d-flex flex-wrap gap-2 align-items-end">
+      <div>
+        <label class="form-label mb-1" style="font-size:.75rem;font-weight:600;">Recherche</label>
+        <input type="text" name="q" class="form-control form-control-sm" placeholder="Matricule ou nom…" value="{{ search }}" style="border-radius:8px;min-width:180px;">
+      </div>
+      <div>
+        <label class="form-label mb-1" style="font-size:.75rem;font-weight:600;">Année académique</label>
+        <select name="academic_year" class="form-select form-select-sm" style="border-radius:8px;">
+          {% for yr in academic_years %}
+          <option value="{{ yr.pk }}" {% if year_filter == yr.pk|stringformat:"s" or not year_filter and yr.is_current %}selected{% endif %}>{{ yr.label }}{% if yr.is_current %} (en cours){% endif %}</option>
+          {% endfor %}
+          <option value="all" {% if year_filter == 'all' %}selected{% endif %}>Toutes les années</option>
+        </select>
+      </div>
+      <button type="submit" class="btn btn-sm" style="background:var(--navy);color:#fff;border-radius:8px;">
+        <i class="bi bi-funnel-fill me-1"></i>Filtrer
+      </button>
+      <a href="{% url 'accounting:validation_inscription_list' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+        <i class="bi bi-x me-1"></i>Réinitialiser
+      </a>
+    </form>
+  </div>
+</div>
+
+<!-- Onglets -->
+<ul class="nav nav-tabs mb-0" id="inscTabs" style="border-bottom:2px solid #e2e8f0;">
+  <li class="nav-item">
+    <button class="nav-link active fw-semibold" id="tab-pending-btn" onclick="switchTab('pending')"
+            style="border-radius:8px 8px 0 0;font-size:.83rem;padding:8px 20px;color:#92400e;border:none;background:transparent;">
+      <i class="bi bi-hourglass-split me-1"></i>En attente
+      <span class="badge ms-1" style="background:#fef3c7;color:#92400e;border-radius:10px;">{{ counts.pending }}</span>
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link fw-semibold" id="tab-caisse-btn" onclick="switchTab('caisse')"
+            style="border-radius:8px 8px 0 0;font-size:.83rem;padding:8px 20px;color:#0369a1;border:none;background:transparent;">
+      <i class="bi bi-cash-coin me-1"></i>À la caisse
+      {% if counts.pending_caisse > 0 %}
+      <span class="badge ms-1" style="background:#0ea5e9;color:#fff;border-radius:10px;animation:pulse .8s infinite alternate;">{{ counts.pending_caisse }}</span>
+      {% else %}
+      <span class="badge ms-1" style="background:#e0f2fe;color:#0369a1;border-radius:10px;">{{ counts.pending_caisse }}</span>
+      {% endif %}
+    </button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link fw-semibold" id="tab-validated-btn" onclick="switchTab('validated')"
+            style="border-radius:8px 8px 0 0;font-size:.83rem;padding:8px 20px;color:#64748b;border:none;background:transparent;">
+      <i class="bi bi-check-circle me-1"></i>Traitées
+      <span class="badge ms-1" style="background:#f1f5f9;color:#475569;border-radius:10px;">{{ counts.validated|add:counts.rejected }}</span>
+    </button>
+  </li>
+</ul>
+
+<!-- ── Section En attente (Trésorier) ──────────────────────────────── -->
+<div id="section-pending">
+  <div class="card border-0 shadow-sm" style="border-radius:0 14px 14px 14px;">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle" id="tbl-pending">
+          <thead>
+            <tr style="background:#fffbeb;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:#92400e;">
+              <th class="px-3 py-3">Étudiant</th>
+              <th>Classe</th>
+              <th>Année</th>
+              <th>Type</th>
+              <th>Paiement</th>
+              <th>Date inscr.</th>
+              <th class="text-end pe-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody style="font-size:.83rem;">
+            {% for enr in enrollments %}{% if enr.status == STATUS_PENDING %}
+            <tr>
+              <td class="px-3">
+                <div class="fw-semibold" style="color:var(--navy);">{{ enr.student.full_name }}</div>
+                <div style="font-size:.73rem;color:#94a3b8;">{{ enr.student.matricule }}</div>
+              </td>
+              <td>
+                <div class="fw-semibold">{{ enr.class_group.name }}</div>
+                <div style="font-size:.73rem;color:#94a3b8;">{{ enr.class_group.program.department.code }}</div>
+              </td>
+              <td>{{ enr.academic_year.label }}</td>
+              <td>
+                {% if enr.enrollment_type == 'REINSCRIPTION' %}
+                <span class="badge" style="background:#ede9fe;color:#7c3aed;font-size:.7rem;border-radius:6px;padding:3px 8px;">Réinscription</span>
+                {% elif enr.enrollment_type == 'CHANGE_FILIERE' %}
+                <span class="badge" style="background:#ffedd5;color:#c2410c;font-size:.7rem;border-radius:6px;padding:3px 8px;">Chgt filière</span>
+                {% else %}
+                <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:.7rem;border-radius:6px;padding:3px 8px;">Nouvelle</span>
+                {% endif %}
+              </td>
+              <td>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <div>
+                    {% if enr.effective_payment %}
+                    <div class="fw-semibold" style="color:#16a34a;" id="pay-amount-{{ enr.pk }}">{{ enr.effective_payment|floatformat:0 }} F</div>
+                    {% if enr.payment_date %}<div style="font-size:.72rem;color:#94a3b8;" id="pay-date-{{ enr.pk }}">{{ enr.payment_date|date:"d/m/Y" }}</div>{% endif %}
+                    {% else %}
+                    <span style="color:#94a3b8;font-size:.78rem;" id="pay-amount-{{ enr.pk }}">—</span>
+                    {% endif %}
+                  </div>
+                  <button type="button"
+                          onclick="openPaymentModal({{ enr.pk }}, '{{ enr.payment_amount|default:'' }}', '{% if enr.payment_date %}{{ enr.payment_date|date:'Y-m-d' }}{% endif %}', '{{ enr.payment_reference|default:''|escapejs }}')"
+                          title="Modifier le paiement"
+                          style="background:none;border:none;cursor:pointer;color:#64748b;padding:2px 4px;border-radius:4px;flex-shrink:0;"
+                          onmouseover="this.style.color='#0284c7'" onmouseout="this.style.color='#64748b'">
+                    <i class="bi bi-pencil-square" style="font-size:.85rem;"></i>
+                  </button>
+                </div>
+              </td>
+              <td style="font-size:.78rem;color:#64748b;">{{ enr.enrollment_date|date:"d/m/Y" }}</td>
+              <td class="text-end pe-3">
+                <div class="d-flex gap-1 justify-content-end">
+                  <a href="{% url 'accounting:validation_inscription_detail' enr.pk %}" class="btn btn-sm" title="Voir / Valider" style="background:var(--navy);color:#fff;border-radius:7px;padding:3px 10px;font-size:.75rem;">
+                    <i class="bi bi-eye-fill"></i>
+                  </a>
+                  <a href="{% url 'accounting:validation_inscription_delete' enr.pk %}" class="btn btn-sm" title="Supprimer" style="background:#dc2626;color:#fff;border-radius:7px;padding:3px 10px;font-size:.75rem;">
+                    <i class="bi bi-trash-fill"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endif %}{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Section À la caisse (Caissier) ──────────────────────────────── -->
+<div id="section-caisse" style="display:none;">
+  <div class="card border-0 shadow-sm" style="border-radius:0 14px 14px 14px;border-top:3px solid #0ea5e9!important;">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle" id="tbl-caisse">
+          <thead>
+            <tr style="background:#e0f2fe;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:#0369a1;">
+              <th class="px-3 py-3">Étudiant</th>
+              <th>Classe</th>
+              <th>Année</th>
+              <th>Type</th>
+              <th>Montant à encaisser</th>
+              <th>Date</th>
+              <th class="text-end pe-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody style="font-size:.83rem;">
+            {% for enr in enrollments %}{% if enr.status == STATUS_PENDING_CAISSE %}
+            <tr style="background:#f0f9ff;">
+              <td class="px-3">
+                <div class="fw-semibold" style="color:var(--navy);">{{ enr.student.full_name }}</div>
+                <div style="font-size:.73rem;color:#94a3b8;">{{ enr.student.matricule }}</div>
+              </td>
+              <td>
+                <div class="fw-semibold">{{ enr.class_group.name }}</div>
+                <div style="font-size:.73rem;color:#94a3b8;">{{ enr.class_group.program.department.code }}</div>
+              </td>
+              <td>{{ enr.academic_year.label }}</td>
+              <td>
+                {% if enr.enrollment_type == 'REINSCRIPTION' %}
+                <span class="badge" style="background:#ede9fe;color:#7c3aed;font-size:.7rem;border-radius:6px;padding:3px 8px;">Réinscription</span>
+                {% elif enr.enrollment_type == 'CHANGE_FILIERE' %}
+                <span class="badge" style="background:#ffedd5;color:#c2410c;font-size:.7rem;border-radius:6px;padding:3px 8px;">Chgt filière</span>
+                {% else %}
+                <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:.7rem;border-radius:6px;padding:3px 8px;">Nouvelle</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if enr.payment_amount %}
+                <div class="fw-bold" style="color:#0369a1;font-size:.9rem;">{{ enr.payment_amount|floatformat:0 }} FCFA</div>
+                {% else %}
+                <span style="color:#94a3b8;font-size:.78rem;">—</span>
+                {% endif %}
+              </td>
+              <td style="font-size:.78rem;color:#64748b;">{{ enr.enrollment_date|date:"d/m/Y" }}</td>
+              <td class="text-end pe-3">
+                <div class="d-flex gap-1 justify-content-end">
+                  <a href="{% url 'accounting:validation_inscription_detail' enr.pk %}"
+                     class="btn btn-sm fw-semibold" title="Confirmer le paiement"
+                     style="background:#0369a1;color:#fff;border-radius:7px;padding:3px 12px;font-size:.75rem;">
+                    <i class="bi bi-cash-stack me-1"></i>Encaisser
+                  </a>
+                  <form method="post" action="{% url 'accounting:validation_inscription_detail' enr.pk %}"
+                        onsubmit="return confirm('Retourner ce dossier en attente pour correction ?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="return_to_pending">
+                    <button type="submit" class="btn btn-sm fw-semibold" title="Retourner en attente (corriger)"
+                            style="background:#d97706;color:#fff;border-radius:7px;padding:3px 10px;font-size:.75rem;">
+                      <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endif %}{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Section Traitées (Validées + Rejetées) ────────────────────── -->
+<div id="section-validated" style="display:none;">
+  <div class="card border-0 shadow-sm" style="border-radius:0 14px 14px 14px;">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle" id="tbl-validated">
+          <thead>
+            <tr style="background:#f0fdf4;font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:#166534;">
+              <th class="px-3 py-3">Étudiant</th>
+              <th>Classe</th>
+              <th>Année</th>
+              <th>Type</th>
+              <th>Paiement</th>
+              <th>Statut</th>
+              <th>Date</th>
+              <th class="text-end pe-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody style="font-size:.83rem;">
+            {% for enr in enrollments %}{% if enr.status == STATUS_VALIDATED or enr.status == STATUS_REJECTED %}
+            <tr>
+              <td class="px-3">
+                <div class="fw-semibold" style="color:var(--navy);">{{ enr.student.full_name }}</div>
+                <div style="font-size:.73rem;color:#94a3b8;">{{ enr.student.matricule }}</div>
+              </td>
+              <td>
+                <div class="fw-semibold">{{ enr.class_group.name }}</div>
+                <div style="font-size:.73rem;color:#94a3b8;">{{ enr.class_group.program.department.code }}</div>
+              </td>
+              <td>{{ enr.academic_year.label }}</td>
+              <td>
+                {% if enr.enrollment_type == 'REINSCRIPTION' %}
+                <span class="badge" style="background:#ede9fe;color:#7c3aed;font-size:.7rem;border-radius:6px;padding:3px 8px;">Réinscription</span>
+                {% elif enr.enrollment_type == 'CHANGE_FILIERE' %}
+                <span class="badge" style="background:#ffedd5;color:#c2410c;font-size:.7rem;border-radius:6px;padding:3px 8px;">Chgt filière</span>
+                {% else %}
+                <span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:.7rem;border-radius:6px;padding:3px 8px;">Nouvelle</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if enr.payment_amount %}
+                <div class="fw-semibold" style="color:#16a34a;">{{ enr.payment_amount|floatformat:0 }} F</div>
+                {% if enr.payment_date %}<div style="font-size:.72rem;color:#94a3b8;">{{ enr.payment_date|date:"d/m/Y" }}</div>{% endif %}
+                {% else %}
+                <span style="color:#94a3b8;font-size:.78rem;">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if enr.status == STATUS_VALIDATED %}
+                <span class="badge" style="background:#dcfce7;color:#166534;font-size:.72rem;border-radius:20px;padding:4px 10px;"><i class="bi bi-check-circle-fill me-1"></i>Validée</span>
+                {% else %}
+                <span class="badge" style="background:#fee2e2;color:#991b1b;font-size:.72rem;border-radius:20px;padding:4px 10px;"><i class="bi bi-x-circle-fill me-1"></i>Rejetée</span>
+                {% endif %}
+              </td>
+              <td style="font-size:.78rem;color:#64748b;">
+                {% if enr.validated_at %}{{ enr.validated_at|date:"d/m/Y" }}{% else %}{{ enr.enrollment_date|date:"d/m/Y" }}{% endif %}
+              </td>
+              <td class="text-end pe-3">
+                <div class="d-flex gap-1 justify-content-end">
+                  <a href="{% url 'accounting:validation_inscription_detail' enr.pk %}" class="btn btn-sm" title="Voir le détail" style="background:var(--navy);color:#fff;border-radius:7px;padding:3px 10px;font-size:.75rem;">
+                    <i class="bi bi-eye-fill"></i>
+                  </a>
+                  {% if enr.status == STATUS_VALIDATED %}
+                  <a href="{% url 'accounting:inscription_recu' enr.pk %}" class="btn btn-sm" title="Voir le reçu" style="background:#059669;color:#fff;border-radius:7px;padding:3px 10px;font-size:.75rem;" target="_blank">
+                    <i class="bi bi-receipt"></i>
+                  </a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endif %}{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal : modifier le paiement ───────────────────────────────── -->
+<div id="paymentModal" style="display:none;position:fixed;inset:0;z-index:1060;background:rgba(0,0,0,.45);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:28px 32px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.25);position:relative;">
+    <button onclick="closePaymentModal()" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:1.3rem;color:#94a3b8;cursor:pointer;">&times;</button>
+    <h5 style="font-weight:700;color:#00173B;margin:0 0 18px;">
+      <i class="bi bi-pencil-square me-2" style="color:#0284c7;"></i>Modifier le paiement
+    </h5>
+    <form id="paymentForm" onsubmit="submitPayment(event)">
+      <input type="hidden" id="pm_enrollment_id">
+      <div style="margin-bottom:14px;">
+        <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Montant versé (FCFA)</label>
+        <input type="number" id="pm_amount" min="0" step="500" placeholder="Ex : 255000"
+               style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:.95rem;outline:none;"
+               onfocus="this.style.borderColor='#0284c7'" onblur="this.style.borderColor='#cbd5e1'">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Date de paiement</label>
+        <input type="date" id="pm_date"
+               style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:.95rem;outline:none;"
+               onfocus="this.style.borderColor='#0284c7'" onblur="this.style.borderColor='#cbd5e1'">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="font-size:.82rem;font-weight:600;color:#475569;display:block;margin-bottom:4px;">Référence / Reçu <span style="font-weight:400;color:#94a3b8;">(optionnel)</span></label>
+        <input type="text" id="pm_ref" placeholder="N° reçu ou référence"
+               style="width:100%;padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:.95rem;outline:none;"
+               onfocus="this.style.borderColor='#0284c7'" onblur="this.style.borderColor='#cbd5e1'">
+      </div>
+      <div id="pm_error" style="display:none;color:#dc2626;font-size:.8rem;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button type="button" onclick="closePaymentModal()"
+                style="padding:8px 18px;border-radius:8px;border:1.5px solid #cbd5e1;background:#f8fafc;color:#64748b;font-weight:600;cursor:pointer;">
+          Annuler
+        </button>
+        <button type="submit" id="pm_submit"
+                style="padding:8px 20px;border-radius:8px;border:none;background:#0284c7;color:#fff;font-weight:600;cursor:pointer;">
+          <i class="bi bi-check-lg me-1"></i>Enregistrer
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var _dtPending   = null;
+var _dtCaisse    = null;
+var _dtValidated = null;
+var _activeTab   = 'pending';
+var TAB_KEY      = 'insc_active_tab';
+
+var DT_LANG = { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json' };
+
+$(function(){
+  _dtPending   = $('#tbl-pending').DataTable({ order:[], pageLength:25, language: DT_LANG });
+  _dtCaisse    = $('#tbl-caisse').DataTable({  order:[], pageLength:25, language: DT_LANG });
+  _dtValidated = $('#tbl-validated').DataTable({ order:[], pageLength:25, language: DT_LANG });
+
+  // Priorité de l'onglet à l'ouverture :
+  //   1. Hash explicite dans l'URL (#validated / #caisse) — lien externe volontaire
+  //   2. Dernier onglet cliqué manuellement par l'utilisateur (sessionStorage) — sans
+  //      ça, tout rechargement de page (ex: après validation d'un paiement) ramenait
+  //      systématiquement sur l'onglet "À la caisse" dès qu'il restait des dossiers à
+  //      encaisser, même si l'utilisateur avait cliqué sur un autre onglet entre-temps.
+  //   3. Sinon, ouverture automatique sur "À la caisse" si pertinent pour le caissier
+  var savedTab = null;
+  try { savedTab = sessionStorage.getItem(TAB_KEY); } catch(e) {}
+
+  if (window.location.hash === '#validated') switchTab('validated');
+  else if (window.location.hash === '#caisse') switchTab('caisse');
+  else if (savedTab === 'pending' || savedTab === 'caisse' || savedTab === 'validated') switchTab(savedTab);
+  {% if counts.pending_caisse > 0 and counts.pending == 0 %}
+  else switchTab('caisse');
+  {% endif %}
+});
+
+var TAB_STYLES = {
+  pending:   { color: '#92400e', border: '#f59e0b' },
+  caisse:    { color: '#0369a1', border: '#0ea5e9' },
+  validated: { color: '#166534', border: '#22c55e' },
+};
+
+function switchTab(tab) {
+  _activeTab = tab;
+  try { sessionStorage.setItem(TAB_KEY, tab); } catch(e) {}
+  var sections = { pending: 'section-pending', caisse: 'section-caisse', validated: 'section-validated' };
+  var buttons  = { pending: 'tab-pending-btn', caisse: 'tab-caisse-btn', validated: 'tab-validated-btn' };
+
+  Object.keys(sections).forEach(function(t) {
+    var sec = document.getElementById(sections[t]);
+    var btn = document.getElementById(buttons[t]);
+    if (!sec || !btn) return;
+    var isActive = (t === tab);
+    sec.style.display = isActive ? 'block' : 'none';
+    btn.classList.toggle('active', isActive);
+    btn.style.color        = isActive ? TAB_STYLES[t].color : '#64748b';
+    btn.style.borderBottom = isActive ? '3px solid ' + TAB_STYLES[t].border : 'none';
+    btn.style.fontWeight   = isActive ? '700' : '500';
+  });
+
+  // Recalibrer la DataTable visible
+  if (tab === 'validated' && _dtValidated) _dtValidated.columns.adjust();
+  if (tab === 'caisse'    && _dtCaisse)    _dtCaisse.columns.adjust();
+}
+
+/* Style initial onglet actif au chargement */
+document.addEventListener('DOMContentLoaded', function(){
+  var btn = document.getElementById('tab-' + _activeTab + '-btn');
+  if (btn) {
+    btn.style.borderBottom = '3px solid ' + TAB_STYLES[_activeTab].border;
+    btn.style.color        = TAB_STYLES[_activeTab].color;
+    btn.style.fontWeight   = '700';
+  }
+});
+
+function getCsrf() {
+  var m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+  return m ? decodeURIComponent(m[1]) : '{{ csrf_token }}';
+}
+
+function openPaymentModal(enrollId, amount, date, ref) {
+  document.getElementById('pm_enrollment_id').value = enrollId;
+  document.getElementById('pm_amount').value = amount || '';
+  document.getElementById('pm_date').value   = date   || '';
+  document.getElementById('pm_ref').value    = ref    || '';
+  document.getElementById('pm_error').style.display = 'none';
+  var m = document.getElementById('paymentModal');
+  m.style.display = 'flex';
+  setTimeout(function(){ document.getElementById('pm_amount').focus(); }, 80);
+}
+
+function closePaymentModal() {
+  document.getElementById('paymentModal').style.display = 'none';
+}
+
+document.getElementById('paymentModal').addEventListener('click', function(e){
+  if (e.target === this) closePaymentModal();
+});
+
+function submitPayment(e) {
+  e.preventDefault();
+  var id     = document.getElementById('pm_enrollment_id').value;
+  var amount = document.getElementById('pm_amount').value.trim();
+  var date   = document.getElementById('pm_date').value.trim();
+  var ref    = document.getElementById('pm_ref').value.trim();
+  var errEl  = document.getElementById('pm_error');
+  var btn    = document.getElementById('pm_submit');
+
+  errEl.style.display = 'none';
+  if (!amount && !date) { errEl.textContent = 'Veuillez saisir au moins un montant.'; errEl.style.display='block'; return; }
+
+  btn.disabled = true; btn.textContent = 'Enregistrement…';
+
+  var form = new FormData();
+  form.append('payment_amount',    amount);
+  form.append('payment_date',      date);
+  form.append('payment_reference', ref);
+  form.append('csrfmiddlewaretoken', getCsrf());
+
+  fetch('/accounting/inscriptions/' + id + '/paiement/', { method:'POST', body: form })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      btn.disabled = false; btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Enregistrer';
+      if (!data.ok) { errEl.textContent = data.error || 'Erreur.'; errEl.style.display='block'; return; }
+      var amountEl = document.getElementById('pay-amount-' + id);
+      var dateEl   = document.getElementById('pay-date-'   + id);
+      var srcEl    = document.getElementById('pay-src-'    + id);
+      if (amountEl) {
+        amountEl.style.color      = '#16a34a';
+        amountEl.style.fontWeight = '600';
+        amountEl.textContent      = data.amount ? Number(data.amount).toLocaleString('fr-FR') + ' F' : '—';
+      }
+      if (dateEl && data.date)  { dateEl.textContent = data.date; }
+      if (srcEl)                { srcEl.remove(); }
+      closePaymentModal();
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML='<i class="bi bi-check-lg me-1"></i>Enregistrer'; errEl.textContent='Erreur réseau.'; errEl.style.display='block'; });
+}
+</script>
+{% endblock %}

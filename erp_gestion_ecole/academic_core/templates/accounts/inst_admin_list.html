@@ -1,0 +1,312 @@
+{% extends 'base/base.html' %}
+{% block title %}Administrateurs d'Institut{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="max-width:1160px;">
+
+  <!-- ── Hero ── -->
+  <div class="rounded-4 p-4 mb-4 text-white d-flex align-items-center justify-content-between flex-wrap gap-3"
+       style="background:linear-gradient(135deg,#0f2547 0%,#1d4ed8 100%);">
+    <div>
+      <h4 class="fw-bold mb-1"><i class="bi bi-person-badge-fill me-2"></i>Administrateurs d'Institut</h4>
+      <div style="opacity:.7;font-size:.83rem;">Gestion exclusive — Super Administrateur</div>
+    </div>
+    <a href="{% url 'accounts:inst_admin_create' %}" class="btn btn-light fw-bold px-4">
+      <i class="bi bi-person-plus-fill me-1"></i>Nouvel administrateur
+    </a>
+  </div>
+
+  <!-- ── Messages ── -->
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+
+  <!-- ── KPIs ── -->
+  <div class="row g-3 mb-4">
+    <div class="col-sm-4">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body d-flex align-items-center gap-3 py-3">
+          <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+               style="width:46px;height:46px;background:#e0eaff;color:#1d4ed8;font-size:1.3rem;">
+            <i class="bi bi-people-fill"></i>
+          </div>
+          <div>
+            <div class="fw-bold" style="font-size:1.6rem;color:#0f2547;line-height:1;">{{ total }}</div>
+            <div class="text-muted" style="font-size:.75rem;font-weight:600;">Administrateurs</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-4">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body d-flex align-items-center gap-3 py-3">
+          <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+               style="width:46px;height:46px;background:#d1fae5;color:#059669;font-size:1.3rem;">
+            <i class="bi bi-buildings-fill"></i>
+          </div>
+          <div>
+            <div class="fw-bold" style="font-size:1.6rem;color:#0f2547;line-height:1;">{{ instituts|length }}</div>
+            <div class="text-muted" style="font-size:.75rem;font-weight:600;">Instituts</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-4">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body d-flex align-items-center gap-3 py-3">
+          <div class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0"
+               style="width:46px;height:46px;background:#fef3c7;color:#d97706;font-size:1.3rem;">
+            <i class="bi bi-key-fill"></i>
+          </div>
+          <div>
+            <div class="fw-bold" id="pwd-count" style="font-size:1.6rem;color:#0f2547;line-height:1;">—</div>
+            <div class="text-muted" style="font-size:.75rem;font-weight:600;">MDP à changer</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Recherche ── -->
+  <form method="get" class="mb-4">
+    <div class="input-group" style="max-width:480px;">
+      <input type="text" name="q" value="{{ q }}" class="form-control"
+             placeholder="Rechercher par nom, email, téléphone, institut…">
+      <button class="btn btn-primary px-3" type="submit">
+        <i class="bi bi-search me-1"></i>Rechercher
+      </button>
+      {% if q %}
+      <a href="{% url 'accounts:inst_admin_list' %}" class="btn btn-outline-secondary" title="Effacer">
+        <i class="bi bi-x-lg"></i>
+      </a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- ── Tableau ── -->
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    {% if total == 0 %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-person-x d-block mb-3" style="font-size:3rem;opacity:.25;"></i>
+        {% if q %}
+          <p class="mb-2">Aucun résultat pour « <strong>{{ q }}</strong> ».</p>
+          <a href="{% url 'accounts:inst_admin_list' %}" class="btn btn-sm btn-outline-secondary">Voir tous</a>
+        {% else %}
+          <p class="mb-2">Aucun administrateur d'institut enregistré.</p>
+          <a href="{% url 'accounts:inst_admin_create' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus-fill me-1"></i>Créer le premier
+          </a>
+        {% endif %}
+      </div>
+    {% else %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7e;font-weight:700;white-space:nowrap;">Administrateur</th>
+            <th style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7e;font-weight:700;white-space:nowrap;">Email</th>
+            <th style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7e;font-weight:700;white-space:nowrap;">Téléphone</th>
+            <th style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7e;font-weight:700;white-space:nowrap;">Rôle</th>
+            <th style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7e;font-weight:700;white-space:nowrap;">Institut affecté</th>
+            <th style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7e;font-weight:700;white-space:nowrap;">Statut</th>
+            <th style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7e;font-weight:700;white-space:nowrap;">Mot de passe</th>
+            <th class="text-end pe-4" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7e;font-weight:700;white-space:nowrap;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          {% for group in grouped %}{% for adm in group.admins %}
+          <tr>
+            <!-- Nom -->
+            <td class="ps-4">
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 text-white fw-bold"
+                     style="width:38px;height:38px;font-size:.8rem;background:linear-gradient(135deg,#0f2547,#1d4ed8);">
+                  {{ adm.first_name|first|upper }}{{ adm.last_name|first|upper }}
+                </div>
+                <div>
+                  <div class="fw-bold" style="font-size:.88rem;color:#1e293b;">{{ adm.get_full_name }}</div>
+                  <div class="text-muted" style="font-size:.73rem;">@{{ adm.username }}</div>
+                </div>
+              </div>
+            </td>
+            <!-- Email -->
+            <td style="font-size:.84rem;color:#334155;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ adm.email }}</td>
+            <!-- Téléphone -->
+            <td style="font-size:.84rem;color:#334155;">
+              {% if adm.phone %}{{ adm.phone }}{% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+            <!-- Rôle -->
+            <td>
+              {% if adm.role.name == 'INST_ADMIN' %}
+                <span class="badge rounded-pill" style="background:#ede9fe;color:#5b21b6;font-size:.71rem;padding:5px 12px;">
+                  <i class="bi bi-shield-check me-1"></i>Admin Institut
+                </span>
+              {% else %}
+                <span class="badge rounded-pill" style="background:#dbeafe;color:#1e40af;font-size:.71rem;padding:5px 12px;">
+                  <i class="bi bi-shield-fill me-1"></i>Admin SI
+                </span>
+              {% endif %}
+            </td>
+            <!-- Institut -->
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                {% if group.inst.logo %}
+                  <img src="{{ group.inst.logo.url }}" alt=""
+                       style="width:30px;height:30px;object-fit:contain;border-radius:6px;border:1px solid #e0e7ef;padding:2px;background:#fff;flex-shrink:0;">
+                {% else %}
+                  <div class="d-flex align-items-center justify-content-center rounded flex-shrink-0 text-white fw-bold"
+                       style="width:30px;height:30px;background:#0f2547;font-size:.6rem;border-radius:6px;">
+                    {{ group.inst.sigle|slice:":2"|upper|default:"IS" }}
+                  </div>
+                {% endif %}
+                <div>
+                  <div class="fw-semibold" style="font-size:.83rem;color:#1e293b;">{{ group.inst.nom }}</div>
+                  {% if group.inst.sigle %}<div class="text-muted" style="font-size:.7rem;">{{ group.inst.sigle }}</div>{% endif %}
+                </div>
+              </div>
+            </td>
+            <!-- Statut -->
+            <td>
+              {% if adm.is_active %}
+                <span class="badge rounded-pill" style="background:#dcfce7;color:#15803d;font-size:.71rem;padding:5px 12px;">
+                  <span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;margin-right:4px;"></span>Actif
+                </span>
+              {% else %}
+                <span class="badge rounded-pill" style="background:#fee2e2;color:#b91c1c;font-size:.71rem;padding:5px 12px;">
+                  <span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;margin-right:4px;"></span>Inactif
+                </span>
+              {% endif %}
+            </td>
+            <!-- MDP -->
+            <td>
+              {% if adm.must_change_password %}
+                <span class="badge rounded-pill js-pwd-badge" style="background:#fef3c7;color:#b45309;font-size:.71rem;padding:5px 12px;">
+                  <i class="bi bi-key me-1"></i>À changer
+                </span>
+              {% else %}
+                <span class="badge rounded-pill" style="background:#f1f5f9;color:#64748b;font-size:.71rem;padding:5px 12px;">
+                  <i class="bi bi-check-circle me-1"></i>OK
+                </span>
+              {% endif %}
+            </td>
+            <!-- Actions -->
+            <td class="text-end pe-4">
+              <a href="{% url 'accounts:inst_admin_edit' adm.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Modifier">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'accounts:inst_admin_delete' adm.pk %}" class="btn btn-sm btn-outline-danger" title="Supprimer">
+                <i class="bi bi-trash3"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}{% endfor %}
+
+          {% for adm in orphans %}
+          <tr style="background:#fffbeb;">
+            <td class="ps-4">
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 text-white fw-bold"
+                     style="width:38px;height:38px;font-size:.8rem;background:linear-gradient(135deg,#c2410c,#d97706);">
+                  {{ adm.first_name|first|upper }}{{ adm.last_name|first|upper }}
+                </div>
+                <div>
+                  <div class="fw-bold" style="font-size:.88rem;color:#1e293b;">{{ adm.get_full_name }}</div>
+                  <div class="text-muted" style="font-size:.73rem;">@{{ adm.username }}</div>
+                </div>
+              </div>
+            </td>
+            <td style="font-size:.84rem;color:#334155;">{{ adm.email }}</td>
+            <td style="font-size:.84rem;color:#334155;">{% if adm.phone %}{{ adm.phone }}{% else %}<span class="text-muted">—</span>{% endif %}</td>
+            <td>
+              {% if adm.role.name == 'INST_ADMIN' %}
+                <span class="badge rounded-pill" style="background:#ede9fe;color:#5b21b6;font-size:.71rem;padding:5px 12px;"><i class="bi bi-shield-check me-1"></i>Admin Institut</span>
+              {% else %}
+                <span class="badge rounded-pill" style="background:#dbeafe;color:#1e40af;font-size:.71rem;padding:5px 12px;"><i class="bi bi-shield-fill me-1"></i>Admin SI</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge rounded-pill" style="background:#fff7ed;color:#c2410c;font-size:.71rem;padding:5px 12px;">
+                <i class="bi bi-exclamation-triangle me-1"></i>Non affecté
+              </span>
+            </td>
+            <td>
+              {% if adm.is_active %}
+                <span class="badge rounded-pill" style="background:#dcfce7;color:#15803d;font-size:.71rem;padding:5px 12px;"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;margin-right:4px;"></span>Actif</span>
+              {% else %}
+                <span class="badge rounded-pill" style="background:#fee2e2;color:#b91c1c;font-size:.71rem;padding:5px 12px;"><span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;margin-right:4px;"></span>Inactif</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if adm.must_change_password %}
+                <span class="badge rounded-pill js-pwd-badge" style="background:#fef3c7;color:#b45309;font-size:.71rem;padding:5px 12px;"><i class="bi bi-key me-1"></i>À changer</span>
+              {% else %}
+                <span class="badge rounded-pill" style="background:#f1f5f9;color:#64748b;font-size:.71rem;padding:5px 12px;"><i class="bi bi-check-circle me-1"></i>OK</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-4">
+              <a href="{% url 'accounts:inst_admin_edit' adm.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'accounts:inst_admin_delete' adm.pk %}" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash3"></i></a>
+            </td>
+          </tr>
+          {% endfor %}
+
+        </tbody>
+      </table>
+    </div>
+    <!-- Footer tableau -->
+    <div class="px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2"
+         style="background:#f8fafc;border-top:1px solid #e8edf3;">
+      <span class="text-muted" style="font-size:.8rem;">{{ total }} administrateur(s) affiché(s)</span>
+      <a href="{% url 'accounts:inst_admin_create' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-person-plus-fill me-1"></i>Ajouter un administrateur
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Gestion des instituts ── -->
+  {% if grouped %}
+  <div class="mb-2 text-uppercase fw-bold" style="font-size:.72rem;letter-spacing:.08em;color:#94a3b8;">
+    <i class="bi bi-buildings-fill me-1"></i>Gestion des instituts
+  </div>
+  <div class="row g-3">
+    {% for group in grouped %}
+    <div class="col-sm-6 col-lg-4">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body d-flex align-items-center gap-3 py-3 px-3">
+          {% if group.inst.logo %}
+            <img src="{{ group.inst.logo.url }}" alt="Logo"
+                 style="width:42px;height:42px;object-fit:contain;border-radius:8px;border:1px solid #e0e7ef;padding:3px;background:#fff;flex-shrink:0;">
+          {% else %}
+            <div class="d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
+                 style="width:42px;height:42px;background:#0f2547;border-radius:8px;font-size:.65rem;">
+              {{ group.inst.sigle|slice:":2"|upper|default:"IS" }}
+            </div>
+          {% endif %}
+          <div class="flex-grow-1" style="min-width:0;">
+            <div class="fw-bold text-truncate" style="font-size:.88rem;color:#1e293b;">{{ group.inst.nom }}</div>
+            <div class="text-muted" style="font-size:.73rem;">{{ group.admins|length }} admin(s){% if group.inst.sigle %} · {{ group.inst.sigle }}{% endif %}</div>
+          </div>
+          <div class="d-flex gap-1 flex-shrink-0">
+            <a href="{% url 'accounts:institut_edit' group.inst.pk %}" class="btn btn-sm btn-outline-primary" title="Modifier"><i class="bi bi-pencil"></i></a>
+            <a href="{% url 'accounts:institut_delete' group.inst.pk %}" class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash3"></i></a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var el = document.getElementById('pwd-count');
+  if (el) el.textContent = document.querySelectorAll('.js-pwd-badge').length;
+});
+</script>
+{% endblock %}

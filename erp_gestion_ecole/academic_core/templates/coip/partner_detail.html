@@ -1,0 +1,89 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ partner.raison_sociale }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:partner_list' %}">Partenaires</a></li>
+<li class="breadcrumb-item active">{{ partner.raison_sociale }}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-building"></i></span>
+    {{ partner.raison_sociale }}
+  </h1>
+  <a href="{% url 'coip:partner_edit' partner.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i>Modifier</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title">Informations</h6></div>
+      <div class="p-3" style="font-size:.85rem;">
+        <div class="mb-2"><strong>Type :</strong> {{ partner.get_type_partenaire_display }}</div>
+        <div class="mb-2"><strong>Secteur :</strong> {{ partner.secteur|default:"—" }}</div>
+        <div class="mb-2"><strong>Adresse :</strong> {{ partner.adresse|default:"—" }}</div>
+        <div class="mb-2"><strong>Ville/Pays :</strong> {{ partner.ville|default:"—" }}{% if partner.pays %}, {{ partner.pays }}{% endif %}</div>
+        <div class="mb-2"><strong>Email :</strong> {{ partner.email|default:"—" }}</div>
+        <div class="mb-2"><strong>Téléphone :</strong> {{ partner.phone|default:"—" }}</div>
+        {% if partner.site_web %}<div class="mb-2"><strong>Site :</strong> <a href="{{ partner.site_web }}" target="_blank" rel="noopener">{{ partner.site_web }}</a></div>{% endif %}
+      </div>
+    </div>
+
+    <div class="card-section mt-3">
+      <div class="card-section-header"><h6 class="card-section-title">Contacts</h6></div>
+      <div class="p-3">
+        {% for c in contacts %}
+        <div class="d-flex justify-content-between align-items-start border-bottom py-2">
+          <div style="font-size:.82rem;">
+            <strong>{{ c.nom }}</strong>{% if c.is_primary %} <span class="badge bg-primary">Principal</span>{% endif %}<br>
+            {{ c.poste|default:"" }}<br>{{ c.email|default:"" }} {{ c.phone|default:"" }}
+          </div>
+          <form method="post" action="{% url 'coip:partner_contact_delete' partner.pk c.pk %}" onsubmit="return confirm('Supprimer ce contact ?');">
+            {% csrf_token %}
+            <button type="submit" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></button>
+          </form>
+        </div>
+        {% empty %}
+        <p class="text-muted text-center py-2" style="font-size:.85rem;">Aucun contact.</p>
+        {% endfor %}
+        <form method="post" action="{% url 'coip:partner_contact_add' partner.pk %}" class="row g-2 mt-2">
+          {% csrf_token %}
+          <div class="col-6">{{ contact_form.nom }}</div>
+          <div class="col-6">{{ contact_form.poste }}</div>
+          <div class="col-6">{{ contact_form.email }}</div>
+          <div class="col-6">{{ contact_form.phone }}</div>
+          <div class="col-8 d-flex align-items-center">
+            <div class="form-check">{{ contact_form.is_primary }}<label class="form-check-label" style="font-size:.8rem;">Principal</label></div>
+          </div>
+          <div class="col-4"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-plus-lg"></i></button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">Conventions liées</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Intitulé</th><th>Signature</th><th>Expiration</th><th>Statut</th></tr></thead>
+          <tbody>
+            {% for p in partnerships %}
+            <tr>
+              <td style="font-size:.82rem;"><a href="{% url 'coip:partnership_detail' p.pk %}">{{ p.intitule }}</a></td>
+              <td style="font-size:.82rem;">{{ p.date_signature|date:"d/m/Y" }}</td>
+              <td style="font-size:.82rem;">{{ p.date_expiration|date:"d/m/Y"|default:"—" }}</td>
+              <td><span class="badge bg-{{ p.statut_color }}">{{ p.get_status_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Aucune convention enregistrée pour ce partenaire.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

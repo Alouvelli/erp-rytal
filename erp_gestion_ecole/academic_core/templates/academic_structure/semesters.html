@@ -1,0 +1,154 @@
+{% extends 'base/base.html' %}
+{% block title %}Semestres{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academic_structure:index' %}">Structure</a></li>
+<li class="breadcrumb-item active">Semestres</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:var(--navy);"><i class="bi bi-calendar-range"></i></span>Semestres</h1>
+  {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalSem"><i class="bi bi-plus-lg"></i> Nouveau semestre</button>
+  {% endif %}
+</div>
+
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ul"></i></span>Liste des semestres</h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table" id="tbl-semesters">
+      <thead><tr><th>Nom</th><th>Niveau</th><th>Année académique</th><th>Date début</th><th>Date fin</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for sem in semesters %}
+        <tr>
+          <td style="font-weight:600;font-size:.85rem;">
+            {{ sem.name }}
+            {% if sem.is_locked %}<i class="bi bi-lock-fill" style="color:#dc2626;margin-left:4px;" title="Semestre verrouillé"></i>{% endif %}
+          </td>
+          <td style="font-size:.83rem;color:#64748b;">{{ sem.level.name|default:"—" }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ sem.academic_year.name|default:"—" }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ sem.start_date|date:"d/m/Y"|default:"—" }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ sem.end_date|date:"d/m/Y"|default:"—" }}</td>
+          <td>{% if sem.is_current %}<span class="badge-statut-inscrit">En cours</span>{% else %}<span class="badge-statut-en_cours">Terminé</span>{% endif %}</td>
+          <td>
+            {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+            <div class="d-flex gap-1">
+              <button class="btn-action edit" title="Modifier"
+                onclick="openEditSem({{ sem.pk }},'{{ sem.label|escapejs }}',{{ sem.academic_year_id|default:'null' }},'{{ sem.start_date|date:'Y-m-d' }}','{{ sem.end_date|date:'Y-m-d' }}',{{ sem.is_current|lower }},{{ sem.level_id|default:'null' }})">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <form method="post" style="display:inline;" onsubmit="return confirm('Supprimer ce semestre ?');">
+                {% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="pk" value="{{ sem.pk }}">
+                <button type="submit" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+<!-- Modal création -->
+<div class="modal fade" id="modalSem" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nouveau semestre</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'academic_structure:semester_create' %}">
+        {% csrf_token %}<input type="hidden" name="action" value="create">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label">Nom <span class="text-danger">*</span></label><input type="text" name="name" class="form-control" placeholder="ex: Semestre 1 — 2024/2025" required></div>
+          <div class="mb-3">
+            <label class="form-label">Niveau <span class="text-danger">*</span></label>
+            <select name="level" class="form-select" required>
+              <option value="">— Choisir —</option>
+              {% for lvl in levels %}<option value="{{ lvl.pk }}">{{ lvl.name }}</option>{% endfor %}
+            </select>
+            <div class="form-text" style="font-size:.75rem;">Détermine automatiquement la numérotation LMD (S1/S2 pour L1 et M1, S3/S4 pour L2 et M2, S5/S6 pour L3).</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Année académique</label>
+            <select name="academic_year" class="form-select">
+              <option value="">— Aucune —</option>
+              {% for yr in academic_years %}<option value="{{ yr.pk }}" {% if yr.is_current %}selected{% endif %}>{{ yr.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="row g-3">
+            <div class="col-6"><label class="form-label">Date début</label><input type="date" name="start_date" class="form-control"></div>
+            <div class="col-6"><label class="form-label">Date fin</label><input type="date" name="end_date" class="form-control"></div>
+          </div>
+          <div class="form-check mt-3"><input class="form-check-input" type="checkbox" name="is_current" id="isCurrentSem"><label class="form-check-label" for="isCurrentSem">Semestre en cours</label></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal édition -->
+<div class="modal fade" id="modalEditSem" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-pencil me-2"></i>Modifier le semestre</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post">
+        {% csrf_token %}<input type="hidden" name="action" value="edit"><input type="hidden" name="pk" id="esPk">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label">Nom <span class="text-danger">*</span></label><input type="text" name="name" id="esName" class="form-control" required></div>
+          <div class="mb-3">
+            <label class="form-label">Niveau <span class="text-danger">*</span></label>
+            <select name="level" id="esLevel" class="form-select" required>
+              <option value="">— Choisir —</option>
+              {% for lvl in levels %}<option value="{{ lvl.pk }}">{{ lvl.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Année académique</label>
+            <select name="academic_year" id="esYear" class="form-select">
+              <option value="">— Aucune —</option>
+              {% for yr in academic_years %}<option value="{{ yr.pk }}">{{ yr.name }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="row g-3">
+            <div class="col-6"><label class="form-label">Date début</label><input type="date" name="start_date" id="esStart" class="form-control"></div>
+            <div class="col-6"><label class="form-label">Date fin</label><input type="date" name="end_date" id="esEnd" class="form-control"></div>
+          </div>
+          <div class="form-check mt-3"><input class="form-check-input" type="checkbox" name="is_current" id="esIsCurrent"><label class="form-check-label" for="esIsCurrent">Semestre en cours</label></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}{# role_name #}
+{% endblock %}
+{% block extra_js %}
+<script>
+$(document).ready(function(){ $('#tbl-semesters').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}}); });
+function openEditSem(pk, name, yearId, start, end, isCurrent, levelId) {
+  document.getElementById('esPk').value = pk;
+  document.getElementById('esName').value = name;
+  document.getElementById('esYear').value = yearId ? String(yearId) : '';
+  document.getElementById('esLevel').value = levelId ? String(levelId) : '';
+  document.getElementById('esStart').value = start !== 'None' ? start : '';
+  document.getElementById('esEnd').value = end !== 'None' ? end : '';
+  document.getElementById('esIsCurrent').checked = isCurrent;
+  new bootstrap.Modal(document.getElementById('modalEditSem')).show();
+}
+</script>
+{% endblock %}

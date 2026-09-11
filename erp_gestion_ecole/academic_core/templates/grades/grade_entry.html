@@ -1,0 +1,244 @@
+{% extends 'base/base.html' %}
+{% block title %}Saisie des notes — {{ evaluation.title }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'grades:evaluation_list' %}">Évaluations</a></li>
+<li class="breadcrumb-item active">Saisie des notes</li>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.grade-input { text-align:center; font-weight:700; font-size:.92rem; }
+.grade-input:focus { border-color:var(--navy); box-shadow:0 0 0 3px rgba(0,61,130,.15); }
+.grade-input.is-valid   { border-color:#16a34a; background:#f0fdf4; }
+.grade-input.is-warning { border-color:#d97706; background:#fffbeb; }
+.grade-input.is-invalid { border-color:#dc2626; background:#fef2f2; }
+.student-row:hover { background:#f8fafc; }
+.progress-bar-fill { height:6px; background:linear-gradient(90deg,var(--navy),#7c3aed); border-radius:3px; transition:width .3s; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-pencil-square"></i></span>
+    Saisie des notes
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'grades:grade_template' evaluation.pk %}" class="btn btn-outline-success btn-sm">
+      <i class="bi bi-file-earmark-arrow-down me-1"></i>Modèle Excel
+    </a>
+    <a href="{% url 'grades:grade_template' evaluation.pk %}?anon=1" class="btn btn-outline-secondary btn-sm"
+       style="color:#7c3aed;border-color:#ddd6fe;"
+       title="Modèle anonyme : Nom/Prénom masqués, la correspondance avec l'étudiant se fait automatiquement via le matricule à l'import">
+      <i class="bi bi-incognito me-1"></i>Modèle anonyme
+    </a>
+    <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+      <i class="bi bi-upload me-1"></i>Importer Excel
+    </button>
+    <a href="{% url 'grades:evaluation_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+  </div>
+</div>
+
+<!-- Carte info évaluation -->
+<div class="card-section mb-3">
+  <div style="padding:14px 18px;">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-6">
+        <div style="font-size:.78rem;color:#94a3b8;text-transform:uppercase;font-weight:700;letter-spacing:.05em;">Évaluation</div>
+        <div style="font-size:1rem;font-weight:700;color:#1e293b;">{{ evaluation.title }}</div>
+        <div style="font-size:.8rem;color:#64748b;margin-top:2px;">
+          {{ evaluation.evaluation_type }} — {{ evaluation.subject.code }} {{ evaluation.subject.title }}
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div style="font-size:.75rem;color:#94a3b8;">Classe / Date</div>
+        <div style="font-size:.85rem;font-weight:600;">{{ evaluation.class_group.name|default:"—" }}</div>
+        <div style="font-size:.8rem;color:#64748b;">{{ evaluation.date|date:"d/m/Y" }}{% if evaluation.duration_minutes %} · {{ evaluation.duration_minutes }} min{% endif %}</div>
+      </div>
+      <div class="col-md-3">
+        <div style="font-size:.75rem;color:#94a3b8;">Progression</div>
+        <div style="font-size:1.1rem;font-weight:700;color:var(--navy);" id="progressLabel">
+          {{ grades_count }}/{{ students_data|length }}
+        </div>
+        <div style="background:#e2e8f0;border-radius:3px;margin-top:4px;">
+          <div class="progress-bar-fill" id="progressBar"
+            style="width:{% if students_data %}{% widthratio grades_count students_data|length 100 %}{% else %}0{% endif %}%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Formulaire saisie -->
+<form method="post" id="gradeForm">
+  {% csrf_token %}
+  <div class="card-section">
+    <div class="card-section-header">
+      <h6 class="card-section-title">
+        <i class="bi bi-people me-2" style="color:var(--navy);"></i>
+        Étudiants ({{ students|length }})
+      </h6>
+      <div style="font-size:.78rem;color:#94a3b8;">Note sur <strong style="color:var(--navy);">{{ evaluation.max_score }}</strong></div>
+    </div>
+    <div style="padding:0 16px 16px;">
+      <table class="table table-hover align-middle" style="width:100%;">
+        <thead>
+          <tr>
+            <th style="width:40px;">#</th>
+            <th>Étudiant</th>
+            <th style="width:80px;">Matricule</th>
+            <th style="width:140px;text-align:center;">Note /{{ evaluation.max_score }}</th>
+            <th>Commentaire</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in students_data %}
+          <tr class="student-row">
+            <td style="font-size:.78rem;color:#94a3b8;">{{ forloop.counter }}</td>
+            <td>
+              <div style="font-weight:600;font-size:.85rem;">
+                {{ item.student.user.last_name|upper }} {{ item.student.user.first_name|title }}
+              </div>
+            </td>
+            <td style="font-size:.78rem;color:#64748b;">{{ item.student.matricule }}</td>
+            <td style="text-align:center;">
+              <input type="number"
+                name="score_{{ item.student.pk }}"
+                id="id_score_{{ item.student.pk }}"
+                class="form-control form-control-sm grade-input"
+                step="0.25" min="0" max="{{ evaluation.max_score }}"
+                data-max="{{ evaluation.max_score }}"
+                autocomplete="off"
+                value="{{ item.score }}"
+              >
+            </td>
+            <td>
+              <input type="text"
+                name="comment_{{ item.student.pk }}"
+                class="form-control form-control-sm"
+                placeholder="Commentaire…"
+                style="font-size:.78rem;"
+                value="{{ item.comment }}"
+              >
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">
+              <i class="bi bi-people d-block mb-2" style="font-size:2rem;color:#cbd5e1;"></i>
+              Aucun étudiant inscrit dans cette classe
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if students_data %}
+  <div class="d-flex justify-content-between align-items-center mt-3">
+    <div style="font-size:.82rem;color:#64748b;">
+      <i class="bi bi-info-circle me-1"></i>
+      Les étudiants seront notifiés après enregistrement.
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-secondary btn-sm" id="btnFillAll" title="Remplir toutes les notes vides avec la même valeur">
+        <i class="bi bi-lightning me-1"></i>Saisie rapide
+      </button>
+      <button type="submit" class="btn btn-primary" style="padding:8px 28px;">
+        <i class="bi bi-save me-2"></i>Enregistrer les notes
+      </button>
+    </div>
+  </div>
+  {% endif %}
+</form>
+
+<!-- Modal Import Excel -->
+<div class="modal fade" id="importModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--navy);color:#fff;">
+        <h5 class="modal-title"><i class="bi bi-upload me-2"></i>Importer les notes (Excel)</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'grades:import_grades' evaluation.pk %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;margin-bottom:16px;font-size:.82rem;color:#92400e;">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Utilisez uniquement le modèle téléchargé via le bouton <strong>Modèle Excel</strong>.
+            Ne modifiez pas les colonnes A, B, C, D — remplissez uniquement la colonne E (Note).
+          </div>
+          <label class="form-label fw-semibold" style="font-size:.84rem;">Fichier Excel (.xlsx)</label>
+          <input type="file" name="excel_file" class="form-control" accept=".xlsx" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-success btn-sm">
+            <i class="bi bi-upload me-1"></i>Importer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const MAX_SCORE = {{ evaluation.max_score }};
+const TOTAL    = {{ students_data|length }};
+
+// Validation live + mise à jour progression
+document.querySelectorAll('.grade-input').forEach(function(inp) {
+  inp.addEventListener('input', function() {
+    const val = parseFloat(this.value);
+    this.classList.remove('is-valid','is-warning','is-invalid');
+    if (this.value === '') return;
+    if (isNaN(val) || val < 0 || val > MAX_SCORE) {
+      this.classList.add('is-invalid');
+    } else if (val < MAX_SCORE * 0.5) {
+      this.classList.add('is-warning');
+    } else {
+      this.classList.add('is-valid');
+    }
+    updateProgress();
+  });
+  // Init couleur
+  if (inp.value !== '') inp.dispatchEvent(new Event('input'));
+});
+
+function updateProgress() {
+  const filled = [...document.querySelectorAll('.grade-input')].filter(i => i.value !== '').length;
+  document.getElementById('progressLabel').textContent = filled + '/' + TOTAL;
+  if (TOTAL > 0) {
+    document.getElementById('progressBar').style.width = Math.round(filled/TOTAL*100) + '%';
+  }
+}
+
+// Saisie rapide
+document.getElementById('btnFillAll')?.addEventListener('click', function() {
+  const val = prompt('Entrer une note à appliquer aux cases vides (sur ' + MAX_SCORE + ') :');
+  if (val === null || val.trim() === '') return;
+  const n = parseFloat(val);
+  if (isNaN(n) || n < 0 || n > MAX_SCORE) { alert('Note invalide.'); return; }
+  document.querySelectorAll('.grade-input').forEach(function(inp) {
+    if (inp.value === '') { inp.value = n; inp.dispatchEvent(new Event('input')); }
+  });
+});
+
+// Navigation clavier dans les notes (Tab = ligne suivante)
+const inputs = [...document.querySelectorAll('.grade-input')];
+inputs.forEach(function(inp, idx) {
+  inp.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const next = inputs[idx + 1];
+      if (next) next.focus();
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends 'base/base.html' %}
+{% block title %}Niveaux{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academic_structure:index' %}">Structure</a></li>
+<li class="breadcrumb-item active">Niveaux</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:var(--navy);"><i class="bi bi-bar-chart-steps"></i></span>Niveaux d'études</h1>
+  {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalLevel"><i class="bi bi-plus-lg"></i> Nouveau niveau</button>
+  {% endif %}
+</div>
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ul"></i></span>Liste des niveaux</h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table" id="tbl-levels">
+      <thead><tr><th>Ordre</th><th>Niveau</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for level in levels %}
+        <tr>
+          <td style="font-size:.83rem;color:#64748b;">{{ level.order }}</td>
+          <td style="font-weight:600;font-size:.85rem;">{{ level.name }}</td>
+          <td>
+            {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+            <div class="d-flex gap-1">
+              <button class="btn-action edit" title="Modifier"
+                onclick="openEditLevel({{ level.pk }},'{{ level.name|escapejs }}',{{ level.order }})">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <form method="post" style="display:inline;" onsubmit="return confirm('Supprimer ce niveau ?');">
+                {% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="pk" value="{{ level.pk }}">
+                <button type="submit" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3" class="text-center py-4 text-muted">Aucun niveau enregistré.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+<!-- Modal création -->
+<div class="modal fade" id="modalLevel" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nouveau niveau</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'academic_structure:level_create' %}">
+        {% csrf_token %}<input type="hidden" name="action" value="create">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label">Nom <span class="text-danger">*</span></label><input type="text" name="name" class="form-control" placeholder="ex: BTS, Licence 1, Master 2…" required></div>
+          <div class="mb-3"><label class="form-label">Ordre d'affichage</label><input type="number" name="order" class="form-control" min="1" placeholder="Laisser vide pour l'ajouter en fin de liste"></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal édition -->
+<div class="modal fade" id="modalEditLevel" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-pencil me-2"></i>Modifier le niveau</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'academic_structure:levels' %}">
+        {% csrf_token %}<input type="hidden" name="action" value="edit"><input type="hidden" name="pk" id="elPk">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label">Nom <span class="text-danger">*</span></label><input type="text" name="name" id="elName" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label">Ordre d'affichage</label><input type="number" name="order" id="elOrder" class="form-control" min="1"></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+$(document).ready(function(){ $('#tbl-levels').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}, order: []}); });
+function openEditLevel(pk, name, order) {
+  document.getElementById('elPk').value = pk;
+  document.getElementById('elName').value = name;
+  document.getElementById('elOrder').value = order;
+  new bootstrap.Modal(document.getElementById('modalEditLevel')).show();
+}
+</script>
+{% endblock %}

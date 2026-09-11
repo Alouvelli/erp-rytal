@@ -1,0 +1,394 @@
+{% extends 'base/base.html' %}
+{% block title %}Gestion des Clôtures de Session{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Clôture des sessions</li>
+{% endblock %}
+
+{% block content %}
+<style>
+  .session-card {
+    background:#fff;border:1px solid #e2e8f0;border-radius:14px;
+    overflow:hidden;margin-bottom:20px;
+  }
+  .session-card-header {
+    padding:18px 24px;display:flex;justify-content:space-between;align-items:center;
+  }
+  .badge-session {
+    display:inline-flex;align-items:center;gap:6px;border-radius:20px;
+    padding:5px 14px;font-size:.78rem;font-weight:700;
+  }
+  .badge-open   { background:#f0fdf4;color:#16a34a;border:1.5px solid #86efac; }
+  .badge-closed { background:#fef2f2;color:#dc2626;border:1.5px solid #fca5a5; }
+  .badge-ratt   { background:#eff6ff;color:#1d4ed8;border:1.5px solid #93c5fd; }
+  .info-row { display:flex;gap:24px;flex-wrap:wrap;padding:0 24px 16px; }
+  .info-item { font-size:.8rem;color:#64748b; }
+  .info-item strong { color:#1e293b;font-weight:700; }
+  .confirm-overlay {
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;
+    align-items:center;justify-content:center;
+  }
+  .confirm-overlay.show { display:flex; }
+  .confirm-box {
+    background:#fff;border-radius:16px;padding:32px 36px;max-width:520px;width:90%;
+    box-shadow:0 20px 60px rgba(0,0,0,.25);
+  }
+</style>
+
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-lock-fill"></i></span>
+    Gestion des Clôtures de Session
+  </h1>
+</div>
+
+<!-- Info globale -->
+<div style="background:linear-gradient(135deg,#1e3a5f,#0f2d5e);border-radius:14px;padding:20px 28px;margin-bottom:28px;color:#fff;">
+  <div style="font-size:.8rem;opacity:.7;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">Année académique en cours</div>
+  <div style="font-size:1.3rem;font-weight:800;">{{ current_year }}</div>
+  <div style="font-size:.82rem;opacity:.6;margin-top:4px;">
+    La clôture de la session normale verrouille toutes les évaluations et bulletins du semestre,
+    et active automatiquement la session de rattrapage.<br>
+    Le verrouillage d'un semestre bloque toute modification (notes, cahier de texte, présences…)
+    sur ce semestre et ouvre automatiquement les autres semestres de l'année.
+  </div>
+</div>
+
+{% if not semester_groups %}
+<div style="text-align:center;padding:60px;color:#94a3b8;">
+  <i class="bi bi-calendar-x d-block mb-3" style="font-size:2.5rem;"></i>
+  <div>Aucune classe avec des étudiants inscrits pour l'année académique en cours.</div>
+</div>
+{% endif %}
+
+{% for grp in semester_groups %}
+{% with sem=grp.semester %}
+<div class="session-card">
+  <div class="session-card-header">
+    <div>
+      <div style="font-size:1.1rem;font-weight:800;color:#1e293b;">
+        <i class="bi bi-calendar3 me-2" style="color:#7c3aed;"></i>
+        {% if sem.label %}{{ sem.label }}{% else %}Semestre {{ sem.number }}{% endif %}
+        &nbsp;—&nbsp;
+        <span style="font-size:.9rem;color:#7c3aed;font-weight:700;">{{ sem.level.name }}</span>
+        &nbsp;—&nbsp;
+        <span style="font-size:.9rem;color:#64748b;">{{ sem.academic_year }}</span>
+      </div>
+      <div style="margin-top:6px;font-size:.78rem;color:#64748b;">
+        <i class="bi bi-people-fill me-1"></i>Classes :
+        {% for c in grp.classes %}
+          <strong style="color:#334155;">{{ c.name }}</strong> ({{ c.enrolled_count }} inscrit{{ c.enrolled_count|pluralize }}){% if not forloop.last %},{% endif %}
+        {% endfor %}
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+        <!-- État verrouillage du semestre -->
+        {% if sem.is_locked %}
+        <span class="badge-session badge-closed">
+          <i class="bi bi-shield-lock-fill"></i> Semestre : Verrouillé
+        </span>
+        {% else %}
+        <span class="badge-session badge-open">
+          <i class="bi bi-unlock-fill"></i> Semestre : Ouvert
+        </span>
+        {% endif %}
+
+        <!-- État session normale -->
+        {% if sem.is_locked %}
+        <span class="badge-session badge-closed">
+          <i class="bi bi-lock-fill"></i> Session normale : Verrouillée
+        </span>
+        {% elif sem.session_normale_closed %}
+        <span class="badge-session badge-closed">
+          <i class="bi bi-lock-fill"></i> Session normale : Clôturée
+        </span>
+        {% else %}
+        <span class="badge-session badge-open">
+          <i class="bi bi-unlock-fill"></i> Session normale : Ouverte
+        </span>
+        {% endif %}
+
+        <!-- État session rattrapage -->
+        {% if sem.is_locked %}
+        <span class="badge-session badge-closed">
+          <i class="bi bi-lock-fill"></i> Session rattrapage : Verrouillée
+        </span>
+        {% elif sem.session_rattrapage_active %}
+        <span class="badge-session badge-ratt">
+          <i class="bi bi-arrow-repeat"></i> Session rattrapage : Active
+        </span>
+        {% else %}
+        <span class="badge-session" style="background:#f8fafc;color:#94a3b8;border:1.5px solid #e2e8f0;">
+          <i class="bi bi-dash-circle"></i> Session rattrapage : Non démarrée
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+      {% if sem.is_locked %}
+      <div style="text-align:right;font-size:.73rem;color:#94a3b8;max-width:220px;">
+        Semestre entièrement verrouillé — la clôture/réactivation de la session normale est contrôlée
+        par le verrouillage du semestre.
+      </div>
+      {% elif not sem.session_normale_closed %}
+      <button type="button"
+              onclick="showConfirm({{ sem.pk }}, '{% if sem.label %}{{ sem.label|escapejs }}{% else %}Semestre {{ sem.number }}{% endif %}')"
+              style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;
+                     border-radius:10px;padding:10px 20px;font-size:.85rem;font-weight:700;
+                     cursor:pointer;display:flex;align-items:center;gap:8px;">
+        <i class="bi bi-lock-fill"></i> Clôturer la session normale
+      </button>
+      {% else %}
+      <div style="text-align:right;font-size:.75rem;color:#64748b;">
+        <div>Clôturée le {{ sem.session_normale_closed_at|date:"d/m/Y à H:i" }}</div>
+        {% if sem.session_normale_closed_by %}
+        <div>par <strong>{{ sem.session_normale_closed_by.get_full_name }}</strong></div>
+        {% endif %}
+      </div>
+      <button type="button"
+              onclick="showReopen({{ sem.pk }}, '{% if sem.label %}{{ sem.label|escapejs }}{% else %}Semestre {{ sem.number }}{% endif %}')"
+              style="background:#fff;color:#b45309;border:1.5px solid #fcd34d;
+                     border-radius:10px;padding:8px 16px;font-size:.8rem;font-weight:600;
+                     cursor:pointer;display:flex;align-items:center;gap:7px;">
+        <i class="bi bi-arrow-counterclockwise"></i> Réactiver la session normale
+      </button>
+      {% endif %}
+
+      {% if sem.is_locked %}
+      <div style="text-align:right;font-size:.75rem;color:#64748b;">
+        <div>Verrouillé le {{ sem.locked_at|date:"d/m/Y à H:i" }}</div>
+        {% if sem.locked_by %}
+        <div>par <strong>{{ sem.locked_by.get_full_name }}</strong></div>
+        {% endif %}
+      </div>
+      <form method="post" action="{% url 'grades:unlock_semester' sem.pk %}">
+        {% csrf_token %}
+        <button type="submit"
+                style="background:#fff;color:#16a34a;border:1.5px solid #86efac;
+                       border-radius:10px;padding:8px 16px;font-size:.8rem;font-weight:600;
+                       cursor:pointer;display:flex;align-items:center;gap:7px;">
+          <i class="bi bi-unlock-fill"></i> Déverrouiller ce semestre
+        </button>
+      </form>
+      {% else %}
+      <button type="button"
+              onclick="showLock({{ sem.pk }}, '{% if sem.label %}{{ sem.label|escapejs }}{% else %}Semestre {{ sem.number }}{% endif %}')"
+              style="background:#fff;color:#475569;border:1.5px solid #cbd5e1;
+                     border-radius:10px;padding:8px 16px;font-size:.8rem;font-weight:600;
+                     cursor:pointer;display:flex;align-items:center;gap:7px;">
+        <i class="bi bi-shield-lock"></i> Verrouiller ce semestre
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if sem.session_normale_closed %}
+  <div class="info-row">
+    <div class="info-item">
+      <i class="bi bi-calendar-check me-1"></i>
+      Clôturée le <strong>{{ sem.session_normale_closed_at|date:"d/m/Y" }}</strong>
+      à <strong>{{ sem.session_normale_closed_at|time:"H:i" }}</strong>
+    </div>
+    {% if sem.session_normale_closed_by %}
+    <div class="info-item">
+      <i class="bi bi-person-check me-1"></i>
+      Par <strong>{{ sem.session_normale_closed_by.get_full_name }}</strong>
+    </div>
+    {% endif %}
+    <div class="info-item" style="color:{% if sem.is_locked %}#dc2626{% else %}#1d4ed8{% endif %};">
+      <i class="bi bi-{% if sem.is_locked %}lock-fill{% else %}arrow-repeat{% endif %} me-1"></i>
+      {% if sem.is_locked %}
+      Semestre verrouillé — aucune note de rattrapage ne peut être saisie tant que le contrôleur interne n'a pas déverrouillé le semestre
+      {% else %}
+      Session de rattrapage activée — les notes de rattrapage peuvent être saisies
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Actions disponibles en mode rattrapage -->
+  <div style="padding:0 24px 20px;display:flex;gap:10px;flex-wrap:wrap;">
+    <a href="{% url 'grades:rattrapage_class_list' %}"
+       style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;
+              background:#eff6ff;color:#1d4ed8;border-radius:8px;text-decoration:none;
+              font-size:.82rem;font-weight:600;">
+      <i class="bi bi-list-ul"></i> Voir les rattrapages
+    </a>
+    <a href="{% url 'grades:bulletin_class_list' %}"
+       style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;
+              background:#f0fdf4;color:#16a34a;border-radius:8px;text-decoration:none;
+              font-size:.82rem;font-weight:600;">
+      <i class="bi bi-file-earmark-text"></i> Bulletins de rattrapage
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endwith %}
+{% endfor %}
+
+
+<!-- ── Modal de confirmation ─────────────────────────────────────────────────── -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+      <div style="width:48px;height:48px;border-radius:12px;background:#fef2f2;
+                  display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-exclamation-triangle-fill" style="font-size:1.4rem;color:#dc2626;"></i>
+      </div>
+      <div>
+        <div style="font-size:1rem;font-weight:800;color:#1e293b;">Confirmer la clôture</div>
+        <div style="font-size:.82rem;color:#64748b;" id="confirmSubtitle"></div>
+      </div>
+    </div>
+
+    <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;
+                padding:14px 18px;margin-bottom:20px;font-size:.83rem;color:#7f1d1d;line-height:1.6;">
+      <strong>Cette action est irréversible.</strong><br>
+      Elle va :
+      <ul style="margin:8px 0 0 16px;padding:0;">
+        <li>Verrouiller <strong>toutes les évaluations</strong> de la session normale (CC, Examen…)</li>
+        <li>Verrouiller <strong>tous les bulletins</strong> du semestre</li>
+        <li>Activer <strong>automatiquement la session de rattrapage</strong></li>
+      </ul>
+    </div>
+
+    <div style="display:flex;gap:12px;justify-content:flex-end;">
+      <button type="button" onclick="hideConfirm()"
+              style="padding:10px 20px;border-radius:8px;border:1.5px solid #e2e8f0;
+                     background:#fff;color:#475569;font-size:.85rem;font-weight:600;cursor:pointer;">
+        <i class="bi bi-x-lg me-1"></i> Annuler
+      </button>
+      <form id="confirmForm" method="post" action="">
+        {% csrf_token %}
+        <button type="submit"
+                style="padding:10px 20px;border-radius:8px;border:none;
+                       background:linear-gradient(135deg,#dc2626,#b91c1c);
+                       color:#fff;font-size:.85rem;font-weight:700;cursor:pointer;">
+          <i class="bi bi-lock-fill me-1"></i> Confirmer la clôture
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal réouverture ──────────────────────────────────────────────────── -->
+<div class="confirm-overlay" id="reopenOverlay">
+  <div class="confirm-box">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+      <div style="width:48px;height:48px;border-radius:12px;background:#fef3c7;
+                  display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-arrow-counterclockwise" style="font-size:1.4rem;color:#b45309;"></i>
+      </div>
+      <div>
+        <div style="font-size:1rem;font-weight:800;color:#1e293b;">Réactiver la session normale</div>
+        <div style="font-size:.82rem;color:#64748b;" id="reopenSubtitle"></div>
+      </div>
+    </div>
+
+    <div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:10px;
+                padding:14px 18px;margin-bottom:20px;font-size:.83rem;color:#78350f;line-height:1.6;">
+      <strong>Attention.</strong> Cette action va :
+      <ul style="margin:8px 0 0 16px;padding:0;">
+        <li>Déverrouiller toutes les <strong>évaluations</strong> de la session normale</li>
+        <li>Déverrouiller tous les <strong>bulletins</strong> du semestre</li>
+        <li><strong>Désactiver</strong> la session de rattrapage</li>
+      </ul>
+      Les notes de rattrapage déjà saisies restent enregistrées.
+    </div>
+
+    <div style="display:flex;gap:12px;justify-content:flex-end;">
+      <button type="button" onclick="hideReopen()"
+              style="padding:10px 20px;border-radius:8px;border:1.5px solid #e2e8f0;
+                     background:#fff;color:#475569;font-size:.85rem;font-weight:600;cursor:pointer;">
+        <i class="bi bi-x-lg me-1"></i> Annuler
+      </button>
+      <form id="reopenForm" method="post" action="">
+        {% csrf_token %}
+        <button type="submit"
+                style="padding:10px 20px;border-radius:8px;border:1.5px solid #fcd34d;
+                       background:#fef3c7;color:#92400e;font-size:.85rem;font-weight:700;cursor:pointer;">
+          <i class="bi bi-arrow-counterclockwise me-1"></i> Confirmer la réactivation
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal verrouillage semestre ───────────────────────────────────────────── -->
+<div class="confirm-overlay" id="lockOverlay">
+  <div class="confirm-box">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+      <div style="width:48px;height:48px;border-radius:12px;background:#f8fafc;
+                  display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-shield-lock-fill" style="font-size:1.4rem;color:#475569;"></i>
+      </div>
+      <div>
+        <div style="font-size:1rem;font-weight:800;color:#1e293b;">Verrouiller le semestre</div>
+        <div style="font-size:.82rem;color:#64748b;" id="lockSubtitle"></div>
+      </div>
+    </div>
+
+    <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;
+                padding:14px 18px;margin-bottom:20px;font-size:.83rem;color:#334155;line-height:1.6;">
+      Cette action va :
+      <ul style="margin:8px 0 0 16px;padding:0;">
+        <li>Verrouiller <strong>toutes les modifications</strong> de ce semestre (notes, cahier de texte, présences…)</li>
+        <li><strong>Ouvrir automatiquement</strong> les autres semestres de la même année académique</li>
+      </ul>
+      Vous pourrez déverrouiller ce semestre à tout moment.
+    </div>
+
+    <div style="display:flex;gap:12px;justify-content:flex-end;">
+      <button type="button" onclick="hideLock()"
+              style="padding:10px 20px;border-radius:8px;border:1.5px solid #e2e8f0;
+                     background:#fff;color:#475569;font-size:.85rem;font-weight:600;cursor:pointer;">
+        <i class="bi bi-x-lg me-1"></i> Annuler
+      </button>
+      <form id="lockForm" method="post" action="">
+        {% csrf_token %}
+        <button type="submit"
+                style="padding:10px 20px;border-radius:8px;border:none;
+                       background:#475569;color:#fff;font-size:.85rem;font-weight:700;cursor:pointer;">
+          <i class="bi bi-shield-lock-fill me-1"></i> Confirmer le verrouillage
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function showConfirm(semId, semLabel) {
+  document.getElementById('confirmSubtitle').textContent = 'Session normale — ' + semLabel;
+  document.getElementById('confirmForm').action = '/grades/cloture/' + semId + '/close-normale/';
+  document.getElementById('confirmOverlay').classList.add('show');
+}
+function hideConfirm() {
+  document.getElementById('confirmOverlay').classList.remove('show');
+}
+document.getElementById('confirmOverlay').addEventListener('click', function(e) {
+  if (e.target === this) hideConfirm();
+});
+
+function showReopen(semId, semLabel) {
+  document.getElementById('reopenSubtitle').textContent = 'Session normale — ' + semLabel;
+  document.getElementById('reopenForm').action = '/grades/cloture/' + semId + '/reopen-normale/';
+  document.getElementById('reopenOverlay').classList.add('show');
+}
+function hideReopen() {
+  document.getElementById('reopenOverlay').classList.remove('show');
+}
+document.getElementById('reopenOverlay').addEventListener('click', function(e) {
+  if (e.target === this) hideReopen();
+});
+
+function showLock(semId, semLabel) {
+  document.getElementById('lockSubtitle').textContent = semLabel;
+  document.getElementById('lockForm').action = '/grades/cloture/' + semId + '/lock/';
+  document.getElementById('lockOverlay').classList.add('show');
+}
+function hideLock() {
+  document.getElementById('lockOverlay').classList.remove('show');
+}
+document.getElementById('lockOverlay').addEventListener('click', function(e) {
+  if (e.target === this) hideLock();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,298 @@
+{% extends 'base/base.html' %}
+{% block title %}Rattrapages — {{ class_group.name }} {{ semester.label }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'grades:rattrapage_class_list' %}">Rattrapages</a></li>
+<li class="breadcrumb-item active">{{ class_group.name }} — {{ semester.label }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <h1 class="page-title">
+    <span class="icon" style="background:#b45309;"><i class="bi bi-arrow-repeat"></i></span>
+    Rattrapages — {{ class_group.name }} | {{ semester.label }}
+  </h1>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if student_rows %}
+    <a href="{% url 'grades:rattrapage_archive_zip' class_group.pk semester.pk %}"
+       class="btn btn-sm" style="background:#b45309;color:#fff;border:none;padding:8px 18px;"
+       onclick="return confirm('Générer les bulletins SR PDF de tous les étudiants en rattrapage dans un ZIP ?')">
+      <i class="bi bi-file-zip me-1"></i>Archiver bulletins SR (ZIP)
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Sélecteur semestre -->
+<div class="d-flex gap-2 mb-4 flex-wrap">
+  {% for s in semesters %}
+  <a href="{% url 'grades:rattrapage_list' class_group.pk s.pk %}"
+     class="btn btn-sm {% if s.pk == semester.pk %}btn-warning{% else %}btn-outline-secondary{% endif %}"
+     style="font-size:.8rem;">
+    {{ s.label }}
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Stats -->
+{% with nb_sr=student_rows|length %}
+{% with nb_valides=0 %}
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px;">
+  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px 18px;">
+    <div style="font-size:.72rem;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Inscrits</div>
+    <div style="font-size:1.5rem;font-weight:800;color:#1e3a5f;">{{ all_count }}</div>
+  </div>
+  <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:14px 18px;">
+    <div style="font-size:.72rem;color:#92400e;font-weight:600;text-transform:uppercase;margin-bottom:4px;">En session SR</div>
+    <div style="font-size:1.5rem;font-weight:800;color:#b45309;">{{ nb_sr }}</div>
+  </div>
+  <div style="background:#dcfce7;border:1px solid #86efac;border-radius:10px;padding:14px 18px;">
+    <div style="font-size:.72rem;color:#15803d;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Validés en SR</div>
+    <div style="font-size:1.5rem;font-weight:800;color:#16a34a;">
+      {% for row in student_rows %}{% if row.all_validated_sr %}{% if not forloop.first %}{% endif %}1{% endif %}{% endfor %}
+    </div>
+  </div>
+</div>
+{% endwith %}{% endwith %}
+
+{% if student_rows %}
+<div class="card-section">
+  <div class="card-section-header" style="cursor:pointer;" onclick="toggleRattrapageList()">
+    <h6 class="card-section-title">
+      <button type="button" class="toggle-btn open" id="rl-list-toggle-btn"
+              onclick="event.stopPropagation();toggleRattrapageList();" style="margin-right:2px;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:.85rem;padding:2px 6px;transition:transform .2s;">
+        <i class="bi bi-chevron-down"></i>
+      </button>
+      <span style="width:26px;height:26px;border-radius:6px;background:#b45309;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ol"></i></span>
+      Bulletins de session de rattrapage
+      <span style="font-size:.75rem;font-weight:400;color:#64748b;margin-left:8px;">({{ student_rows|length }} étudiant(s))</span>
+    </h6>
+  </div>
+  <div id="rl-list-body">
+  <div class="table-responsive">
+    <table class="table" style="font-size:.83rem;border-collapse:separate;border-spacing:0;">
+      <thead>
+        <tr>
+          <th style="width:36px;">#</th>
+          <th>Étudiant</th>
+          <th>Matricule</th>
+          <th>Statut SR</th>
+          <th class="text-center" style="width:90px;">UE(s)</th>
+          <th class="text-center" style="width:200px;">Bulletin SR</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in student_rows %}
+        <!-- Ligne principale -->
+        <tr style="border-left:4px solid {% if row.all_validated_sr %}#16a34a{% else %}#f59e0b{% endif %};">
+          <td style="color:#94a3b8;font-size:.78rem;padding-left:10px;">{{ forloop.counter }}</td>
+          <td>
+            <div style="font-weight:700;color:#1e293b;">{{ row.student.user.get_full_name }}</div>
+          </td>
+          <td style="font-size:.78rem;color:#64748b;">{{ row.student.matricule }}</td>
+          <td>
+            {% if row.all_validated_sr %}
+              <span style="display:inline-flex;align-items:center;gap:5px;background:#dcfce7;color:#15803d;border-radius:20px;padding:4px 12px;font-size:.75rem;font-weight:700;">
+                <i class="bi bi-check-circle-fill"></i> Toutes UEs validées en SR
+              </span>
+            {% else %}
+              <span style="display:inline-flex;align-items:center;gap:5px;background:#fef3c7;color:#92400e;border-radius:20px;padding:4px 12px;font-size:.75rem;font-weight:700;">
+                <i class="bi bi-hourglass-split"></i> En attente de rattrapage
+              </span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            <span style="font-weight:700;color:#b45309;">{{ row.ues_non_validees|length }}</span>
+            <span style="color:#94a3b8;font-size:.76rem;">NV /</span>
+            <span style="font-weight:700;color:#16a34a;">{{ row.ues_validees_sr|length }}</span>
+            <span style="color:#94a3b8;font-size:.76rem;">SR</span>
+          </td>
+          <td class="text-center">
+            <div class="d-flex gap-1 justify-content-center">
+              <a href="{% url 'grades:rattrapage_preview' class_group.pk semester.pk row.student.pk %}"
+                 class="btn btn-sm" style="background:#fef3c7;color:#92400e;border:1px solid #fcd34d;font-size:.72rem;padding:4px 10px;font-weight:600;">
+                <i class="bi bi-pencil-square me-1"></i>Bulletin SR
+              </a>
+              <a href="{% url 'grades:rattrapage_pdf' class_group.pk semester.pk row.student.pk %}"
+                 class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;font-size:.72rem;padding:4px 10px;font-weight:600;">
+                <i class="bi bi-file-earmark-pdf"></i>
+              </a>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Ligne de détail UEs -->
+        <tr style="background:#fafafa;border-bottom:2px solid #f1f5f9;">
+          <td></td>
+          <td colspan="5" style="padding:6px 12px 12px 12px;border-top:none;">
+            <div class="d-flex flex-wrap gap-2">
+              <!-- UEs encore non validées — EC(s) à rattraper, saisie directe -->
+              {% for ue_entry in row.ues_non_validees %}
+              <div style="background:#fff;border:1px solid #fca5a5;border-radius:8px;padding:7px 12px;font-size:.75rem;min-width:280px;">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+                  <i class="bi bi-x-circle-fill" style="color:#dc2626;font-size:.8rem;"></i>
+                  <span style="font-weight:700;color:#1e293b;">{{ ue_entry.ue.code }}</span>
+                  <span style="color:#64748b;">{{ ue_entry.ue.title }}</span>
+                  {% if ue_entry.average %}
+                  <span style="background:#fee2e2;color:#991b1b;border-radius:10px;padding:1px 7px;font-weight:700;margin-left:auto;">
+                    {{ ue_entry.average|floatformat:2 }}/20
+                  </span>
+                  {% else %}
+                  <span style="background:#f1f5f9;color:#64748b;border-radius:10px;padding:1px 7px;font-size:.7rem;margin-left:auto;">
+                    EC à composer
+                  </span>
+                  {% endif %}
+                </div>
+                {% for ec in ue_entry.ec_list %}
+                {% if ec.appreciation != 'Validé' %}
+                <div class="ratt-ec-row d-flex align-items-center gap-2" style="padding:3px 0;border-top:1px dashed #f1f5f9;"
+                     data-student-id="{{ row.student.pk }}" data-subject-id="{{ ec.subject.pk }}">
+                  <span style="font-weight:700;color:#7c3aed;min-width:46px;">{{ ec.subject.code }}</span>
+                  <span style="color:#374151;flex:1;">{{ ec.subject.title }}</span>
+                  <span class="ratt-ec-final" style="font-size:.7rem;color:#94a3b8;min-width:36px;text-align:right;" title="Moyenne EC actuelle">
+                    {{ ec.final_average|floatformat:2|default:"—" }}
+                  </span>
+                  {% if not semester.is_locked %}
+                  <input type="number" class="form-control form-control-sm ratt-input" min="0" max="20" step="0.01"
+                         style="max-width:68px;font-size:.75rem;padding:2px 6px;"
+                         value="{% if ec.rattrapage_score is not None %}{{ ec.rattrapage_score|stringformat:'.2f' }}{% endif %}"
+                         placeholder="/20" title="Note de rattrapage (0-20)">
+                  {% else %}
+                  <span style="color:#94a3b8;">{{ ec.rattrapage_score|floatformat:2|default:"—" }}</span>
+                  {% endif %}
+                </div>
+                {% endif %}
+                {% endfor %}
+              </div>
+              {% endfor %}
+
+              <!-- UEs validées en SR -->
+              {% for ue_entry in row.ues_validees_sr %}
+              <div style="background:#fff;border:1px solid #86efac;border-radius:8px;padding:5px 12px;font-size:.75rem;display:inline-flex;align-items:center;gap:6px;">
+                <i class="bi bi-check-circle-fill" style="color:#16a34a;font-size:.8rem;"></i>
+                <span style="font-weight:700;color:#1e293b;">{{ ue_entry.ue.code }}</span>
+                <span style="color:#64748b;">{{ ue_entry.ue.title }}</span>
+                {% if ue_entry.average %}
+                <span style="background:#dcfce7;color:#15803d;border-radius:10px;padding:1px 7px;font-weight:700;">
+                  {{ ue_entry.average|floatformat:2 }}/20
+                </span>
+                {% endif %}
+                <span style="background:#fef3c7;color:#b45309;border-radius:10px;padding:1px 7px;font-size:.7rem;font-weight:700;">
+                  Validée en SR
+                </span>
+              </div>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  </div>
+</div>
+
+{% else %}
+<div style="text-align:center;padding:70px 20px;color:#94a3b8;">
+  <i class="bi bi-check-circle d-block mb-3" style="font-size:3rem;color:#86efac;"></i>
+  <div style="font-size:.95rem;font-weight:700;color:#16a34a;">Tous les étudiants ont validé leurs UEs</div>
+  <div style="font-size:.82rem;margin-top:6px;">Aucun étudiant en session de rattrapage pour ce semestre.</div>
+</div>
+{% endif %}
+
+{% block extra_js %}
+<style>
+.ratt-input:focus { outline:2px solid #b45309;border-color:#b45309 !important;background:#fffbeb !important; }
+.ratt-input.saving { opacity:.6;pointer-events:none; }
+.ratt-input.saved  { border-color:#16a34a !important; }
+.ratt-input.error  { border-color:#dc2626 !important;background:#fef2f2 !important; }
+</style>
+<script>
+function toggleRattrapageList() {
+  const body = document.getElementById('rl-list-body');
+  const btn  = document.getElementById('rl-list-toggle-btn');
+  if (!body || !btn) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  btn.classList.toggle('open', !open);
+  btn.style.transform = !open ? 'rotate(180deg)' : '';
+}
+
+{% if not semester.is_locked %}
+(function () {
+  const INLINE_URL  = "{% url 'grades:grade_inline_update' %}";
+  const CSRF        = "{{ csrf_token }}";
+  const SEMESTER_ID = {{ semester.pk }};
+  const CLASS_ID    = {{ class_group.pk }};
+
+  async function saveRattrapageScore(input) {
+    const row = input.closest('.ratt-ec-row');
+    if (!row) return;
+
+    const studentId = row.dataset.studentId;
+    const subjectId = row.dataset.subjectId;
+    const scoreRaw  = input.value.trim().replace(',', '.');
+    const score     = scoreRaw === '' ? '' : parseFloat(scoreRaw);
+
+    if (scoreRaw !== '' && (isNaN(score) || score < 0 || score > 20)) {
+      input.classList.add('error');
+      input.title = 'Note invalide (0–20)';
+      return;
+    }
+
+    input.classList.remove('saved', 'error');
+    input.classList.add('saving');
+
+    try {
+      const resp = await fetch(INLINE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+        body: JSON.stringify({
+          student_id:  parseInt(studentId),
+          subject_id:  parseInt(subjectId),
+          semester_id: SEMESTER_ID,
+          class_id:    CLASS_ID,
+          grade_type:  'RATTRAPAGE',
+          score:       scoreRaw === '' ? null : score,
+        }),
+      });
+
+      const d = await resp.json();
+
+      if (!resp.ok) {
+        input.classList.remove('saving');
+        input.classList.add('error');
+        input.title = d.error || 'Erreur serveur';
+        return;
+      }
+
+      input.classList.remove('saving', 'error');
+      input.classList.add('saved');
+      input.title = '';
+
+      // Le rattrapage peut faire passer l'EC/l'UE en validé et déplacer
+      // l'étudiant entre "En attente" et "Validé en SR" — plutôt que de
+      // dupliquer ici toute la logique de regroupement du serveur, on
+      // recharge la page pour rester fiable à 100% après un court délai
+      // (le temps de voir la confirmation visuelle).
+      setTimeout(() => window.location.reload(), 500);
+    } catch (e) {
+      input.classList.remove('saving');
+      input.classList.add('error');
+      input.title = 'Erreur réseau';
+    }
+  }
+
+  document.querySelectorAll('.ratt-input').forEach(input => {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); saveRattrapageScore(input); input.blur(); }
+      if (e.key === 'Escape') { input.blur(); }
+    });
+    input.addEventListener('blur', () => saveRattrapageScore(input));
+    input.addEventListener('focus', () => input.select());
+    input.addEventListener('click', e => e.stopPropagation());
+  });
+})();
+{% endif %}
+</script>
+{% endblock %}
+{% endblock %}

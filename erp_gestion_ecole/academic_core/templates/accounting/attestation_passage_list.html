@@ -1,0 +1,146 @@
+{% extends 'base/base.html' %}
+{% block title %}Attestations de passage{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Attestations de passage</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-file-earmark-check-fill"></i></span>
+    Attestations de passage
+  </h1>
+  {# Filtre année #}
+  <form method="get" class="d-flex align-items-center gap-2">
+    <select name="year_id" class="form-select form-select-sm" style="min-width:200px;" onchange="this.form.submit()">
+      {% for yr in all_years %}
+      <option value="{{ yr.pk }}" {% if selected_year and yr.pk == selected_year.pk %}selected{% endif %}>{{ yr }}</option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+<div class="mb-3" style="font-size:.8rem;color:#64748b;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 16px;">
+  <i class="bi bi-info-circle-fill me-2" style="color:#0369a1;"></i>
+  Une attestation est générée uniquement pour les étudiants autorisés à une <strong>réinscription validée</strong> dont les <strong>mensualités de l'année antérieure sont entièrement soldées</strong>.
+</div>
+
+{% if not groups %}
+<div class="card-section" style="padding:48px;text-align:center;color:#94a3b8;">
+  <i class="bi bi-file-earmark-x" style="font-size:3rem;color:#e2e8f0;display:block;margin-bottom:12px;"></i>
+  <div style="font-weight:600;color:#64748b;">Aucune réinscription validée pour cette année académique.</div>
+</div>
+{% endif %}
+
+{% for grp in groups %}
+{% with gid=forloop.counter %}
+<div class="card-section mb-3" style="overflow:hidden;">
+
+  {# En-tête classe #}
+  <div onclick="toggleGrp({{ gid }})"
+       style="display:flex;align-items:center;gap:12px;padding:12px 20px;
+              background:var(--navy);cursor:pointer;user-select:none;">
+    <span style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;flex-shrink:0;">
+      <i class="bi bi-people-fill"></i>
+    </span>
+    <div style="flex:1;">
+      <div style="font-weight:700;color:#fff;font-size:.88rem;">{{ grp.class_group.name }}</div>
+      {% if grp.class_group.level %}<div style="font-size:.7rem;color:#93c5fd;">{{ grp.class_group.level }}</div>{% endif %}
+    </div>
+    {% with total=grp.rows|length eligible_count=0 %}
+    <span style="font-size:.75rem;font-weight:700;background:rgba(255,255,255,.15);color:#fff;padding:3px 10px;border-radius:20px;">
+      {{ grp.rows|length }} étudiant{{ grp.rows|length|pluralize }}
+    </span>
+    {% endwith %}
+    <i id="grp-arrow-{{ gid }}" class="bi bi-chevron-down" style="color:#93c5fd;transition:transform .25s;flex-shrink:0;"></i>
+  </div>
+
+  {# Corps #}
+  <div id="grp-body-{{ gid }}" style="display:block;">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0" style="font-size:.84rem;">
+        <thead style="background:#f8fafc;">
+          <tr>
+            <th style="padding:9px 16px;font-size:.72rem;color:#64748b;font-weight:700;">Étudiant</th>
+            <th style="font-size:.72rem;color:#64748b;font-weight:700;">Classe précédente</th>
+            <th style="font-size:.72rem;color:#64748b;font-weight:700;text-align:center;">Mensualités</th>
+            <th style="font-size:.72rem;color:#64748b;font-weight:700;text-align:center;">Éligibilité</th>
+            <th style="font-size:.72rem;color:#64748b;font-weight:700;text-align:center;">Attestation</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in grp.rows %}
+          <tr style="{% if not row.eligible %}background:#fff9f9;{% endif %}">
+            <td style="padding:10px 16px;">
+              <div style="font-weight:700;color:var(--navy);">{{ row.student.user.get_full_name }}</div>
+              <div style="font-size:.72rem;color:#94a3b8;font-family:monospace;">{{ row.student.matricule }}</div>
+            </td>
+            <td>
+              {% if row.enrollment.previous_class %}
+              <span style="font-size:.78rem;background:#f1f5f9;color:#374151;padding:2px 8px;border-radius:6px;">
+                {{ row.enrollment.previous_class.name }}
+              </span>
+              {% else %}
+              <span style="color:#94a3b8;font-size:.78rem;">—</span>
+              {% endif %}
+            </td>
+            <td style="text-align:center;">
+              {% if row.remaining == 0 %}
+              <span style="font-size:.74rem;background:#dcfce7;color:#166534;padding:3px 10px;border-radius:10px;font-weight:700;">
+                <i class="bi bi-check-circle-fill me-1"></i>Soldé
+              </span>
+              {% else %}
+              <span style="font-size:.74rem;background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:10px;font-weight:700;">
+                <i class="bi bi-exclamation-circle-fill me-1"></i>{{ row.remaining|floatformat:0 }} F
+              </span>
+              {% endif %}
+            </td>
+            <td style="text-align:center;">
+              {% if row.eligible %}
+              <span style="font-size:.74rem;background:#dcfce7;color:#166534;padding:3px 10px;border-radius:10px;font-weight:700;">
+                <i class="bi bi-patch-check-fill me-1"></i>Éligible
+              </span>
+              {% else %}
+              <span style="font-size:.74rem;background:#f3f4f6;color:#6b7280;padding:3px 10px;border-radius:10px;">
+                <i class="bi bi-dash-circle me-1"></i>Non éligible
+              </span>
+              {% endif %}
+            </td>
+            <td style="text-align:center;">
+              {% if row.eligible and row.enrollment.previous_class %}
+              <a href="{% url 'accounting:attestation_passage_pdf' row.enrollment.pk %}"
+                 target="_blank"
+                 class="btn btn-sm"
+                 style="background:#7c3aed;color:#fff;font-size:.73rem;border-radius:7px;">
+                <i class="bi bi-file-earmark-pdf-fill me-1"></i>PDF
+              </a>
+              {% else %}
+              <button class="btn btn-sm btn-outline-secondary" disabled style="font-size:.73rem;border-radius:7px;opacity:.45;">
+                <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+              </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endwith %}
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleGrp(id) {
+  const body  = document.getElementById('grp-body-' + id);
+  const arrow = document.getElementById('grp-arrow-' + id);
+  const open  = body.style.display !== 'none';
+  body.style.display    = open ? 'none' : 'block';
+  arrow.style.transform = open ? 'rotate(-90deg)' : '';
+}
+</script>
+{% endblock %}

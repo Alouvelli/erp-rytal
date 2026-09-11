@@ -1,0 +1,152 @@
+{% extends "base/base.html" %}
+{% block title %}Bulletin — {{ bulletin.user.get_full_name }} — {{ month_label }} {{ bulletin.annee }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'hr:bulletin_list' %}?year={{ bulletin.annee }}&month={{ bulletin.mois }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+      <div>
+        <h5 class="mb-0 fw-bold">{{ bulletin.user.get_full_name }} — {{ month_label }} {{ bulletin.annee }}</h5>
+        <small class="text-muted">Bulletin de salaire</small>
+      </div>
+    </div>
+    <div class="d-flex gap-2 no-print">
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i>Imprimer
+      </button>
+      <a href="{% url 'hr:bulletin_pdf' pk=bulletin.pk %}" target="_blank" class="btn btn-sm fw-semibold" style="background:#15803d;color:#fff;">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+      </a>
+      <a href="{% url 'hr:bulletin_word' pk=bulletin.pk %}" class="btn btn-sm fw-semibold" style="background:#1d4ed8;color:#fff;">
+        <i class="bi bi-file-earmark-word me-1"></i>Word
+      </a>
+      {% if bulletin.statut == 'BROUILLON' and is_manager %}
+      <form method="post" action="{% url 'hr:bulletin_delete' pk=bulletin.pk %}" onsubmit="return confirm('Supprimer ce bulletin brouillon ?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Supprimer</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body p-4">
+      <div class="row g-3 mb-3 pb-3 border-bottom">
+        <div class="col-md-3">
+          <div class="text-muted" style="font-size:.78rem;">Poste</div>
+          <div class="fw-semibold" style="font-size:.9rem;">{{ fiche.poste|default:bulletin.user.role.get_name_display|default:'—' }}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted" style="font-size:.78rem;">Type de contrat</div>
+          <div class="fw-semibold" style="font-size:.9rem;">{% if fiche %}{{ fiche.get_type_contrat_display }}{% else %}—{% endif %}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted" style="font-size:.78rem;">Date d'embauche</div>
+          <div class="fw-semibold" style="font-size:.9rem;">{% if fiche.date_embauche %}{{ fiche.date_embauche|date:"d/m/Y" }}{% else %}—{% endif %}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted" style="font-size:.78rem;">Ancienneté</div>
+          <div class="fw-semibold" style="font-size:.9rem;">{{ anciennete|default:'—' }}</div>
+        </div>
+      </div>
+      {% if bulletin.statut == 'BROUILLON' and is_manager %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" style="font-size:.83rem;">Salaire de base (FCFA)</label>
+            <input type="number" step="1" name="salaire_base" value="{{ bulletin.salaire_base|floatformat:0 }}" class="form-control" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" style="font-size:.83rem;">Primes (FCFA)</label>
+            <input type="number" step="1" name="primes" value="{{ bulletin.primes|floatformat:0 }}" class="form-control">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold" style="font-size:.83rem;">Retenues (FCFA)</label>
+            <input type="number" step="1" name="retenues" value="{{ bulletin.retenues|floatformat:0 }}" class="form-control">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold" style="font-size:.83rem;">Notes</label>
+            <textarea name="notes" rows="2" class="form-control">{{ bulletin.notes }}</textarea>
+          </div>
+        </div>
+        <div class="d-flex justify-content-end gap-2 mt-3">
+          <button type="submit" class="btn btn-outline-primary fw-semibold"><i class="bi bi-save me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+      <hr>
+      <form method="post" onsubmit="return confirm('Valider ce bulletin ? Les montants ne pourront plus être modifiés.');">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="validate">
+        <div class="d-flex justify-content-between align-items-center">
+          <span style="font-size:.85rem;color:#64748b;">Une fois validé, le bulletin devient définitif.</span>
+          <button type="submit" class="btn btn-success fw-semibold"><i class="bi bi-check2-circle me-1"></i>Valider le bulletin</button>
+        </div>
+      </form>
+      {% else %}
+      <div class="row g-3">
+        <div class="col-md-4">
+          <div class="text-muted" style="font-size:.78rem;">Salaire de base</div>
+          <div class="fw-bold" style="font-size:1rem;">{{ bulletin.salaire_base|floatformat:0 }} FCFA</div>
+        </div>
+        <div class="col-md-4">
+          <div class="text-muted" style="font-size:.78rem;">Primes</div>
+          <div class="fw-bold" style="font-size:1rem;">{{ bulletin.primes|floatformat:0 }} FCFA</div>
+        </div>
+        <div class="col-md-4">
+          <div class="text-muted" style="font-size:.78rem;">Retenues</div>
+          <div class="fw-bold" style="font-size:1rem;">{{ bulletin.retenues|floatformat:0 }} FCFA</div>
+        </div>
+        {% if bulletin.notes %}
+        <div class="col-12">
+          <div class="text-muted" style="font-size:.78rem;">Notes</div>
+          <div style="font-size:.85rem;">{{ bulletin.notes }}</div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div class="mt-4 p-3 rounded" style="background:#eff6ff;">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div>
+            <span style="font-size:.78rem;color:#1e3a8a;">Net à payer</span>
+            <div style="font-size:1.4rem;font-weight:700;color:#1e3a8a;">{{ bulletin.salaire_net|floatformat:0 }} FCFA</div>
+          </div>
+          <span class="badge" style="font-size:.8rem;padding:8px 14px;
+            background:{% if bulletin.statut == 'BROUILLON' %}#f1f5f9{% elif bulletin.statut == 'VALIDE' %}#dcfce7{% else %}#dbeafe{% endif %};
+            color:{% if bulletin.statut == 'BROUILLON' %}#64748b{% elif bulletin.statut == 'VALIDE' %}#15803d{% else %}#1d4ed8{% endif %};">
+            {{ bulletin.get_statut_display }}
+          </span>
+        </div>
+      </div>
+
+      {% if bulletin.statut == 'VALIDE' and is_manager %}
+      <form method="post" class="mt-3 d-flex align-items-end gap-2">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="mark_paid">
+        <div>
+          <label class="form-label fw-semibold" style="font-size:.8rem;">Date de paiement</label>
+          <input type="date" name="date_paiement" class="form-control form-control-sm">
+        </div>
+        <button type="submit" class="btn btn-sm btn-primary fw-semibold"><i class="bi bi-cash-coin me-1"></i>Marquer comme payé</button>
+      </form>
+      {% endif %}
+
+      {% if bulletin.statut == 'PAYE' and bulletin.date_paiement %}
+      <div class="mt-3" style="font-size:.83rem;color:#64748b;">
+        <i class="bi bi-check-circle-fill text-primary me-1"></i>Payé le {{ bulletin.date_paiement|date:"d/m/Y" }}
+      </div>
+      {% endif %}
+
+      {% if bulletin.validated_by %}
+      <div class="mt-2" style="font-size:.78rem;color:#94a3b8;">
+        Validé par {{ bulletin.validated_by.get_full_name }} le {{ bulletin.validated_at|date:"d/m/Y H:i" }}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

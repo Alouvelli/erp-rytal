@@ -1,0 +1,132 @@
+{% extends 'base/base.html' %}
+{% block title %}Contrôleurs Internes{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" style="max-width:1160px;">
+
+  <!-- ── Hero ── -->
+  <div class="rounded-4 p-4 mb-4 text-white d-flex align-items-center justify-content-between flex-wrap gap-3"
+       style="background:linear-gradient(135deg,#0f2547 0%,#1d4ed8 100%);">
+    <div>
+      <h4 class="fw-bold mb-1"><i class="bi bi-eye-fill me-2"></i>Contrôleurs Internes multi-instituts</h4>
+      <div style="opacity:.7;font-size:.83rem;">Rattachement d'un Contrôleur Interne à plusieurs instituts — Super Administrateur</div>
+    </div>
+    <a href="{% url 'accounts:controleur_create' %}" class="btn btn-light fw-bold px-4">
+      <i class="bi bi-person-plus-fill me-1"></i>Nouveau Contrôleur
+    </a>
+  </div>
+
+  <!-- ── Messages ── -->
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+
+  <div class="info-box mb-4" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;font-size:.82rem;color:#1e40af;">
+    <i class="bi bi-info-circle-fill me-2"></i>
+    Cette page ne liste que les Contrôleurs Internes rattachés à <strong>plusieurs</strong> instituts via
+    cette interface. Les Contrôleurs Internes classiques (un seul institut, créés directement depuis
+    la gestion des utilisateurs d'un institut) n'apparaissent pas ici.
+  </div>
+
+  <!-- ── Recherche ── -->
+  <form method="get" class="mb-4">
+    <div class="input-group" style="max-width:480px;">
+      <input type="text" name="q" value="{{ q }}" class="form-control"
+             placeholder="Rechercher par nom, email…">
+      <button class="btn btn-primary px-3" type="submit">
+        <i class="bi bi-search me-1"></i>Rechercher
+      </button>
+      {% if q %}
+      <a href="{% url 'accounts:controleur_list' %}" class="btn btn-outline-secondary" title="Effacer">
+        <i class="bi bi-x-lg"></i>
+      </a>
+      {% endif %}
+    </div>
+  </form>
+
+  <!-- ── Tableau ── -->
+  <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+    {% if total == 0 %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-person-x d-block mb-3" style="font-size:3rem;opacity:.25;"></i>
+        {% if q %}
+          <p class="mb-2">Aucun résultat pour « <strong>{{ q }}</strong> ».</p>
+          <a href="{% url 'accounts:controleur_list' %}" class="btn btn-sm btn-outline-secondary">Voir tous</a>
+        {% else %}
+          <p class="mb-2">Aucun Contrôleur Interne multi-instituts enregistré.</p>
+          <a href="{% url 'accounts:controleur_create' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus-fill me-1"></i>Créer le premier
+          </a>
+        {% endif %}
+      </div>
+    {% else %}
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7e;font-weight:700;white-space:nowrap;">Contrôleur</th>
+            <th style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7e;font-weight:700;white-space:nowrap;">Email</th>
+            <th style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7e;font-weight:700;white-space:nowrap;">Instituts contrôlés</th>
+            <th style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7e;font-weight:700;white-space:nowrap;">Statut</th>
+            <th class="text-end pe-4" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:#5a6a7e;font-weight:700;white-space:nowrap;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in controleurs %}
+          <tr>
+            <td class="ps-4">
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 text-white fw-bold"
+                     style="width:38px;height:38px;font-size:.8rem;background:linear-gradient(135deg,#0f2547,#1d4ed8);">
+                  {{ c.first_name|first|upper }}{{ c.last_name|first|upper }}
+                </div>
+                <div>
+                  <div class="fw-bold" style="font-size:.88rem;color:#1e293b;">{{ c.get_full_name }}</div>
+                  <div class="text-muted" style="font-size:.73rem;">Contrôleur Interne</div>
+                </div>
+              </div>
+            </td>
+            <td style="font-size:.84rem;color:#334155;">{{ c.email }}</td>
+            <td>
+              <div class="d-flex flex-wrap gap-1">
+                {% for link in c.controlled_institut_links.all %}
+                <span class="badge rounded-pill" style="background:#dbeafe;color:#1e40af;font-size:.71rem;padding:5px 10px;">
+                  <i class="bi bi-building me-1"></i>{{ link.institut_config.nom }}
+                </span>
+                {% endfor %}
+              </div>
+            </td>
+            <td>
+              {% if c.is_active %}
+                <span class="badge rounded-pill" style="background:#dcfce7;color:#15803d;font-size:.71rem;padding:5px 12px;">Actif</span>
+              {% else %}
+                <span class="badge rounded-pill" style="background:#fee2e2;color:#b91c1c;font-size:.71rem;padding:5px 12px;">Inactif</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-4">
+              <a href="{% url 'accounts:controleur_edit' c.pk %}" class="btn btn-sm btn-outline-primary me-1" title="Modifier">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <a href="{% url 'accounts:controleur_delete' c.pk %}" class="btn btn-sm btn-outline-danger" title="Supprimer">
+                <i class="bi bi-trash3"></i>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="px-4 py-3 d-flex align-items-center justify-content-between flex-wrap gap-2"
+         style="background:#f8fafc;border-top:1px solid #e8edf3;">
+      <span class="text-muted" style="font-size:.8rem;">{{ total }} Contrôleur(s) multi-instituts affiché(s)</span>
+      <a href="{% url 'accounts:controleur_create' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-person-plus-fill me-1"></i>Ajouter un Contrôleur
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

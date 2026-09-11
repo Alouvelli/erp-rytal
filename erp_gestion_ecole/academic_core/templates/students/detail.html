@@ -1,0 +1,297 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ student.full_name }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:list' %}">Étudiants</a></li>
+<li class="breadcrumb-item active">{{ student.full_name }}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:var(--navy);"><i class="bi bi-person-fill"></i></span>{{ student.full_name }}</h1>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'students:fiche_inscription_pdf' pk=student.pk %}" target="_blank"
+       class="btn btn-sm" style="background:#15803d;color:#fff;border-radius:8px;font-size:.82rem;">
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>Fiche d'inscription
+    </a>
+    <a href="{% url 'students:student_card_pdf' pk=student.pk %}" target="_blank"
+       class="btn btn-sm" style="background:#1a3a6b;color:#fff;border-radius:8px;font-size:.82rem;">
+      <i class="bi bi-credit-card-fill me-1"></i>Carte étudiant
+    </a>
+    <a href="{% url 'students:dossier' student.pk %}"
+       class="btn btn-sm" style="background:#7c3aed;color:#fff;border-radius:8px;font-size:.82rem;">
+      <i class="bi bi-folder2-open me-1"></i>Dossier complet
+    </a>
+    <a href="{% url 'students:edit' student.pk %}" class="btn btn-primary btn-sm"><i class="bi bi-pencil me-1"></i>Modifier</a>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-person"></i></span>Informations personnelles</h6>
+      </div>
+      <div class="p-3">
+        <div class="text-center py-3">
+          <!-- Zone photo cliquable -->
+          <div style="position:relative;display:inline-block;cursor:pointer;"
+               onclick="document.getElementById('modal-photo').style.display='flex'"
+               title="{% if student.photo %}Changer la photo{% else %}Ajouter une photo{% endif %}">
+            {% if student.photo %}
+              <img src="{{ student.photo.url }}" alt="Photo de {{ student.full_name }}"
+                   style="width:100px;height:110px;border-radius:12px;object-fit:cover;border:3px solid var(--navy);display:block;">
+            {% else %}
+              <div style="width:100px;height:110px;border-radius:12px;background:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:4px;">
+                <span style="font-size:2rem;font-weight:800;line-height:1;">{{ student.full_name|slice:":1"|upper }}</span>
+                <span style="font-size:.55rem;font-weight:600;opacity:.7;letter-spacing:.05em;">AJOUTER PHOTO</span>
+              </div>
+            {% endif %}
+            <!-- Bouton caméra -->
+            <div style="position:absolute;bottom:-4px;right:-4px;background:#0891b2;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.2);">
+              <i class="bi bi-{% if student.photo %}pencil-fill{% else %}camera-fill{% endif %}" style="color:#fff;font-size:.75rem;"></i>
+            </div>
+          </div>
+          <div style="font-weight:700;font-size:1rem;margin-top:8px;">{{ student.full_name }}</div>
+          <div style="font-size:.8rem;color:#64748b;">{{ student.matricule }}</div>
+        </div>
+
+        <!-- Modal photo -->
+        <div id="modal-photo" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;">
+          <div style="background:#fff;border-radius:16px;padding:28px;width:420px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.25);">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="mb-0 fw-bold"><i class="bi bi-camera me-2 text-primary"></i>Photo de l'étudiant</h6>
+              <button type="button" onclick="closePhotoModal()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:#64748b;">&times;</button>
+            </div>
+
+            <!-- Onglets -->
+            <ul class="nav nav-pills mb-3" id="detail-photo-tabs">
+              <li class="nav-item">
+                <button class="nav-link active" type="button" onclick="switchDetailTab('upload')">
+                  <i class="bi bi-upload me-1"></i> Importer
+                </button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link" type="button" onclick="switchDetailTab('webcam')">
+                  <i class="bi bi-webcam me-1"></i> Webcam
+                </button>
+              </li>
+            </ul>
+
+            <form method="post" action="{% url 'students:update_photo' student.pk %}" enctype="multipart/form-data">
+              {% csrf_token %}
+              <input type="hidden" name="photo_webcam" id="detail-photo-webcam">
+
+              <!-- Upload -->
+              <div id="detail-tab-upload">
+                <input type="file" name="photo" accept="image/*" class="form-control mb-3" id="detail-file-input">
+                <div id="detail-upload-preview" class="text-center mb-3" style="display:none;">
+                  <img id="detail-upload-img" style="max-height:160px;border-radius:8px;border:2px solid #cbd5e1;">
+                </div>
+              </div>
+
+              <!-- Webcam -->
+              <div id="detail-tab-webcam" style="display:none;">
+                <video id="detail-webcam-video" autoplay playsinline style="width:100%;border-radius:8px;background:#000;display:none;"></video>
+                <canvas id="detail-webcam-canvas" style="display:none;"></canvas>
+                <div id="detail-webcam-preview" class="text-center mb-2" style="display:none;">
+                  <img id="detail-webcam-img" style="max-height:160px;border-radius:8px;border:2px solid #cbd5e1;">
+                </div>
+                <div class="d-flex gap-2 mb-2 flex-wrap">
+                  <button type="button" class="btn btn-sm btn-outline-primary" id="detail-btn-start">
+                    <i class="bi bi-camera-video me-1"></i> Démarrer
+                  </button>
+                  <button type="button" class="btn btn-sm btn-success" id="detail-btn-capture" style="display:none;">
+                    <i class="bi bi-camera me-1"></i> Capturer
+                  </button>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" id="detail-btn-retake" style="display:none;">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Recommencer
+                  </button>
+                </div>
+                <div id="detail-cam-status" class="form-text"></div>
+              </div>
+
+              <div class="d-flex gap-2 justify-content-end mt-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="closePhotoModal()">Annuler</button>
+                <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="border-top pt-3">
+          {% for label, val in student_info %}
+          <div class="d-flex justify-content-between py-2 border-bottom" style="font-size:.83rem;">
+            <span style="color:#64748b;font-weight:600;">{{ label }}</span>
+            <span>{{ val|default:"—" }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-journal-text"></i></span>Inscriptions</h6>
+      </div>
+      <div class="table-responsive">
+        <table class="table">
+          <thead><tr><th>Année académique</th><th>Classe</th><th>Semestres</th><th>Statut</th></tr></thead>
+          <tbody>
+            {% for item in enrollments_with_semesters %}
+            {% with enrollment=item.enrollment semesters=item.semesters %}
+            <tr>
+              <td style="font-size:.84rem;">{{ enrollment.academic_year }}</td>
+              <td style="font-size:.84rem;font-weight:600;">{{ enrollment.class_group.name|default:"—" }}</td>
+              <td style="font-size:.83rem;">
+                {% if semesters %}
+                  <div class="d-flex flex-wrap gap-1">
+                    {% for sem in semesters %}
+                    <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:600;
+                          background:{% if sem.is_active %}#dbeafe{% else %}#f1f5f9{% endif %};
+                          color:{% if sem.is_active %}#1e40af{% else %}#64748b{% endif %};
+                          border:1px solid {% if sem.is_active %}#bfdbfe{% else %}#e2e8f0{% endif %};">
+                      {% if sem.is_active %}<i class="bi bi-circle-fill" style="font-size:.4rem;color:#22c55e;"></i>{% endif %}
+                      {{ sem.name }}
+                      {% if sem.is_locked %}<i class="bi bi-lock-fill" style="color:#dc2626;font-size:.65rem;" title="Semestre verrouillé"></i>{% endif %}
+                    </span>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <span class="text-muted" style="font-size:.8rem;">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if enrollment.status == 'VALIDATED' %}
+                  <span style="padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:#dcfce7;color:#166534;">Validée</span>
+                {% elif enrollment.status == 'PENDING' or enrollment.status == 'PENDING_CAISSE' %}
+                  <span style="padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:#fef9c3;color:#854d0e;">En attente</span>
+                {% elif enrollment.status == 'REJECTED' %}
+                  <span style="padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:#f1f5f9;color:#475569;">Rejetée</span>
+                {% elif enrollment.status == 'ABANDONED' %}
+                  <span style="padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:#fee2e2;color:#b91c1c;"><i class="bi bi-person-x-fill me-1"></i>Abandon</span>
+                {% elif enrollment.status == 'SUSPENDED' %}
+                  <span style="padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:600;background:#fef3c7;color:#b45309;"><i class="bi bi-pause-circle-fill me-1"></i>Suspension</span>
+                {% else %}
+                  <span class="badge-statut-inscrit">Inscrit</span>
+                {% endif %}
+                {% if enrollment.credit_report %}
+                <div style="font-size:.7rem;color:#166534;margin-top:3px;"><i class="bi bi-piggy-bank-fill me-1"></i>Crédit reporté : {{ enrollment.credit_report|floatformat:0 }} FCFA</div>
+                {% endif %}
+              </td>
+            </tr>
+            {% endwith %}
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3" style="font-size:.83rem;">Aucune inscription</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Modal helpers ──────────────────────────────────────────────────────────
+function closePhotoModal() {
+  document.getElementById('modal-photo').style.display = 'none';
+  stopDetailCam();
+}
+// Close on backdrop click
+document.getElementById('modal-photo')?.addEventListener('click', function(e) {
+  if (e.target === this) closePhotoModal();
+});
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchDetailTab(tab) {
+  document.getElementById('detail-tab-upload').style.display = tab === 'upload' ? '' : 'none';
+  document.getElementById('detail-tab-webcam').style.display = tab === 'webcam' ? '' : 'none';
+  document.querySelectorAll('#detail-photo-tabs .nav-link').forEach((btn, i) => {
+    btn.classList.toggle('active', (tab === 'upload' && i === 0) || (tab === 'webcam' && i === 1));
+  });
+  if (tab !== 'webcam') stopDetailCam();
+}
+
+// ── Upload preview ─────────────────────────────────────────────────────────
+document.getElementById('detail-file-input')?.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('detail-upload-img').src = ev.target.result;
+    document.getElementById('detail-upload-preview').style.display = '';
+  };
+  reader.readAsDataURL(file);
+  document.getElementById('detail-photo-webcam').value = '';
+});
+
+// ── Webcam ─────────────────────────────────────────────────────────────────
+let detailCamStream = null;
+
+document.getElementById('detail-btn-start')?.addEventListener('click', async () => {
+  const video  = document.getElementById('detail-webcam-video');
+  const status = document.getElementById('detail-cam-status');
+  const btnCap = document.getElementById('detail-btn-capture');
+  const btnStart = document.getElementById('detail-btn-start');
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    status.innerHTML = '<span class="text-danger">Webcam non disponible. Utilisez l\'importation.</span>';
+    return;
+  }
+  status.textContent = 'Demande d\'accès à la caméra…';
+  try {
+    detailCamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+    video.srcObject = detailCamStream;
+    video.style.display = 'block';
+    btnCap.style.display = '';
+    btnStart.style.display = 'none';
+    status.textContent = 'Caméra active. Cliquez sur "Capturer".';
+  } catch(err) {
+    const msgs = {
+      NotFoundError: 'Aucune caméra détectée.',
+      NotAllowedError: 'Permission refusée. Autorisez la caméra dans le navigateur.',
+      NotReadableError: 'Caméra déjà utilisée par une autre application.',
+    };
+    status.innerHTML = `<span class="text-danger">${msgs[err.name] || 'Erreur : ' + err.message}</span>`;
+    btnStart.style.display = '';
+  }
+});
+
+document.getElementById('detail-btn-capture')?.addEventListener('click', () => {
+  const video  = document.getElementById('detail-webcam-video');
+  const canvas = document.getElementById('detail-webcam-canvas');
+  const btnCap = document.getElementById('detail-btn-capture');
+  const btnRetake = document.getElementById('detail-btn-retake');
+  const preview = document.getElementById('detail-webcam-preview');
+  const img = document.getElementById('detail-webcam-img');
+  const status = document.getElementById('detail-cam-status');
+
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+
+  document.getElementById('detail-photo-webcam').value = dataUrl;
+  img.src = dataUrl;
+  preview.style.display = '';
+  stopDetailCam();
+  video.style.display = 'none';
+  btnCap.style.display = 'none';
+  btnRetake.style.display = '';
+  status.textContent = 'Photo capturée. Cliquez sur "Enregistrer".';
+});
+
+document.getElementById('detail-btn-retake')?.addEventListener('click', () => {
+  document.getElementById('detail-photo-webcam').value = '';
+  document.getElementById('detail-webcam-preview').style.display = 'none';
+  document.getElementById('detail-btn-retake').style.display = 'none';
+  document.getElementById('detail-btn-start').style.display = '';
+  document.getElementById('detail-cam-status').textContent = '';
+});
+
+function stopDetailCam() {
+  if (detailCamStream) { detailCamStream.getTracks().forEach(t => t.stop()); detailCamStream = null; }
+  const video = document.getElementById('detail-webcam-video');
+  if (video) video.style.display = 'none';
+}
+
+window.addEventListener('beforeunload', stopDetailCam);
+</script>
+{% endblock %}

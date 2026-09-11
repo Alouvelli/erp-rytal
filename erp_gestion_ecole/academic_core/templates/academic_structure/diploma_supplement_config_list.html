@@ -1,0 +1,68 @@
+{% extends 'base/base.html' %}
+{% block title %}Suppléments de diplôme — Configuration{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Suppléments de diplôme</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-award-fill"></i></span>
+    Suppléments de diplôme — Configuration par filière
+  </h1>
+</div>
+
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:.82rem;color:#1e40af;">
+  <i class="bi bi-info-circle-fill me-2"></i>
+  Renseignez ici, pour chaque filière, les rubriques descriptives du supplément de diplôme
+  (définition de la qualification, conditions d'admission, débouchés…). Ce contenu est ensuite
+  repris automatiquement pour générer le document de chaque étudiant éligible de la filière —
+  les informations propres à l'étudiant (identité, modules suivis) sont calculées automatiquement.
+</div>
+
+<div class="card-section">
+  <div class="table-responsive">
+    <table class="table table-hover" style="margin:0;">
+      <thead style="background:#f8fafc;">
+        <tr>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;padding:10px 16px;">Filière</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;">Département</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;">Durée</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;text-align:center;">Configuration</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;text-align:center;width:120px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for program in programs %}
+        <tr>
+          <td style="padding:10px 16px;font-size:.85rem;">
+            <div style="font-weight:700;color:#1e293b;">{{ program.name }}</div>
+            <div style="font-size:.72rem;color:#94a3b8;">{{ program.code }}</div>
+          </td>
+          <td style="font-size:.84rem;color:#475569;">{{ program.department.name }}</td>
+          <td style="font-size:.84rem;color:#475569;">{{ program.duration_years }} an{{ program.duration_years|pluralize }}</td>
+          <td style="text-align:center;">
+            {% if program.pk in configured_ids %}
+            <span style="font-size:.73rem;background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-weight:700;">
+              <i class="bi bi-check-circle-fill me-1"></i>Configurée
+            </span>
+            {% else %}
+            <span style="font-size:.73rem;background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-weight:700;">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>À configurer
+            </span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">
+            <a href="{% url 'academic_structure:diploma_supplement_config_edit' program.pk %}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-pencil-square me-1"></i>Configurer
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">Aucune filière trouvée.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

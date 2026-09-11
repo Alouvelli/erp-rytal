@@ -1,0 +1,131 @@
+{% extends "base/base.html" %}
+
+{% block title %}Budgets rectificatifs{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-pencil-square me-2"></i>Budgets rectificatifs
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Pilotage et Suivi Budgétaire</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounting:budget_dashboard' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    {% if lignes %}
+    <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('rectModal')).show()">
+      <i class="bi bi-plus-lg me-1"></i>Nouveau rectificatif
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card-section mb-3" style="padding:16px 20px;">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Exercice</label>
+      <select name="annee" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for y in academic_years %}
+        <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+</div>
+
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Ligne budgétaire</th>
+          <th class="text-end">Ajustement</th>
+          <th>Motif</th>
+          <th>Demandé par</th>
+          <th class="text-center">Statut</th>
+          <th class="text-center" style="width:150px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rectificatifs %}
+        <tr>
+          <td style="padding:8px 16px;">
+            <a href="{% url 'accounting:ligne_budgetaire_detail' r.ligne_budgetaire.pk %}" style="text-decoration:none;font-weight:600;color:var(--navy);">
+              {{ r.ligne_budgetaire.direction.name }} — {{ r.ligne_budgetaire.compte_comptable }}
+            </a>
+          </td>
+          <td class="text-end" style="font-weight:700;">{{ r.montant_ajustement|floatformat:0 }}</td>
+          <td style="font-size:.78rem;">{{ r.motif|truncatechars:50 }}</td>
+          <td style="font-size:.78rem;">{{ r.demande_par.get_full_name }}</td>
+          <td class="text-center">
+            {% if r.statut == 'DEMANDE' %}
+            <span style="background:#fef3c7;color:#92400e;border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;">Demandé</span>
+            {% elif r.statut == 'VALIDE' %}
+            <span style="background:#dcfce7;color:#166534;border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;">Validé</span>
+            {% else %}
+            <span style="background:#fee2e2;color:#991b1b;border-radius:20px;padding:2px 10px;font-size:.72rem;font-weight:700;">Rejeté</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if r.statut == 'DEMANDE' %}
+            <div class="d-flex gap-1 justify-content-center">
+              <form method="post" action="{% url 'accounting:rectificatif_valider' r.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#dcfce7;color:#166534;border-radius:7px;padding:3px 10px;font-size:.72rem;">Valider</button>
+              </form>
+              <form method="post" action="{% url 'accounting:rectificatif_rejeter' r.pk %}" onsubmit="return confirm('Rejeter ce rectificatif ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:3px 10px;font-size:.72rem;">Rejeter</button>
+              </form>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:40px;">Aucun rectificatif pour cet exercice.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal création -->
+<div class="modal fade" id="rectModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nouveau rectificatif</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'accounting:rectificatif_create' %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Ligne budgétaire <span class="text-danger">*</span></label>
+            <select name="ligne_budgetaire" class="form-select" required>
+              <option value="">— Sélectionner —</option>
+              {% for l in lignes %}
+              <option value="{{ l.pk }}">{{ l.direction.name }} — {{ l.compte_comptable }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Montant d'ajustement (FCFA) <span class="text-danger">*</span></label>
+            <input type="number" name="montant_ajustement" class="form-control" step="1000" required placeholder="Positif pour augmenter, négatif pour réduire">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Motif <span class="text-danger">*</span></label>
+            <textarea name="motif" class="form-control" rows="3" required></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Demander</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

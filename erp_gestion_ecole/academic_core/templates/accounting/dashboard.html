@@ -1,0 +1,465 @@
+{% extends 'base/base.html' %}
+{% block title %}Direction Administrative Financière — Honoraires{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Direction Administrative Financière</li>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#166534;"><i class="bi bi-cash-stack"></i></span>
+    Honoraires des enseignants
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounting:export_excel' %}?{{ request.GET.urlencode }}" class="btn btn-sm" style="background:#166534;color:#fff;border:none;">
+      <i class="bi bi-file-earmark-excel me-1"></i>Excel
+    </a>
+    <a href="{% url 'accounting:export_pdf' %}?{{ request.GET.urlencode }}" class="btn btn-sm" style="background:#b91c1c;color:#fff;border:none;">
+      <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+    </a>
+    <a href="{% url 'accounting:export_word' %}?{{ request.GET.urlencode }}" class="btn btn-sm" style="background:#1d4ed8;color:#fff;border:none;">
+      <i class="bi bi-file-earmark-word me-1"></i>Word
+    </a>
+    <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-printer me-1"></i>Imprimer
+    </button>
+  </div>
+</div>
+
+<!-- ── Filtres ──────────────────────────────────────────────────────────────── -->
+<div class="card-section mb-4">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-funnel"></i></span>
+      Filtres
+    </h6>
+  </div>
+  <div class="p-3">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-sm-2">
+        <label class="form-label" style="font-size:.82rem;font-weight:600;">Mois</label>
+        <select name="month" class="form-select form-select-sm">
+          {% for num, nom in months %}
+          <option value="{{ num }}" {% if num == month %}selected{% endif %}>{{ nom }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-2">
+        <label class="form-label" style="font-size:.82rem;font-weight:600;">Année</label>
+        <select name="year" class="form-select form-select-sm">
+          {% for y in years %}
+          <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-4">
+        <label class="form-label" style="font-size:.82rem;font-weight:600;">Enseignant</label>
+        <select name="teacher" class="form-select form-select-sm">
+          <option value="">Tous les enseignants</option>
+          {% for t in teachers %}
+          <option value="{{ t.pk }}" {% if teacher_filter and teacher_filter.pk == t.pk %}selected{% endif %}>{{ t.full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-4">
+        <label class="form-label" style="font-size:.82rem;font-weight:600;">Département</label>
+        <select name="department" class="form-select form-select-sm">
+          <option value="">— Tous les départements</option>
+          {% for d in departments %}
+          <option value="{{ d.pk }}" {% if dept_filter and dept_filter.pk == d.pk %}selected{% endif %}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12 d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{% url 'accounting:dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-x-lg me-1"></i>Réinitialiser</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── KPI globaux ──────────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card-section">
+      <div class="p-4 text-center">
+        <div style="font-size:2rem;font-weight:800;color:var(--navy);">{{ by_dept|length }}</div>
+        <div style="font-size:.82rem;color:#64748b;">département(s)</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section">
+      <div class="p-4 text-center">
+        <div style="font-size:2rem;font-weight:800;color:var(--navy);">{{ total_teachers }}</div>
+        <div style="font-size:.82rem;color:#64748b;">enseignant(s)</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card-section">
+      <div class="p-4 text-center">
+        <div style="font-size:2rem;font-weight:800;color:var(--navy);">{{ total_seances }}</div>
+        <div style="font-size:.82rem;color:#64748b;">séances validées</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div style="background:linear-gradient(135deg,#14532d,#166534);border-radius:12px;padding:24px;text-align:center;">
+      <div style="font-size:1.5rem;font-weight:900;color:#fff;">{{ grand_total|floatformat:0 }} <span style="font-size:.9rem;font-weight:400;opacity:.8;">FCFA</span></div>
+      <div style="font-size:.82rem;color:rgba(255,255,255,.7);">Total global {{ month_name }} {{ year }}</div>
+    </div>
+  </div>
+</div>
+
+{% if by_dept %}
+
+<!-- ── Récapitulatif par département ───────────────────────────────────────── -->
+<div class="card-section mb-4">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#166534;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-building"></i></span>
+      Récapitulatif par département
+    </h6>
+    <span style="font-size:.8rem;color:#64748b;">{{ month_name }} {{ year }}</span>
+  </div>
+  <div class="table-responsive">
+    <table class="table" style="margin:0;font-size:.85rem;border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="min-width:160px;">Département</th>
+          <th>Enseignant</th>
+          <th>SYNTHESE</th>
+          <th class="text-end">Montant (FCFA)</th>
+          <th class="text-end" style="color:#dc2626;">Impôts 5% (FCFA)</th>
+          <th class="text-end" style="color:#0284c7;">Net à payer (FCFA)</th>
+          <th>Téléphone</th>
+          <th>Émargement</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for dk, ddata in by_dept.items %}
+          {% for tk, td in ddata.teachers.items %}
+          <tr style="vertical-align:middle;">
+            {% if forloop.first %}
+            <td rowspan="{{ ddata.teachers|length }}" style="vertical-align:top;border-right:3px solid #e2e8f0;background:#f8fafc;padding:10px 12px;">
+              <div style="font-weight:700;font-size:.85rem;color:#1e293b;">{{ ddata.dept.name }}</div>
+              <div style="font-size:.7rem;color:#64748b;margin-top:2px;">{{ ddata.dept.code }}</div>
+              {% if ddata.teachers|length > 1 %}
+              <div style="font-size:.68rem;color:#94a3b8;margin-top:3px;background:#eff6ff;border-radius:10px;padding:1px 7px;display:inline-block;">{{ ddata.teachers|length }} enseignants</div>
+              {% endif %}
+            </td>
+            {% endif %}
+            <td style="font-weight:600;color:#1e293b;">{{ td.teacher.full_name }}</td>
+            <td style="font-size:.78rem;color:#1e293b;">
+              <div style="font-weight:700;">Total global : {{ td.subtotal_hours|floatformat:1 }}h</div>
+              {% for niveau, h in td.heures_par_niveau.items %}
+              <div style="color:#64748b;">{{ niveau }} : {{ h|floatformat:1 }}h</div>
+              {% endfor %}
+            </td>
+            <td class="text-end" style="font-weight:700;color:#166534;">{{ td.subtotal|floatformat:0 }}</td>
+            <td class="text-end" style="color:#dc2626;">{{ td.subtotal_impots|floatformat:0 }}</td>
+            <td class="text-end" style="font-weight:700;color:#0284c7;">{{ td.subtotal_net|floatformat:0 }}</td>
+            <td style="color:#475569;">{{ td.phone }}</td>
+            <td></td>
+          </tr>
+          {% endfor %}
+          {% if ddata.teachers|length > 1 %}
+          <tr style="background:#f0fdf4;border-top:2px solid #bbf7d0;">
+            <td colspan="2" style="font-weight:700;font-size:.78rem;color:#166534;padding-left:14px;">
+              <i class="bi bi-plus-circle me-1"></i>Sous-total — {{ ddata.dept.name }}
+            </td>
+            <td style="font-weight:700;color:#166534;font-size:.82rem;">Total département : {{ ddata.dept_heures|floatformat:1 }}h</td>
+            <td class="text-end" style="font-weight:800;color:#166534;">{{ ddata.dept_total|floatformat:0 }}</td>
+            <td class="text-end" style="font-weight:700;color:#dc2626;">{{ ddata.dept_impots|floatformat:0 }}</td>
+            <td class="text-end" style="font-weight:800;color:#0284c7;">{{ ddata.dept_net|floatformat:0 }}</td>
+            <td></td>
+            <td></td>
+          </tr>
+          {% endif %}
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background:#f0fdf4;font-weight:800;border-top:2px solid #86efac;">
+          <td colspan="2">TOTAL GÉNÉRAL</td>
+          <td style="color:#64748b;font-weight:600;font-size:.82rem;">Total : {{ grand_heures|floatformat:1 }}h</td>
+          <td class="text-end" style="color:#166534;font-size:1rem;">{{ grand_total|floatformat:0 }}</td>
+          <td class="text-end" style="color:#dc2626;">{{ grand_impots|floatformat:0 }}</td>
+          <td class="text-end" style="color:#0284c7;font-size:1rem;">{{ grand_net|floatformat:0 }}</td>
+          <td></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ── Détail par département puis par enseignant ──────────────────────────── -->
+{% for dk, ddata in by_dept.items %}
+<div class="card-section mb-4">
+
+  <!-- En-tête département -->
+  <div style="background:linear-gradient(90deg,var(--navy),#1e3a5f);padding:12px 20px;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:center;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;">
+        <i class="bi bi-building" style="color:#fff;font-size:.85rem;"></i>
+      </div>
+      <div>
+        <div style="font-weight:800;color:#fff;font-size:.95rem;">{{ ddata.dept.name }}</div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.6);">{{ ddata.teachers|length }} enseignant(s) — {{ month_name }} {{ year }}</div>
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:1.2rem;font-weight:800;color:#86efac;">{{ ddata.dept_total|floatformat:0 }} FCFA</div>
+      <div style="font-size:.7rem;color:rgba(255,255,255,.5);">
+        {% if grand_total %}{% widthratio ddata.dept_total grand_total 100 %}% du total{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Enseignants du département -->
+  {% for tk, tdata in ddata.teachers.items %}
+  <div style="border-top:1px solid #e2e8f0;">
+
+    <!-- En-tête enseignant (cliquable → accordéon) -->
+    <div class="teacher-accordion-header"
+         onclick="toggleTeacher('teacher-{{ dk }}-{{ tk }}')"
+         style="background:#f8fafc;padding:10px 20px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;transition:background .15s;">
+
+      <div style="display:flex;align-items:center;gap:10px;">
+        <!-- Icône chevron -->
+        <div id="chevron-{{ dk }}-{{ tk }}" style="transition:transform .25s;color:#64748b;">
+          <i class="bi bi-chevron-down" style="font-size:.9rem;"></i>
+        </div>
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;font-weight:700;flex-shrink:0;">
+          {{ tdata.teacher.full_name|first|upper }}
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:.88rem;color:#1e293b;">{{ tdata.teacher.full_name }}</div>
+          <div style="font-size:.72rem;color:#64748b;">
+            {{ tdata.teacher.user.email }}{% if tdata.teacher.grade %} · {{ tdata.teacher.grade }}{% endif %}
+            &nbsp;·&nbsp; {{ tdata.rows|length }} séance(s) &nbsp;·&nbsp; {{ tdata.subtotal_hours|default:0|floatformat:1 }}h
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;">
+        <!-- Totaux résumé -->
+        <div style="text-align:right;">
+          <div style="font-size:.95rem;font-weight:800;color:#166534;">{{ tdata.subtotal|floatformat:0 }} FCFA</div>
+          <div style="font-size:.7rem;color:#64748b;">
+            Impôts : <span style="color:#dc2626;">{{ tdata.subtotal_impots|floatformat:0 }}</span>
+            &nbsp;|&nbsp; Net : <span style="color:#0284c7;font-weight:700;">{{ tdata.subtotal_net|floatformat:0 }}</span>
+          </div>
+        </div>
+
+        <!-- Boutons d'action (stopPropagation pour ne pas déclencher l'accordéon) -->
+        <div onclick="event.stopPropagation();" style="display:flex;gap:6px;flex-wrap:nowrap;">
+          <a href="{% url 'accounting:export_teacher_excel' %}?teacher={{ tk }}&year={{ year }}&month={{ month }}"
+             title="Télécharger Excel (fiche enseignant)"
+             style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:6px;background:#dcfce7;color:#166534;text-decoration:none;font-size:.75rem;font-weight:600;border:1.5px solid #86efac;">
+            <i class="bi bi-file-earmark-excel"></i> Excel
+          </a>
+          <a href="{% url 'accounting:export_teacher_pdf' %}?teacher={{ tk }}&year={{ year }}&month={{ month }}"
+             title="Télécharger PDF (fiche enseignant)"
+             style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:6px;background:#fef2f2;color:#dc2626;text-decoration:none;font-size:.75rem;font-weight:600;border:1.5px solid #fca5a5;">
+            <i class="bi bi-file-earmark-pdf"></i> PDF
+          </a>
+          <a href="{% url 'accounting:export_teacher_word' %}?teacher={{ tk }}&year={{ year }}&month={{ month }}"
+             title="Télécharger Word (fiche enseignant)"
+             style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:6px;background:#eff6ff;color:#1d4ed8;text-decoration:none;font-size:.75rem;font-weight:600;border:1.5px solid #93c5fd;">
+            <i class="bi bi-file-earmark-word"></i> Word
+          </a>
+          <button onclick="printTeacher('teacher-{{ dk }}-{{ tk }}', '{{ tdata.teacher.full_name }}', '{{ month_name }} {{ year }}')"
+                  title="Imprimer"
+                  style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:6px;background:#f8fafc;color:#475569;font-size:.75rem;font-weight:600;border:1.5px solid #cbd5e1;cursor:pointer;">
+            <i class="bi bi-printer"></i> Imprimer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lignes de séances (accordéon, fermé par défaut) -->
+    <div id="teacher-{{ dk }}-{{ tk }}" style="display:none;">
+      <div class="table-responsive">
+        <table class="table" style="margin:0;font-size:.82rem;">
+          <thead style="background:#f1f5f9;">
+            <tr>
+              <th>Date</th>
+              <th>Niveau</th>
+              <th>Module (EC)</th>
+              <th>Classe</th>
+              <th class="text-end">Durée</th>
+              <th class="text-end">Taux/h</th>
+              <th class="text-end">Montant (FCFA)</th>
+              <th class="text-end" style="color:#dc2626;">Impôts 5%</th>
+              <th class="text-end" style="color:#0284c7;">Net à payer</th>
+              {% if request.user.is_admin or request.user.is_responsable or request.user.is_controleur or request.user.is_ciaq or request.user.is_inst_admin %}
+              <th class="text-center" style="color:#94a3b8;font-size:.68rem;">ACTIONS</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for h in tdata.rows %}
+            {% with entry=h.attendance_sheet.timetable_entry %}
+            <tr>
+              <td style="white-space:nowrap;color:#64748b;">{{ h.session_date|date:"d/m/Y" }}</td>
+              <td>{% if entry.class_group.level %}<span style="background:#eff6ff;color:var(--navy);border-radius:20px;padding:2px 8px;font-size:.72rem;font-weight:600;">{{ entry.class_group.level }}</span>{% else %}—{% endif %}</td>
+              <td style="font-weight:600;color:#1e293b;">{{ entry.subject.title }}</td>
+              <td>{{ entry.class_group.name }}</td>
+              <td class="text-end" style="font-weight:600;">{{ h.duration_hours|floatformat:1 }}h</td>
+              <td class="text-end" style="color:#64748b;">{{ h.rate_per_hour|floatformat:0 }}</td>
+              <td class="text-end" style="font-weight:700;color:#166534;">{{ h.amount|floatformat:0 }}</td>
+              <td class="text-end" style="color:#dc2626;">{{ h.impots|floatformat:0 }}</td>
+              <td class="text-end" style="font-weight:700;color:#0284c7;">{{ h.net_a_payer|floatformat:0 }}</td>
+              {% if request.user.is_admin or request.user.is_responsable or request.user.is_controleur or request.user.is_ciaq or request.user.is_inst_admin %}
+              <td class="text-center" style="white-space:nowrap;">
+                <a href="{% url 'accounting:honoraire_edit' h.pk %}"
+                   title="Modifier"
+                   style="display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:6px;
+                          background:#eff6ff;color:#1d4ed8;text-decoration:none;font-size:.72rem;font-weight:600;
+                          border:1px solid #bfdbfe;margin-right:4px;">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <a href="{% url 'accounting:honoraire_delete' h.pk %}"
+                   title="Supprimer"
+                   style="display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:6px;
+                          background:#fef2f2;color:#dc2626;text-decoration:none;font-size:.72rem;font-weight:600;
+                          border:1px solid #fca5a5;">
+                  <i class="bi bi-trash3"></i>
+                </a>
+              </td>
+              {% endif %}
+            </tr>
+            {% endwith %}
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr style="background:#f0fdf4;">
+              <td colspan="6" style="text-align:right;font-weight:700;color:#166534;padding:8px 12px;">Sous-total {{ tdata.teacher.full_name }}</td>
+              <td style="text-align:right;font-weight:800;color:#166534;padding:8px 12px;">{{ tdata.subtotal|floatformat:0 }}</td>
+              <td style="text-align:right;color:#dc2626;font-weight:700;padding:8px 12px;">{{ tdata.subtotal_impots|floatformat:0 }}</td>
+              <td style="text-align:right;font-weight:800;color:#0284c7;padding:8px 12px;">{{ tdata.subtotal_net|floatformat:0 }}</td>
+              {% if request.user.is_admin or request.user.is_responsable or request.user.is_controleur or request.user.is_ciaq or request.user.is_inst_admin %}
+              <td></td>
+              {% endif %}
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <!-- Total département -->
+  <div style="background:#dcfce7;padding:10px 20px;border-radius:0 0 12px 12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+    <span style="font-weight:700;font-size:.88rem;color:#166534;"><i class="bi bi-sigma me-2"></i>Total {{ ddata.dept.name }}</span>
+    <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:.82rem;color:#64748b;">Montant brut :
+        <strong style="color:#166534;">{{ ddata.dept_total|floatformat:0 }} FCFA</strong>
+      </span>
+      <span style="font-size:.82rem;color:#64748b;">Impôts 5% :
+        <strong style="color:#dc2626;">{{ ddata.dept_impots|floatformat:0 }} FCFA</strong>
+      </span>
+      <span style="font-size:.82rem;color:#64748b;">Net à payer :
+        <strong style="font-size:1.05rem;color:#0284c7;">{{ ddata.dept_net|floatformat:0 }} FCFA</strong>
+      </span>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+<!-- ── Total global ────────────────────────────────────────────────────────── -->
+<div style="background:linear-gradient(135deg,#14532d,#166534);border-radius:14px;padding:24px 32px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+    <div>
+      <div style="font-size:1.1rem;font-weight:800;color:#fff;">TOTAL GLOBAL — {{ month_name }} {{ year }}</div>
+      <div style="font-size:.8rem;color:rgba(255,255,255,.6);">{{ by_dept|length }} département(s) · {{ total_seances }} séance(s)</div>
+    </div>
+    <div style="font-size:2rem;font-weight:900;color:#86efac;">{{ grand_total|floatformat:0 }} <span style="font-size:1rem;font-weight:400;opacity:.7;">FCFA</span></div>
+  </div>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.2);padding-top:14px;">
+    <div style="background:rgba(255,255,255,.1);border-radius:10px;padding:10px 20px;text-align:center;">
+      <div style="font-size:.72rem;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Montant brut</div>
+      <div style="font-size:1.1rem;font-weight:800;color:#fff;">{{ grand_total|floatformat:0 }} FCFA</div>
+    </div>
+    <div style="background:rgba(220,38,38,.25);border-radius:10px;padding:10px 20px;text-align:center;">
+      <div style="font-size:.72rem;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Impôts (5%)</div>
+      <div style="font-size:1.1rem;font-weight:800;color:#fca5a5;">{{ grand_impots|floatformat:0 }} FCFA</div>
+    </div>
+    <div style="background:rgba(2,132,199,.25);border-radius:10px;padding:10px 20px;text-align:center;">
+      <div style="font-size:.72rem;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Net à payer</div>
+      <div style="font-size:1.1rem;font-weight:800;color:#7dd3fc;">{{ grand_net|floatformat:0 }} FCFA</div>
+    </div>
+  </div>
+</div>
+
+{% else %}
+<div class="card-section">
+  <div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+    <i class="bi bi-cash-stack d-block mb-3" style="font-size:3rem;color:#cbd5e1;"></i>
+    <div style="font-size:1rem;font-weight:600;margin-bottom:8px;">Aucun honoraire enregistré</div>
+    <div style="font-size:.85rem;">Aucune fiche d'émargement validée pour {{ month_name }} {{ year }}{% if dept_filter %} dans {{ dept_filter.name }}{% endif %}.</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleTeacher(id) {
+  const panel = document.getElementById(id);
+  const chevronId = 'chevron-' + id.replace('teacher-', '');
+  const chevron = document.getElementById(chevronId);
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  if (chevron) chevron.style.transform = isOpen ? '' : 'rotate(-180deg)';
+}
+
+function printTeacher(id, name, period) {
+  const panel = document.getElementById(id);
+  const wasHidden = panel.style.display === 'none';
+  if (wasHidden) panel.style.display = 'block';
+
+  const tableHtml = panel.innerHTML;
+  const win = window.open('', '_blank', 'width=1000,height=700');
+  win.document.write(`
+    <!DOCTYPE html><html><head>
+    <meta charset="utf-8">
+    <title>Honoraires — ${name} — ${period}</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 12px; padding: 20px; color: #1e293b; }
+      h2 { color: #00173b; margin-bottom: 4px; }
+      .sub { color: #64748b; font-size: 11px; margin-bottom: 16px; }
+      table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      th { background: #1e3a5f; color: #fff; padding: 6px 8px; text-align: left; }
+      th:nth-child(n+5) { text-align: right; }
+      td { padding: 5px 8px; border-bottom: 1px solid #e2e8f0; }
+      td:nth-child(n+5) { text-align: right; }
+      tfoot td { background: #dcfce7; font-weight: bold; color: #166534; }
+      tfoot td:nth-child(8) { color: #dc2626; }
+      tfoot td:nth-child(9) { color: #0284c7; }
+      tr:nth-child(even) td { background: #f8fafc; }
+    </style>
+    </head><body>
+    <h2>Honoraires — ${name}</h2>
+    <div class="sub">Période : ${period} &nbsp;|&nbsp; Document généré le ${new Date().toLocaleDateString('fr-FR')}</div>
+    ${tableHtml}
+    </body></html>
+  `);
+  win.document.close();
+  win.focus();
+  setTimeout(() => { win.print(); win.close(); }, 400);
+
+  if (wasHidden) panel.style.display = 'none';
+}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.teacher-accordion-header:hover { background: #f1f5f9 !important; }
+@media print {
+  .sidebar, .top-bar, .page-header .d-flex, .card-section-header form, .btn { display:none !important; }
+  .card-section { break-inside:avoid; }
+}
+</style>
+{% endblock %}

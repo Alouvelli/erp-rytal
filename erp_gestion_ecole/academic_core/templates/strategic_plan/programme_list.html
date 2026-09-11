@@ -1,0 +1,127 @@
+{% extends "base/base.html" %}
+
+{% block title %}Programmes{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-diagram-2-fill me-2"></i>Programmes
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Plan Stratégique de Développement</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap no-print">
+    <a href="{% url 'strategic_plan:objectif_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Retour
+    </a>
+    <a href="{% url 'strategic_plan:programme_import' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-file-earmark-arrow-up-fill me-1"></i>Importer
+    </a>
+    <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+      <i class="bi bi-printer-fill me-1"></i>Imprimer
+    </button>
+    <a href="{% url 'strategic_plan:programme_pdf' %}" class="btn btn-outline-danger btn-sm">
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>Télécharger PDF
+    </a>
+    <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('progModal')).show()">
+      <i class="bi bi-plus-lg me-1"></i>Nouveau programme
+    </button>
+  </div>
+</div>
+
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Code</th>
+          <th>Libellé</th>
+          <th>Objectif</th>
+          <th>Responsable</th>
+          <th class="text-center">Projets</th>
+          <th class="text-center no-print" style="width:120px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in programmes %}
+        <tr>
+          <td style="padding:8px 16px;font-weight:700;color:var(--navy);">{{ p.code }}</td>
+          <td>{{ p.libelle }}</td>
+          <td style="font-size:.78rem;">{{ p.objectif.code }}</td>
+          <td style="font-size:.78rem;">{{ p.responsable.get_full_name|default:"—" }}</td>
+          <td class="text-center">
+            <a href="{% url 'strategic_plan:projet_list' %}?programme={{ p.pk }}">{{ p.projets.count }}</a>
+          </td>
+          <td class="text-center no-print">
+            <div class="d-flex gap-1 justify-content-center">
+              <button type="button" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 10px;font-size:.72rem;"
+                onclick="editProg({{ p.pk }}, {{ p.objectif_id }}, '{{ p.code }}', '{{ p.libelle|escapejs }}', {{ p.responsable_id|default:'null' }})">Modifier</button>
+              <form method="post" action="{% url 'strategic_plan:programme_delete' p.pk %}" onsubmit="return confirm('Supprimer ce programme ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:3px 10px;font-size:.72rem;">Supprimer</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:40px;">Aucun programme défini.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="progModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0" id="progModalTitle"><i class="bi bi-plus-circle me-2"></i>Nouveau programme</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="progForm" action="{% url 'strategic_plan:programme_create' %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Objectif stratégique <span class="text-danger">*</span></label>
+            <select name="objectif" id="prog_objectif" class="form-select" required>
+              <option value="">— Sélectionner —</option>
+              {% for o in objectifs %}<option value="{{ o.pk }}">{{ o.code }} — {{ o.libelle }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Code <span class="text-danger">*</span></label>
+            <input type="text" name="code" id="prog_code" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Libellé <span class="text-danger">*</span></label>
+            <input type="text" name="libelle" id="prog_libelle" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Responsable</label>
+            <select name="responsable" id="prog_responsable" class="form-select">
+              <option value="">— Aucun —</option>
+              {% for u in users %}<option value="{{ u.pk }}">{{ u.get_full_name }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function editProg(pk, objectifId, code, libelle, responsableId) {
+  document.getElementById('progModalTitle').innerHTML = '<i class="bi bi-pencil me-2"></i>Modifier le programme';
+  document.getElementById('progForm').action = '/plan-strategique/programmes/' + pk + '/modifier/';
+  document.getElementById('prog_objectif').value = objectifId;
+  document.getElementById('prog_code').value = code;
+  document.getElementById('prog_libelle').value = libelle;
+  document.getElementById('prog_responsable').value = responsableId || '';
+  new bootstrap.Modal(document.getElementById('progModal')).show();
+}
+</script>
+{% endblock %}

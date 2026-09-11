@@ -1,0 +1,171 @@
+{% extends 'base/base.html' %}
+{% block title %}Cahier de texte — {{ sheet.timetable_entry.subject.title }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_list' %}">Émargements</a></li>
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_detail' sheet.pk %}">Détail</a></li>
+<li class="breadcrumb-item active">Cahier de texte</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#f59e0b;"><i class="bi bi-journal-text"></i></span>
+    Saisie du cahier de texte
+  </h1>
+</div>
+
+<!-- Bannière d'alerte -->
+<div style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:12px;padding:14px 18px;margin-bottom:20px;
+            display:flex;align-items:flex-start;gap:14px;">
+  <i class="bi bi-exclamation-triangle-fill" style="font-size:1.5rem;color:#f59e0b;flex-shrink:0;margin-top:2px;"></i>
+  <div>
+    <div style="font-weight:700;color:#92400e;font-size:.92rem;margin-bottom:4px;">
+      Fenêtre d'émargement expirée — Cahier de texte obligatoire
+    </div>
+    <div style="font-size:.82rem;color:#b45309;">
+      La fenêtre d'émargement de cette séance est passée. Vous devez renseigner obligatoirement
+      les <strong>objectifs du cours</strong> et le <strong>contenu dispensé</strong> pour que
+      l'administrateur puisse valider la fiche.
+    </div>
+  </div>
+</div>
+
+<!-- Infos séance -->
+<div class="card-section mb-4">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-info-circle"></i></span>
+      Séance concernée
+    </h6>
+  </div>
+  <div class="p-3" style="display:flex;flex-wrap:wrap;gap:20px;font-size:.85rem;">
+    <div><span style="color:#64748b;">Module (EC) :</span> <strong>{{ sheet.timetable_entry.subject.title }}</strong></div>
+    <div><span style="color:#64748b;">Classe :</span> <strong>{{ sheet.timetable_entry.class_group.name }}</strong></div>
+    <div><span style="color:#64748b;">Date :</span> <strong>{{ sheet.session_date|date:"d/m/Y" }}</strong></div>
+    <div><span style="color:#64748b;">Horaire :</span> <strong>{{ sheet.timetable_entry.start_time|time:"H:i" }} – {{ sheet.timetable_entry.end_time|time:"H:i" }}</strong></div>
+    {% if sheet.timetable_entry.room %}<div><span style="color:#64748b;">Salle :</span> <strong>{{ sheet.timetable_entry.room.name }}</strong></div>{% endif %}
+  </div>
+</div>
+
+<!-- Formulaire -->
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="card-section">
+    <div class="card-section-header">
+      <h6 class="card-section-title">
+        <span style="width:26px;height:26px;border-radius:6px;background:#f59e0b;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-journal-text"></i></span>
+        Contenu pédagogique <span style="font-size:.72rem;font-weight:400;color:#dc2626;margin-left:6px;">* Champs obligatoires</span>
+      </h6>
+    </div>
+    <div class="p-3" style="display:flex;flex-direction:column;gap:20px;">
+
+      <!-- Sélecteur de séance depuis le plan de cours -->
+      <div id="planSessionPicker" style="display:none;">
+        <label style="font-weight:700;font-size:.85rem;color:#1e293b;margin-bottom:6px;display:block;">
+          <i class="bi bi-journal-text me-1" style="color:#7c3aed;"></i>
+          Séance du plan de cours
+        </label>
+        <select id="planSessionSelect" class="form-select form-select-sm">
+          <option value="">— Remplir manuellement —</option>
+        </select>
+        <div style="font-size:.75rem;color:#7c3aed;margin-top:4px;">
+          <i class="bi bi-info-circle me-1"></i>Sélectionnez la séance prévue : les objectifs et le contenu ci-dessous seront remplis automatiquement.
+        </div>
+      </div>
+
+      <!-- Objectifs -->
+      <div>
+        <label for="id_lesson_objectives" style="font-weight:700;font-size:.85rem;color:#1e293b;margin-bottom:6px;display:block;">
+          <i class="bi bi-bullseye me-1" style="color:#f59e0b;"></i>
+          Objectifs pédagogiques <span style="color:#dc2626;">*</span>
+        </label>
+        <textarea id="id_lesson_objectives" name="lesson_objectives" rows="4"
+                  class="form-control" required
+                  placeholder="Décrivez les objectifs visés par cette séance (compétences, savoirs attendus)…"
+                  style="font-size:.85rem;resize:vertical;">{{ lesson_objectives }}</textarea>
+        <div style="font-size:.75rem;color:#64748b;margin-top:4px;">
+          Ce que les étudiants doivent avoir acquis à l'issue de la séance.
+        </div>
+      </div>
+
+      <!-- Contenu -->
+      <div>
+        <label for="id_lesson_content" style="font-weight:700;font-size:.85rem;color:#1e293b;margin-bottom:6px;display:block;">
+          <i class="bi bi-list-ul me-1" style="color:#0891b2;"></i>
+          Contenu du cours dispensé <span style="color:#dc2626;">*</span>
+        </label>
+        <textarea id="id_lesson_content" name="lesson_content" rows="6"
+                  class="form-control" required
+                  placeholder="Décrivez le contenu effectivement traité pendant la séance (chapitres, exercices, TP, etc.)…"
+                  style="font-size:.85rem;resize:vertical;">{{ lesson_content }}</textarea>
+        <div style="font-size:.75rem;color:#64748b;margin-top:4px;">
+          Résumé détaillé de ce qui a été effectivement enseigné lors de cette séance.
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div style="display:flex;gap:10px;padding-top:8px;border-top:1px solid #f1f5f9;flex-wrap:wrap;">
+        <button type="submit"
+                style="background:#f59e0b;color:#fff;border:none;border-radius:8px;padding:10px 22px;
+                       font-weight:700;font-size:.88rem;cursor:pointer;display:flex;align-items:center;gap:8px;">
+          <i class="bi bi-check-circle-fill"></i>Enregistrer le cahier de texte
+        </button>
+        <a href="{% url 'attendance:sheet_detail' sheet.pk %}"
+           style="background:#f1f5f9;color:#475569;border-radius:8px;padding:10px 18px;
+                  font-weight:600;font-size:.88rem;text-decoration:none;display:flex;align-items:center;gap:6px;">
+          <i class="bi bi-arrow-left"></i>Annuler
+        </a>
+      </div>
+
+    </div>
+  </div>
+</form>
+
+<script>
+const PLAN_SESSIONS = JSON.parse('{{ plan_sessions_json|escapejs }}');
+
+(function wirePlanSessionPicker() {
+  if (!PLAN_SESSIONS.length) return;
+  const picker = document.getElementById('planSessionPicker');
+  const select = document.getElementById('planSessionSelect');
+  const objField = document.getElementById('id_lesson_objectives');
+  const contentField = document.getElementById('id_lesson_content');
+  if (!picker || !select || !objField || !contentField) return;
+
+  PLAN_SESSIONS.forEach(function(s) {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = 'Séance ' + s.numero + ' — ' + s.titre;
+    select.appendChild(opt);
+  });
+  picker.style.display = 'block';
+
+  select.addEventListener('change', function() {
+    const session = PLAN_SESSIONS.find(s => String(s.id) === select.value);
+    if (!session) return;
+    objField.value = session.objectif || '';
+    contentField.value = session.contenu || '';
+  });
+})();
+
+// Validation côté client
+document.querySelector('form').addEventListener('submit', function(e) {
+  const obj = document.getElementById('id_lesson_objectives').value.trim();
+  const cnt = document.getElementById('id_lesson_content').value.trim();
+  const errors = [];
+  if (!obj) errors.push('Les objectifs du cours sont obligatoires.');
+  if (!cnt) errors.push('Le contenu du cours est obligatoire.');
+  if (errors.length) {
+    e.preventDefault();
+    errors.forEach(msg => {
+      const div = document.createElement('div');
+      div.className = 'alert alert-danger py-2 mb-2';
+      div.style.fontSize = '.83rem';
+      div.textContent = msg;
+      document.querySelector('form').prepend(div);
+    });
+    window.scrollTo(0, 0);
+  }
+});
+</script>
+{% endblock %}

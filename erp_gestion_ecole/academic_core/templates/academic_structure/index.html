@@ -1,0 +1,68 @@
+{% extends 'base/base.html' %}
+{% block title %}Gestion de la Scolarité{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Gestion de la Scolarité</li>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:var(--navy);"><i class="bi bi-building"></i></span>Gestion de la Scolarité</h1>
+</div>
+<div class="row g-3">
+  {% if can_see_global %}
+  <div class="col-md-4">
+    <div class="card-section h-100">
+      <div class="card-section-header">
+        <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-calendar3"></i></span>Années académiques</h6>
+        <a href="{% url 'academic_structure:years' %}" class="btn btn-outline-secondary btn-sm">Gérer</a>
+      </div>
+      <div class="p-3 text-center">
+        <div style="font-size:2.5rem;font-weight:800;color:var(--navy);">{{ total_years|default:"0" }}</div>
+        <div style="font-size:.8rem;color:#64748b;">années enregistrées</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  <div class="col-md-4">
+    <div class="card-section h-100">
+      <div class="card-section-header">
+        <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:#7c3aed;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-building"></i></span>Départements</h6>
+        {% if can_manage_departments %}
+        <a href="{% url 'academic_structure:departments' %}" class="btn btn-outline-secondary btn-sm">Gérer</a>
+        {% endif %}
+      </div>
+      <div class="p-3 text-center">
+        <div style="font-size:2.5rem;font-weight:800;color:#7c3aed;">{{ total_departments|default:"0" }}</div>
+        <div style="font-size:.8rem;color:#64748b;">départements</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card-section h-100">
+      <div class="card-section-header">
+        <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-mortarboard"></i></span>Classes</h6>
+        <a href="{% url 'academic_structure:classes' %}" class="btn btn-outline-secondary btn-sm">Gérer</a>
+      </div>
+      <div class="p-3 text-center">
+        <div style="font-size:2.5rem;font-weight:800;color:#16a34a;">{{ total_classes|default:"0" }}</div>
+        <div style="font-size:.8rem;color:#64748b;">classes actives</div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="row g-3 mt-1">
+  <div class="col-md-6">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-link-45deg"></i></span>Accès rapides</h6>
+      </div>
+      <div class="p-3 d-flex flex-column gap-2">
+        {% for name, url, icon, color in quick_links %}
+        <a href="{{ url }}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;text-decoration:none;color:#1e293b;transition:background .15s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+          <div style="width:34px;height:34px;border-radius:8px;background:{{ color }}20;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="{{ icon }}" style="color:{{ color }};font-size:.9rem;"></i></div>
+          <span style="font-weight:600;font-size:.84rem;">{{ name }}</span>
+          <i class="bi bi-chevron-right ms-auto" style="color:#cbd5e1;font-size:.75rem;"></i>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

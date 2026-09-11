@@ -1,0 +1,443 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Carte — {{ emp.get_full_name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── Layout page ─────────────────────────────────────────────────────── */
+body { background: #f1f5f9; }
+
+.card-wrap {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 32px 16px;
+}
+
+/* ── Carte physique ──────────────────────────────────────────────────── */
+.id-card {
+  width: 86mm;
+  height: 54mm;
+  border-radius: 6mm;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,.22);
+  position: relative;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  flex-shrink: 0;
+}
+
+/* ── RECTO ──────────────────────────────────────────────────────────── */
+.recto {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Bandeau supérieur bleu */
+.recto-header {
+  width: 100%;
+  background: linear-gradient(135deg, #0d2244 0%, #1565c0 100%);
+  padding: 5px 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.recto-header .logo-wrap {
+  width: 24px; height: 24px;
+  background: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.recto-header .logo-wrap img { width: 20px; height: 20px; object-fit: contain; }
+.recto-header .inst-name {
+  color: #fff;
+  font-size: 5.5px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+/* Zone centrale */
+.recto-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  padding: 6px 8px 0;
+  gap: 3px;
+}
+.recto-photo {
+  width: 20mm;
+  height: 20mm;
+  border-radius: 3px;
+  object-fit: cover;
+  border: 2px solid #1565c0;
+  display: block;
+}
+.photo-initials {
+  width: 20mm;
+  height: 20mm;
+  border-radius: 3px;
+  border: 2px solid #1565c0;
+  background: linear-gradient(135deg, #1565c0, #0d2244);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+}
+.recto-name {
+  font-size: 7px;
+  font-weight: 700;
+  color: #0d2244;
+  text-align: center;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+.recto-role {
+  font-size: 6px;
+  color: #e67e00;
+  font-weight: 700;
+  text-align: center;
+}
+.recto-dept {
+  font-size: 7.5px;
+  color: #1565c0;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: .01em;
+}
+
+/* Bandeau inférieur */
+.recto-footer {
+  width: 100%;
+  background: linear-gradient(135deg, #0d2244 0%, #1565c0 100%);
+  padding: 4px;
+  text-align: center;
+  color: #fff;
+  font-size: 5px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+/* ── VERSO ──────────────────────────────────────────────────────────── */
+.verso {
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.verso-header {
+  width: 100%;
+  background: linear-gradient(135deg, #0d2244 0%, #1565c0 100%);
+  padding: 5px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.verso-header .v-title {
+  color: #fff;
+  font-size: 5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+.verso-header .v-inst {
+  color: rgba(255,255,255,.7);
+  font-size: 4.5px;
+  text-align: right;
+}
+
+.verso-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px;
+}
+
+#qr-canvas { display: block; }
+.verso-scan-label {
+  font-size: 5px;
+  color: #64748b;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.verso-matricule {
+  font-size: 7px;
+  font-weight: 700;
+  color: #0d2244;
+  letter-spacing: .04em;
+  font-family: 'Courier New', monospace;
+}
+
+.verso-footer {
+  width: 100%;
+  background: #0d2244;
+  padding: 4px;
+  text-align: center;
+  color: rgba(255,255,255,.8);
+  font-size: 4.5px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+/* ── Panneau de contrôle (masqué à l'impression) ───────────────────── */
+.ctrl-panel {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.1);
+  padding: 28px;
+  min-width: 300px;
+}
+
+/* ── Impression ──────────────────────────────────────────────────────── */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  body { background: #fff !important; }
+  .ctrl-panel, .navbar, nav, #sidebar, .sb-overlay,
+  .topbar, .btn, h5, .breadcrumb, .no-print { display: none !important; }
+  .card-wrap { padding: 8mm; gap: 12mm; }
+  .id-card { box-shadow: none; border: 1px solid #ccc; }
+  .recto-header, .verso-header, .recto-footer, .verso-footer {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  @page { size: A4; margin: 10mm; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center gap-3 mb-4 no-print">
+    {% if not self_view %}
+    <a href="{% url 'hr:cartes_personnel' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    {% endif %}
+    <div>
+      <h5 class="mb-0 fw-bold">
+        {% if self_view %}<i class="bi bi-credit-card-fill me-2 text-primary"></i>Ma carte du personnel{% else %}Carte du personnel{% endif %}
+      </h5>
+      <small class="text-muted">{{ emp.get_full_name }} — {{ emp.matricule_employe|default:'Matricule non généré' }}</small>
+    </div>
+    <div class="ms-auto d-flex gap-2">
+      <button type="button" class="btn btn-outline-primary" onclick="window.print()">
+        <i class="bi bi-printer me-2"></i>Imprimer
+      </button>
+      {% if not self_view %}
+      <a href="{% url 'hr:cartes_personnel' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-x"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Cartes + panneau -->
+  <div class="card-wrap">
+
+    <!-- ── RECTO ── -->
+    <div>
+      <div class="text-center text-muted fw-semibold mb-2" style="font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;">
+        <i class="bi bi-credit-card me-1"></i> Recto
+      </div>
+      <div class="id-card recto">
+
+        <!-- Bandeau supérieur -->
+        <div class="recto-header">
+          {% if institut_cfg and institut_cfg.logo %}
+          <div class="logo-wrap">
+            <img src="{{ institut_cfg.logo.url }}" alt="Logo">
+          </div>
+          {% else %}
+          <div class="logo-wrap" style="background:#0d2244;">
+            <i class="bi bi-building" style="color:#fff;font-size:12px;"></i>
+          </div>
+          {% endif %}
+          <div class="inst-name">
+            {{ institut_cfg.nom|default:"Institut Supérieur d'Informatique"|upper }}
+          </div>
+        </div>
+
+        <!-- Corps -->
+        <div class="recto-body">
+          {% if emp.avatar %}
+          <img src="{{ emp.avatar.url }}" class="recto-photo" alt="{{ emp.get_full_name }}">
+          {% else %}
+          <div class="photo-initials">
+            {{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}
+          </div>
+          {% endif %}
+          <div class="recto-name">{{ emp.get_full_name }}</div>
+          <div class="recto-role">
+            {% if emp.role.name == 'INST_ADMIN' %}Directeur Général{% elif fiche.poste %}{{ fiche.poste }}{% elif emp.role %}{{ emp.role.get_name_display }}{% else %}Personnel{% endif %}
+          </div>
+          <div class="recto-dept">
+            {% if emp.department %}{{ emp.department.name }}{% elif emp.direction %}{{ emp.direction.name }}{% elif emp.institut_config %}{{ emp.institut_config.nom }}{% endif %}
+          </div>
+        </div>
+
+        <!-- Bandeau inférieur -->
+        <div class="recto-footer">
+          Institut de référence dans les TIC
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VERSO ── -->
+    <div>
+      <div class="text-center text-muted fw-semibold mb-2" style="font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;">
+        <i class="bi bi-upc-scan me-1"></i> Verso
+      </div>
+      <div class="id-card verso">
+
+        <div class="verso-header">
+          <div class="v-title">Contrôle par QR Code</div>
+          <div class="v-inst">
+            {{ institut_cfg.sigle|default:"ISI" }}<br>
+            Tel : {{ emp.phone|default:'—' }}
+          </div>
+        </div>
+
+        <div class="verso-body">
+          {% if qr_b64 %}
+          <img src="{{ qr_b64 }}" alt="QR Code" style="width:22mm;height:22mm;display:block;image-rendering:pixelated;">
+          {% else %}
+          <div style="width:22mm;height:22mm;background:#e2e8f0;border-radius:3px;display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:5px;color:#94a3b8;">QR indisponible</span>
+          </div>
+          {% endif %}
+          <div class="verso-scan-label">Scanner pour pointer la présence</div>
+          <div class="verso-matricule">{{ emp.matricule_employe }}</div>
+        </div>
+
+        <div class="verso-footer">
+          {{ institut_cfg.nom|default:"Institut Supérieur d'Informatique"|upper }}
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Panneau de contrôle ── -->
+    <div class="ctrl-panel no-print">
+      <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-2 text-primary"></i>Informations de la carte</h6>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold" style="font-size:.8rem;color:#64748b;">Matricule employé</label>
+        <div class="d-flex gap-2 align-items-center">
+          <code class="px-3 py-2 rounded" style="background:#f1f5f9;font-size:.9rem;font-weight:700;color:#0d2244;flex:1;">
+            {{ emp.matricule_employe|default:'Non généré' }}
+          </code>
+          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="copyMatricule()" title="Copier">
+            <i class="bi bi-clipboard"></i>
+          </button>
+        </div>
+      </div>
+
+      <hr>
+
+      <div class="mb-2" style="font-size:.83rem;">
+        <i class="bi bi-person me-1 text-primary"></i>
+        <strong>Nom :</strong> {{ emp.get_full_name }}
+      </div>
+      <div class="mb-2" style="font-size:.83rem;">
+        <i class="bi bi-briefcase me-1 text-primary"></i>
+        <strong>Rôle :</strong> {% if emp.role.name == 'INST_ADMIN' %}Directeur Général{% else %}{{ emp.role.get_name_display|default:'—' }}{% endif %}
+      </div>
+      {% if fiche.poste %}
+      <div class="mb-2" style="font-size:.83rem;">
+        <i class="bi bi-person-badge me-1 text-primary"></i>
+        <strong>Poste :</strong> {{ fiche.poste }}
+      </div>
+      {% endif %}
+      <div class="mb-2" style="font-size:.83rem;">
+        <i class="bi bi-file-earmark-text me-1 text-primary"></i>
+        <strong>Contrat :</strong> {{ fiche.get_type_contrat_display }}
+      </div>
+      {% if fiche.date_embauche %}
+      <div class="mb-2" style="font-size:.83rem;">
+        <i class="bi bi-calendar-event me-1 text-primary"></i>
+        <strong>Embauché(e) le :</strong> {{ fiche.date_embauche|date:"d/m/Y" }}
+      </div>
+      {% endif %}
+      <div class="mb-2" style="font-size:.83rem;">
+        <i class="bi bi-building me-1 text-primary"></i>
+        {% if emp.department %}
+        <strong>Département :</strong> {{ emp.department.name }}
+        {% elif emp.direction %}
+        <strong>Département :</strong> {{ emp.direction.name }}
+        {% elif emp.institut_config %}
+        <strong>Institut administré :</strong> {{ emp.institut_config.nom }}
+        {% else %}
+        <strong>Département :</strong> —
+        {% endif %}
+      </div>
+      <div class="mb-2" style="font-size:.83rem;">
+        <i class="bi bi-telephone me-1 text-primary"></i>
+        <strong>Téléphone :</strong> {{ emp.phone|default:'—' }}
+      </div>
+      <div class="mb-3" style="font-size:.83rem;">
+        <i class="bi bi-envelope me-1 text-primary"></i>
+        <strong>Email :</strong> {{ emp.email }}
+      </div>
+
+      <hr>
+
+      <div class="alert alert-info py-2 mb-3" style="font-size:.78rem;">
+        <i class="bi bi-qr-code me-1"></i>
+        Le QR code encode un lien de <strong>pointage personnel</strong>.
+        En le scannant avec son téléphone, l'employé enregistre automatiquement son arrivée
+        (1er scan du jour) puis son départ (2e scan), selon les règles horaires en vigueur.
+      </div>
+
+      <div class="d-grid gap-2">
+        <button type="button" class="btn btn-primary fw-semibold" onclick="window.print()">
+          <i class="bi bi-printer me-2"></i>Imprimer la carte
+        </button>
+        {% if not self_view %}
+        <a href="{% url 'hr:cartes_personnel' %}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-2"></i>Retour à la liste
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const MATRICULE = "{{ emp.matricule_employe|escapejs }}";
+
+function copyMatricule() {
+  navigator.clipboard.writeText(MATRICULE).then(() => {
+    const btn = event.currentTarget;
+    btn.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+    setTimeout(() => btn.innerHTML = '<i class="bi bi-clipboard"></i>', 1500);
+  });
+}
+</script>
+{% endblock %}

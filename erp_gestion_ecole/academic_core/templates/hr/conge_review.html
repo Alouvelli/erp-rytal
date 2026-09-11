@@ -1,0 +1,136 @@
+{% extends "base/base.html" %}
+{% block title %}Traiter la demande de congé{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-type { display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:999px;font-size:.8rem;font-weight:600;background:#e0f2fe;color:#0369a1; }
+.info-row { display:flex;align-items:baseline;gap:8px;padding:10px 0;border-bottom:1px solid #f1f5f9; }
+.info-row:last-child { border-bottom:none; }
+.info-label { font-size:.78rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;min-width:140px;flex-shrink:0; }
+.info-val { font-size:.9rem;color:#1e293b; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:700px;">
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{% url 'hr:conge_list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <div>
+      <h5 class="mb-0 fw-bold">Traiter la demande de congé</h5>
+      <small class="text-muted">Approuver ou rejeter la demande</small>
+    </div>
+  </div>
+
+  <!-- Fiche de la demande -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3 d-flex align-items-center gap-3">
+      <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#0d2244,#1a3a6b);
+                  display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <span style="color:#fff;font-size:.9rem;font-weight:700;">
+          {{ conge.user.first_name|first|upper }}{{ conge.user.last_name|first|upper }}
+        </span>
+      </div>
+      <div>
+        <div class="fw-bold">{{ conge.user.get_full_name }}</div>
+        <div style="font-size:.78rem;color:#64748b;">{{ conge.user.role.get_name_display|default:'—' }}</div>
+      </div>
+      <div class="ms-auto">
+        <span class="badge-type"><i class="bi bi-calendar-range me-1"></i>{{ conge.get_type_conge_display }}</span>
+      </div>
+    </div>
+    <div class="card-body px-4 py-2">
+      <div class="info-row">
+        <span class="info-label">Période</span>
+        <span class="info-val fw-semibold">
+          {{ conge.date_debut|date:"d/m/Y" }} → {{ conge.date_fin|date:"d/m/Y" }}
+          <span class="text-muted fw-normal ms-2">({{ conge.nombre_jours }} jour{{ conge.nombre_jours|pluralize }})</span>
+        </span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Motif</span>
+        <span class="info-val">{{ conge.motif }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Demandé le</span>
+        <span class="info-val">{{ conge.created_at|date:"d/m/Y à H:i" }}</span>
+      </div>
+      {% if conge.document %}
+      <div class="info-row">
+        <span class="info-label">Document</span>
+        <a href="{{ conge.document.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+          <i class="bi bi-paperclip me-1"></i>Voir le justificatif
+        </a>
+      </div>
+      {% endif %}
+      {% if conge.statut != 'EN_ATTENTE' %}
+      <div class="info-row">
+        <span class="info-label">Décision</span>
+        <span class="info-val">
+          {% if conge.statut == 'APPROUVE' %}
+          <span style="color:#15803d;font-weight:700;"><i class="bi bi-check-circle-fill me-1"></i>Approuvée</span>
+          {% else %}
+          <span style="color:#b91c1c;font-weight:700;"><i class="bi bi-x-circle-fill me-1"></i>Rejetée</span>
+          {% endif %}
+          par {{ conge.valide_par.get_full_name|default:'—' }}
+          le {{ conge.valide_le|date:"d/m/Y à H:i" }}
+        </span>
+      </div>
+      {% if conge.commentaire_rh %}
+      <div class="info-row">
+        <span class="info-label">Commentaire RH</span>
+        <span class="info-val">{{ conge.commentaire_rh }}</span>
+      </div>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Formulaire de décision -->
+  {% if conge.statut == 'EN_ATTENTE' %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3 fw-bold">
+      <i class="bi bi-check2-square text-primary me-2"></i>Prendre une décision
+    </div>
+    <div class="card-body p-4">
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Commentaire RH <span class="text-muted fw-normal">(optionnel)</span></label>
+          <textarea name="commentaire" class="form-control" rows="3"
+                    placeholder="Motif de la décision, observations…"></textarea>
+        </div>
+
+        <div class="alert alert-warning d-flex align-items-start gap-2 mb-4" style="font-size:.83rem;">
+          <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+          <span>Si vous <strong>approuvez</strong>, les pointages <em>CONGÉ</em> seront créés automatiquement pour tous les jours ouvrables de la période.</span>
+        </div>
+
+        <div class="d-flex gap-3 justify-content-end">
+          <a href="{% url 'hr:conge_list' %}" class="btn btn-outline-secondary fw-semibold">Annuler</a>
+          <button type="submit" name="decision" value="REJETE"
+                  class="btn btn-danger fw-semibold px-4"
+                  onclick="return confirm('Rejeter cette demande ?')">
+            <i class="bi bi-x-circle me-2"></i>Rejeter
+          </button>
+          <button type="submit" name="decision" value="APPROUVE"
+                  class="btn btn-success fw-semibold px-4"
+                  onclick="return confirm('Approuver cette demande et générer les pointages ?')">
+            <i class="bi bi-check-circle me-2"></i>Approuver
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center">
+    <a href="{% url 'hr:conge_list' %}" class="btn btn-outline-secondary fw-semibold">
+      <i class="bi bi-arrow-left me-2"></i>Retour à la liste
+    </a>
+    <a href="{% url 'hr:employe_fiche' pk=conge.user.pk %}" class="btn btn-outline-primary fw-semibold ms-2">
+      <i class="bi bi-person me-2"></i>Fiche employé
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

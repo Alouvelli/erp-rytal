@@ -1,0 +1,147 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-card { background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;max-width:680px;margin:0 auto; }
+.form-card-header { background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);color:#fff;padding:22px 28px; }
+.form-card-header h1 { font-size:1.2rem;font-weight:800;margin:0; }
+.form-card-body { padding:28px; }
+.form-section { margin-bottom:24px; }
+.form-section-title { font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:12px;border-bottom:1px solid #f1f5f9;padding-bottom:6px; }
+.form-label { font-size:.85rem;font-weight:600;color:#374151;margin-bottom:4px; }
+.info-box { background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;font-size:.82rem;color:#1e40af;margin-bottom:20px; }
+.institut-checks { max-height:260px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px; }
+.institut-checks .form-check { padding:6px 0; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="max-width:720px;">
+
+  <div class="mb-3">
+    <a href="{% url 'accounts:controleur_list' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Retour à la liste
+    </a>
+  </div>
+
+  <div class="form-card">
+    <div class="form-card-header">
+      <h1><i class="bi bi-eye-fill me-2"></i>{{ title }}</h1>
+    </div>
+    <div class="form-card-body">
+
+      {% if is_create %}
+      <div class="info-box">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        L'email saisi servira de <strong>login de connexion</strong>. Le Contrôleur devra
+        <strong>changer son mot de passe</strong> dès sa première connexion. S'il est
+        rattaché à <strong>2 instituts ou plus</strong>, il choisira son institut d'accès
+        à chaque connexion et pourra en changer à tout moment.
+      </div>
+      {% endif %}
+
+      {% if form.errors %}
+      <div class="alert alert-danger">
+        <strong>Erreurs à corriger :</strong>
+        <ul class="mb-0 mt-1">
+          {% for field in form %}{% for error in field.errors %}
+            <li>{{ field.label }} : {{ error }}</li>
+          {% endfor %}{% endfor %}
+          {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+
+        <!-- Identité -->
+        <div class="form-section">
+          <div class="form-section-title"><i class="bi bi-person me-1"></i>Identité</div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">{{ form.first_name.label }} <span class="text-danger">*</span></label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}<div class="text-danger" style="font-size:.78rem;">{{ form.first_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ form.last_name.label }} <span class="text-danger">*</span></label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}<div class="text-danger" style="font-size:.78rem;">{{ form.last_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">{{ form.email.label }} <span class="text-danger">*</span></label>
+              {{ form.email }}
+              {% if is_create %}<div class="form-text">Cet email sera utilisé comme identifiant de connexion.</div>{% endif %}
+              {% if form.email.errors %}<div class="text-danger" style="font-size:.78rem;">{{ form.email.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">{{ form.phone.label }}</label>
+              {{ form.phone }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Instituts contrôlés -->
+        <div class="form-section">
+          <div class="form-section-title"><i class="bi bi-buildings me-1"></i>Instituts contrôlés</div>
+          <div class="institut-checks">
+            {{ form.instituts }}
+          </div>
+          {% if form.instituts.help_text %}<div class="form-text mt-1">{{ form.instituts.help_text }}</div>{% endif %}
+          {% if form.instituts.errors %}<div class="text-danger" style="font-size:.78rem;">{{ form.instituts.errors.0 }}</div>{% endif %}
+          <div class="form-check mt-2">
+            {{ form.is_active }}
+            <label class="form-check-label" style="font-size:.88rem;">Compte actif</label>
+          </div>
+        </div>
+
+        <!-- Mot de passe -->
+        <div class="form-section">
+          <div class="form-section-title"><i class="bi bi-key me-1"></i>
+            {% if is_create %}Mot de passe par défaut{% else %}Réinitialiser le mot de passe{% endif %}
+          </div>
+          {% if not is_create %}
+          <div class="info-box" style="background:#fffbeb;border-color:#fcd34d;color:#92400e;">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Laissez vide pour ne pas modifier le mot de passe actuel.
+            Si vous en définissez un nouveau, le Contrôleur devra le changer à sa prochaine connexion.
+          </div>
+          {% endif %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">
+                {% if is_create %}{{ form.password.label }}{% else %}{{ form.new_password.label }}{% endif %}
+                {% if is_create %}<span class="text-danger">*</span>{% endif %}
+              </label>
+              {% if is_create %}{{ form.password }}{% else %}{{ form.new_password }}{% endif %}
+              {% if is_create and form.password.errors %}<div class="text-danger" style="font-size:.78rem;">{{ form.password.errors.0 }}</div>{% endif %}
+              {% if not is_create and form.new_password.errors %}<div class="text-danger" style="font-size:.78rem;">{{ form.new_password.errors.0 }}</div>{% endif %}
+              {% if is_create %}<div class="form-text">{{ form.password.help_text }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">
+                {% if is_create %}{{ form.password_confirm.label }}{% else %}{{ form.new_password_confirm.label }}{% endif %}
+                {% if is_create %}<span class="text-danger">*</span>{% endif %}
+              </label>
+              {% if is_create %}{{ form.password_confirm }}{% else %}{{ form.new_password_confirm }}{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-3 pt-2 border-top">
+          <button type="submit" class="btn btn-primary fw-bold px-4">
+            <i class="bi bi-check-lg me-1"></i>
+            {% if is_create %}Créer le Contrôleur{% else %}Enregistrer les modifications{% endif %}
+          </button>
+          <a href="{% url 'accounts:controleur_list' %}" class="btn btn-outline-secondary">Annuler</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

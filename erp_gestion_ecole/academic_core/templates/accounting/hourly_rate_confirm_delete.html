@@ -1,0 +1,49 @@
+{% extends 'base/base.html' %}
+{% block title %}Supprimer le taux horaire{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:rate_list' %}">Taux horaires</a></li>
+<li class="breadcrumb-item active">Supprimer</li>
+{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-5">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#ef4444;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-trash"></i></span>
+          Confirmer la suppression
+        </h6>
+      </div>
+      <div class="p-4">
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px;margin-bottom:20px;font-size:.84rem;color:#991b1b;">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          Voulez-vous vraiment supprimer ce taux horaire ?
+        </div>
+        <div class="mb-3 pb-2 border-bottom d-flex justify-content-between" style="font-size:.85rem;">
+          <span style="color:#64748b;font-weight:600;">Département</span>
+          <span>{{ rate.department.name }}</span>
+        </div>
+        <div class="mb-3 pb-2 border-bottom d-flex justify-content-between" style="font-size:.85rem;">
+          <span style="color:#64748b;font-weight:600;">Niveau</span>
+          <span>{{ rate.level }}</span>
+        </div>
+        <div class="mb-3 pb-2 border-bottom d-flex justify-content-between" style="font-size:.85rem;">
+          <span style="color:#64748b;font-weight:600;">Année académique</span>
+          <span>{{ rate.academic_year }}</span>
+        </div>
+        <div class="mb-4 d-flex justify-content-between" style="font-size:.85rem;">
+          <span style="color:#64748b;font-weight:600;">Montant / séance</span>
+          <span style="font-weight:800;color:#166534;">{{ rate.amount_per_session|floatformat:0 }} FCFA</span>
+        </div>
+        <form method="post" class="d-flex gap-2 justify-content-end">
+          {% csrf_token %}
+          <a href="{% url 'accounting:rate_list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+          <button type="submit" class="btn btn-sm" style="background:#ef4444;color:#fff;border:none;">
+            <i class="bi bi-trash me-1"></i>Supprimer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

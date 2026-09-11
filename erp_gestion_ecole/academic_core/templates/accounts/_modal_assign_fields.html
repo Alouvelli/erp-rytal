@@ -1,0 +1,67 @@
+{% comment %}Champs d'affectation cascade dans un modal individuel{% endcomment %}
+
+<!-- Étape 1 : Institut -->
+<div class="mb-3">
+  <label class="form-label fw-semibold" style="font-size:.8rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;">
+    <i class="bi bi-buildings-fill me-1"></i>1. Institut
+  </label>
+  {% if modal_locked and inst_qs|length == 1 %}
+  {# INST_ADMIN : champ en lecture seule, pré-rempli #}
+  {% for inst in inst_qs %}
+  <input type="text" class="form-control form-control-sm" value="{{ inst.nom }}" readonly
+         style="background:#f1f5f9;color:#475569;cursor:not-allowed;">
+  <input type="hidden" class="modal-filter-inst-hidden" value="{{ inst.faculty.pk }}">
+  {% endfor %}
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Activer direction+département pour l'unique institut disponible
+    document.querySelectorAll('.modal-filter-inst-hidden').forEach(function(inp) {
+      var modal = inp.closest('.modal-content') || inp.closest('.modal');
+      if (modal) modalOnInstitutChange(modal, inp.value);
+    });
+  });
+  </script>
+  {% else %}
+  <select class="form-select form-select-sm modal-filter-inst"
+          onchange="modalOnInstitutChange(this.closest('.modal'), this.value)">
+    <option value="">— Choisir un institut —</option>
+    {% for inst in inst_qs %}
+    <option value="{{ inst.faculty.pk }}">{{ inst.nom }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+</div>
+
+<!-- Étape 2a : Direction -->
+<div class="m-dir-wrap mb-2" style="opacity:.4;transition:opacity .2s;">
+  <label class="form-label fw-semibold" style="font-size:.8rem;color:#6d28d9;text-transform:uppercase;letter-spacing:.05em;">
+    <i class="bi bi-building-fill me-1"></i>2a. Direction
+    <span style="font-weight:400;text-transform:none;font-size:.72rem;color:#94a3b8;">(optionnel)</span>
+  </label>
+  <select class="form-select form-select-sm m-dir-sel" disabled
+          onchange="modalOnDestChange(this.closest('.modal'), 'direction', this.value)">
+    <option value="">— Aucune direction —</option>
+    {% for d in dir_qs %}
+    <option value="{{ d.pk }}" data-faculty="{{ d.faculty.pk|default:'' }}">{{ d.name }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="text-center text-muted mb-2" style="font-size:.78rem;font-weight:600;">ou</div>
+
+<!-- Étape 2b : Département -->
+<div class="m-dept-wrap" style="opacity:.4;transition:opacity .2s;">
+  <label class="form-label fw-semibold" style="font-size:.8rem;color:var(--navy);text-transform:uppercase;letter-spacing:.05em;">
+    <i class="bi bi-diagram-3-fill me-1"></i>2b. Département
+    <span style="font-weight:400;text-transform:none;font-size:.72rem;color:#94a3b8;">(optionnel)</span>
+  </label>
+  <select class="form-select form-select-sm m-dept-sel" disabled
+          onchange="modalOnDestChange(this.closest('.modal'), 'department', this.value)">
+    <option value="">— Aucun département —</option>
+    {% for dept in dept_qs %}
+    <option value="{{ dept.pk }}" data-faculty="{{ dept.faculty.pk|default:'' }}">
+      {{ dept.name }} ({{ dept.code }})
+    </option>
+    {% endfor %}
+  </select>
+</div>

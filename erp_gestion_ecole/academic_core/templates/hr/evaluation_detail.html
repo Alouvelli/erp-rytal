@@ -1,0 +1,108 @@
+{% extends "base/base.html" %}
+{% block title %}Évaluation{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-statut { display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:999px;font-size:.8rem;font-weight:600; }
+.be-A_FAIRE      { background:#f1f5f9;color:#475569; }
+.be-AUTO_EVALUEE { background:#e0f2fe;color:#0369a1; }
+.be-EVALUEE      { background:#dbeafe;color:#1e40af; }
+.be-FINALISEE    { background:#dcfce7;color:#15803d; }
+.info-row { display:flex;align-items:baseline;gap:8px;padding:10px 0;border-bottom:1px solid #f1f5f9; }
+.info-row:last-child { border-bottom:none; }
+.info-label { font-size:.78rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;min-width:160px;flex-shrink:0; }
+.info-val { font-size:.9rem;color:#1e293b;white-space:pre-line; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:760px;">
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{% url 'hr:evaluation_list' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <div>
+      <h5 class="mb-0 fw-bold">Évaluation — {{ evaluation.user.get_full_name }}</h5>
+      <small class="text-muted">{{ evaluation.campaign.label }} ({{ evaluation.campaign.annee }})</small>
+    </div>
+    <span class="badge-statut be-{{ evaluation.statut }} ms-auto">{{ evaluation.get_statut_display }}</span>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body px-4 py-2">
+      {% if evaluation.auto_evaluation %}
+      <div class="info-row"><span class="info-label">Auto-évaluation</span><span class="info-val">{{ evaluation.auto_evaluation }}</span></div>
+      <div class="info-row"><span class="info-label">Souhaits de carrière</span><span class="info-val">{{ evaluation.souhait_carriere|default:'—' }}</span></div>
+      {% endif %}
+      {% if evaluation.evaluation_manager %}
+      <div class="info-row"><span class="info-label">Évaluation du responsable</span><span class="info-val">{{ evaluation.evaluation_manager }}</span></div>
+      <div class="info-row"><span class="info-label">Note globale</span><span class="info-val fw-bold">{{ evaluation.note_globale }}/5</span></div>
+      {% endif %}
+      {% if objectifs %}
+      <div class="info-row">
+        <span class="info-label">Objectifs</span>
+        <span class="info-val">
+          <ul class="mb-0 ps-3">
+            {% for o in objectifs %}<li>{{ o.libelle }} (poids {{ o.poids }}){% if o.resultat %} — {{ o.resultat }}{% endif %}</li>{% endfor %}
+          </ul>
+        </span>
+      </div>
+      {% endif %}
+      {% if not evaluation.auto_evaluation and not evaluation.evaluation_manager %}
+      <div class="text-center py-3 text-muted" style="font-size:.85rem;">Aucune information saisie pour l'instant.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if evaluation.statut == 'A_FAIRE' and is_self %}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3 fw-bold"><i class="bi bi-pencil-square text-primary me-2"></i>Mon auto-évaluation</div>
+    <div class="card-body p-4">
+      <form method="post" action="{% url 'hr:evaluation_action' pk=evaluation.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="auto_evaluer">
+        <div class="mb-3"><label class="form-label fw-semibold">Auto-évaluation</label><textarea name="auto_evaluation" class="form-control" rows="4" required></textarea></div>
+        <div class="mb-3"><label class="form-label fw-semibold">Souhaits de carrière</label><textarea name="souhait_carriere" class="form-control" rows="2"></textarea></div>
+        <div class="text-end"><button class="btn btn-primary fw-semibold px-4">Soumettre</button></div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if evaluation.statut == 'AUTO_EVALUEE' and is_manager %}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3 fw-bold"><i class="bi bi-clipboard2-check text-primary me-2"></i>Évaluer</div>
+    <div class="card-body p-4">
+      <form method="post" action="{% url 'hr:evaluation_action' pk=evaluation.pk %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="evaluer">
+        <div class="mb-3"><label class="form-label fw-semibold">Évaluation du responsable</label><textarea name="evaluation_manager" class="form-control" rows="4" required></textarea></div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Note globale (1 à 5)</label>
+          <select name="note_globale" class="form-select" required>
+            {% for i in "12345" %}<option value="{{ i }}">{{ i }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Objectifs (optionnel)</label>
+          <div id="objectifs-rows">
+            <div class="row g-2 mb-1">
+              <div class="col-6"><input type="text" name="objectif_libelle" class="form-control form-control-sm" placeholder="Libellé"></div>
+              <div class="col-2"><input type="number" name="objectif_poids" class="form-control form-control-sm" placeholder="Poids" value="1"></div>
+              <div class="col-4"><input type="text" name="objectif_resultat" class="form-control form-control-sm" placeholder="Résultat"></div>
+            </div>
+          </div>
+        </div>
+        <div class="text-end"><button class="btn btn-primary fw-semibold px-4">Enregistrer</button></div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if evaluation.statut == 'EVALUEE' and is_self %}
+  <form method="post" action="{% url 'hr:evaluation_action' pk=evaluation.pk %}" class="text-center">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="prendre_connaissance">
+    <button class="btn btn-success fw-semibold px-4"><i class="bi bi-check2-circle me-2"></i>Prendre connaissance</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends 'base/base.html' %}
+{% block title %}Importer — {{ entity_label }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003d82;"><i class="bi bi-file-earmark-arrow-up-fill"></i></span>
+    Importer — {{ entity_label }}
+  </h1>
+  <a href="{{ back_url }}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<div class="card-section p-4 mx-auto" style="max-width: 720px;">
+  <div class="mb-4 p-3" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;">
+    <p class="mb-2 small">
+      1. Téléchargez le modèle Excel ci-dessous.<br>
+      2. Remplissez une ligne par élément à partir de la 3<sup>e</sup> ligne (la 2<sup>e</sup> ligne est un exemple, à titre indicatif — vous pouvez la modifier ou la laisser).<br>
+      3. Importez le fichier rempli ci-dessous.
+    </p>
+    <a href="?download=1" class="btn btn-sm btn-success">
+      <i class="bi bi-download me-1"></i>Télécharger le modèle Excel
+    </a>
+  </div>
+
+  {% if columns_help %}
+  <div class="table-responsive mb-4">
+    <table class="table table-sm" style="font-size:.8rem;">
+      <thead><tr><th>Colonne</th><th>Obligatoire</th><th>Description</th></tr></thead>
+      <tbody>
+        {% for header, required, desc in columns_help %}
+        <tr>
+          <td class="fw-semibold">{{ header }}</td>
+          <td>{% if required %}<span class="badge bg-danger">Oui</span>{% else %}<span class="badge bg-secondary">Non</span>{% endif %}</td>
+          <td class="text-muted">{{ desc }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">Fichier Excel (.xlsx)</label>
+      <input type="file" name="xlsx_file" accept=".xlsx" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-file-earmark-arrow-up-fill me-1"></i>Importer
+    </button>
+  </form>
+</div>
+{% endblock %}

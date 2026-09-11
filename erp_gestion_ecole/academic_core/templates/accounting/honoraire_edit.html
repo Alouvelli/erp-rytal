@@ -1,0 +1,110 @@
+{% extends 'base/base.html' %}
+{% block title %}Modifier l'honoraire{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Honoraires</a></li>
+<li class="breadcrumb-item active">Modifier</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#b45309;"><i class="bi bi-pencil-square"></i></span>
+    Modifier l'honoraire
+  </h1>
+</div>
+
+<div class="card-section" style="max-width:600px;">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <i class="bi bi-person-badge me-2" style="color:#003D82;"></i>
+      {{ honoraire.teacher.full_name }}
+    </h6>
+    <span style="font-size:.78rem;color:#64748b;">{{ honoraire.department.name }}</span>
+  </div>
+
+  {% if messages %}
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show mx-3 mt-3" role="alert">
+      {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" class="p-4">
+    {% csrf_token %}
+
+    <div class="mb-3">
+      <label class="form-label fw-bold" style="font-size:.82rem;">Date de la séance</label>
+      <input type="date" name="session_date" class="form-control form-control-sm"
+             value="{{ honoraire.session_date|date:'Y-m-d' }}" required>
+    </div>
+
+    <div class="row g-3 mb-3">
+      <div class="col-sm-6">
+        <label class="form-label fw-bold" style="font-size:.82rem;">Durée (heures)</label>
+        <input type="number" name="duration_hours" class="form-control form-control-sm"
+               step="0.25" min="0.25" value="{{ honoraire.duration_hours }}" required
+               id="id_duration" oninput="recalc()">
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label fw-bold" style="font-size:.82rem;">Taux horaire (FCFA/h)</label>
+        <input type="number" name="rate_per_hour" class="form-control form-control-sm"
+               step="1" min="1" value="{{ honoraire.rate_per_hour }}" required
+               id="id_rate" oninput="recalc()">
+      </div>
+    </div>
+
+    <!-- Preview calcul -->
+    <div id="calc-preview" style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px 18px;margin-bottom:20px;">
+      <div style="font-size:.78rem;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
+        Calcul automatique
+      </div>
+      <div class="row g-2" style="font-size:.85rem;">
+        <div class="col-4 text-center">
+          <div style="color:#64748b;font-size:.72rem;">Montant brut</div>
+          <div style="font-weight:800;color:#003D82;" id="prev-amount">{{ honoraire.amount|floatformat:0 }} FCFA</div>
+        </div>
+        <div class="col-4 text-center">
+          <div style="color:#64748b;font-size:.72rem;">Impôts 5%</div>
+          <div style="font-weight:700;color:#dc2626;" id="prev-impots">— FCFA</div>
+        </div>
+        <div class="col-4 text-center">
+          <div style="color:#64748b;font-size:.72rem;">Net à payer</div>
+          <div style="font-weight:800;color:#0284c7;" id="prev-net">— FCFA</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-3">
+      <button type="submit" class="btn btn-sm"
+              style="background:#003D82;color:#fff;border:none;padding:8px 20px;font-weight:600;border-radius:8px;">
+        <i class="bi bi-check-lg me-1"></i>Enregistrer
+      </button>
+      <a href="{{ back_url }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-x-lg me-1"></i>Annuler
+      </a>
+      <a href="{% url 'accounting:honoraire_delete' honoraire.pk %}"
+         class="btn btn-sm ms-auto"
+         style="background:#fef2f2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;padding:6px 14px;font-weight:600;font-size:.8rem;">
+        <i class="bi bi-trash3 me-1"></i>Supprimer
+      </a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function recalc() {
+  const dur  = parseFloat(document.getElementById('id_duration').value) || 0;
+  const rate = parseFloat(document.getElementById('id_rate').value)     || 0;
+  const amount = Math.round(dur * rate);
+  const impots = Math.round(amount * 0.05);
+  const net    = amount - impots;
+  document.getElementById('prev-amount').textContent = amount.toLocaleString('fr-FR') + ' FCFA';
+  document.getElementById('prev-impots').textContent = impots.toLocaleString('fr-FR') + ' FCFA';
+  document.getElementById('prev-net').textContent    = net.toLocaleString('fr-FR') + ' FCFA';
+}
+recalc();
+</script>
+{% endblock %}

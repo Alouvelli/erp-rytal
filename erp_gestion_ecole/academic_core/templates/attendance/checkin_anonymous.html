@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Pointage QR — {{ entry.subject.title }}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0d2244 0%, #1a3a6b 60%, #0d2244 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 20px 16px 40px;
+    }
+    .wrapper { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 14px; }
+
+    /* ── Header ── */
+    .header {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 16px;
+      padding: 18px 20px;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .header-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: linear-gradient(135deg, #0ea5e9, #0369a1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; color: #fff; flex-shrink: 0;
+      box-shadow: 0 4px 16px rgba(14,165,233,.4);
+    }
+    .header-text h1 { font-size: 1.1rem; font-weight: 800; color: #fff; }
+    .header-text p  { font-size: .78rem; color: rgba(255,255,255,.65); margin-top: 2px; }
+
+    /* ── Session card ── */
+    .session-card {
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,.25);
+    }
+    .session-header {
+      background: linear-gradient(135deg, #0d2244, #1a3a6b);
+      padding: 14px 18px 12px;
+    }
+    .session-subject { font-size: 1rem; font-weight: 800; color: #fff; margin-bottom: 8px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 6px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(255,255,255,.15); border: 1px solid rgba(255,255,255,.2);
+      border-radius: 20px; padding: 3px 10px;
+      font-size: .72rem; font-weight: 600; color: #fff;
+    }
+
+    /* ── Body ── */
+    .card-body { padding: 20px 20px 22px; }
+
+    /* window error */
+    .alert-window {
+      background: #fff7ed; border: 1px solid #fed7aa; border-radius: 12px;
+      padding: 14px; display: flex; gap: 12px; align-items: flex-start;
+    }
+    .alert-window .icon { font-size: 1.3rem; color: #ea580c; flex-shrink: 0; margin-top: 1px; }
+    .alert-window p { font-size: .84rem; color: #9a3412; line-height: 1.5; margin: 0; }
+
+    /* success */
+    .success-block { text-align: center; padding: 8px 0 4px; }
+    .success-circle {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 14px; font-size: 1.8rem; color: #fff;
+      box-shadow: 0 8px 24px rgba(22,163,74,.4);
+      animation: pop .4s cubic-bezier(.17,.67,.52,1.4) both;
+    }
+    @keyframes pop { from{transform:scale(0);opacity:0} to{transform:scale(1);opacity:1} }
+    .success-block h2 { font-size: 1.2rem; font-weight: 800; color: #166534; margin-bottom: 4px; }
+    .student-name { font-size: 1rem; font-weight: 800; color: #0d2244; margin-bottom: 2px; }
+    .student-meta { font-size: .78rem; color: #64748b; }
+    .already-badge {
+      display: inline-block; background: #fef9c3; color: #854d0e;
+      border: 1px solid #fde68a; border-radius: 20px;
+      padding: 4px 12px; font-size: .73rem; font-weight: 700; margin-top: 8px;
+    }
+
+    /* error */
+    .alert-error {
+      background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px;
+      padding: 12px 14px; display: flex; gap: 9px; align-items: flex-start;
+      margin-bottom: 14px;
+    }
+    .alert-error .icon { color: #dc2626; flex-shrink: 0; margin-top: 1px; }
+    .alert-error p { font-size: .82rem; color: #991b1b; margin: 0; line-height: 1.4; }
+
+    /* form */
+    label { display: block; font-size: .8rem; font-weight: 700; color: #374151; margin-bottom: 6px; }
+    .input-wrap { position: relative; }
+    .input-wrap .icon-left {
+      position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+      color: #94a3b8; font-size: 1.1rem; pointer-events: none;
+    }
+    input[type="text"] {
+      width: 100%; padding: 13px 14px 13px 40px;
+      border: 2px solid #e2e8f0; border-radius: 12px;
+      font-size: 1rem; font-weight: 700; letter-spacing: .06em;
+      color: #0d2244; outline: none; transition: border .2s;
+      text-transform: uppercase;
+    }
+    input[type="text"]:focus { border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,.15); }
+    input[type="text"].error { border-color: #dc2626; }
+    .hint { font-size: .72rem; color: #94a3b8; margin-top: 5px; }
+
+    .btn-submit {
+      width: 100%; padding: 14px;
+      background: linear-gradient(135deg, #0d2244, #1a3a6b);
+      color: #fff; border: none; border-radius: 12px;
+      font-size: .95rem; font-weight: 800; cursor: pointer;
+      margin-top: 16px;
+      display: flex; align-items: center; justify-content: center; gap: 9px;
+      box-shadow: 0 4px 16px rgba(13,34,68,.4);
+      transition: transform .1s, box-shadow .2s;
+    }
+    .btn-submit:hover  { box-shadow: 0 6px 22px rgba(13,34,68,.5); }
+    .btn-submit:active { transform: scale(.98); }
+
+    /* ── Liste étudiants ── */
+    .students-card {
+      background: #fff;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,.18);
+    }
+    .students-header {
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .students-header h3 {
+      font-size: .85rem; font-weight: 800; color: #0d2244;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .count-badge {
+      background: #0ea5e9; color: #fff; border-radius: 20px;
+      padding: 2px 9px; font-size: .7rem; font-weight: 700;
+    }
+    .present-count {
+      font-size: .75rem; color: #16a34a; font-weight: 700;
+    }
+    .student-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background .1s;
+    }
+    .student-row:last-child { border-bottom: none; }
+    .student-row:hover { background: #f8fafc; }
+    .student-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg, #0d2244, #1a3a6b);
+      display: flex; align-items: center; justify-content: center;
+      font-size: .75rem; font-weight: 800; color: #fff; flex-shrink: 0;
+    }
+    .student-avatar.present {
+      background: linear-gradient(135deg, #16a34a, #15803d);
+    }
+    .student-info { flex: 1; min-width: 0; }
+    .student-info .name {
+      font-size: .82rem; font-weight: 700; color: #1e293b;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .student-info .mat {
+      font-size: .7rem; color: #94a3b8;
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .status-dot.present { background: #16a34a; }
+    .status-dot.absent  { background: #e2e8f0; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-icon"><i class="bi bi-qr-code-scan"></i></div>
+    <div class="header-text">
+      <h1>Pointage de Présence</h1>
+      <p>Scannez et saisissez votre matricule pour valider votre présence</p>
+    </div>
+  </div>
+
+  <!-- Carte séance -->
+  <div class="session-card">
+    <div class="session-header">
+      <div class="session-subject">{{ entry.subject.title }}</div>
+      <div class="badges">
+        <span class="badge"><i class="bi bi-people-fill"></i>{{ entry.class_group.name }}</span>
+        <span class="badge"><i class="bi bi-calendar3"></i>{{ sheet.session_date|date:"d/m/Y" }}</span>
+        <span class="badge"><i class="bi bi-clock"></i>{{ entry.start_time|time:"H:i" }}–{{ entry.end_time|time:"H:i" }}</span>
+        <span class="badge"><i class="bi bi-person-workspace"></i>{{ entry.teacher.user.get_full_name }}</span>
+      </div>
+    </div>
+
+    <div class="card-body">
+
+      {% if window_error %}
+      <div class="alert-window">
+        <div class="icon"><i class="bi bi-lock-fill"></i></div>
+        <p><strong>Pointage non disponible</strong><br>{{ window_error }}</p>
+      </div>
+
+      {% elif success %}
+      <div class="success-block">
+        <div class="success-circle"><i class="bi bi-check-lg"></i></div>
+        {% if already %}
+        <h2>Déjà enregistré !</h2>
+        {% else %}
+        <h2>Présence confirmée !</h2>
+        {% endif %}
+        <div class="student-name">{{ student.full_name }}</div>
+        <div class="student-meta">{{ student.matricule }} — {{ entry.class_group.name }}</div>
+        {% if already %}
+        <span class="already-badge"><i class="bi bi-info-circle me-1"></i>Présence déjà enregistrée</span>
+        {% else %}
+        <p style="margin-top:14px;font-size:.82rem;color:#64748b;">
+          Votre présence à la séance de <strong>{{ entry.subject.title }}</strong> a été enregistrée avec succès.
+        </p>
+        {% endif %}
+      </div>
+
+      {% else %}
+      {% if error %}
+      <div class="alert-error">
+        <div class="icon"><i class="bi bi-exclamation-circle-fill"></i></div>
+        <p>{{ error }}</p>
+      </div>
+      {% endif %}
+
+      <form method="POST" autocomplete="off">
+        {% csrf_token %}
+        <label for="matricule">
+          <i class="bi bi-person-badge-fill" style="color:#0ea5e9;margin-right:4px;"></i>
+          Votre numéro de matricule
+        </label>
+        <div class="input-wrap">
+          <i class="bi bi-card-text icon-left"></i>
+          <input type="text" id="matricule" name="matricule"
+                 placeholder="Ex : etuRI2026001"
+                 value="{{ request.POST.matricule|default:'' }}"
+                 class="{% if error %}error{% endif %}"
+                 autofocus autocomplete="off" spellcheck="false">
+        </div>
+        <p class="hint">Saisissez votre matricule tel qu'il figure sur votre carte étudiant.</p>
+
+        <button type="submit" class="btn-submit">
+          <i class="bi bi-check-circle-fill"></i>
+          Valider ma présence
+        </button>
+      </form>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- Liste de la classe -->
+  {% if enrolled_students %}
+  <div class="students-card">
+    <div class="students-header">
+      <h3>
+        <i class="bi bi-people-fill" style="color:#0ea5e9;"></i>
+        Liste de la classe
+        <span class="count-badge">{{ enrolled_students|length }}</span>
+      </h3>
+      {% with present_count=checked_in_ids|length %}
+      {% if present_count > 0 %}
+      <span class="present-count"><i class="bi bi-check-circle-fill me-1"></i>{{ present_count }} présent{{ present_count|pluralize }}</span>
+      {% endif %}
+      {% endwith %}
+    </div>
+    {% for s in enrolled_students %}
+    {% with is_present=s.pk|stringformat:"s" in checked_in_ids|join:"," %}
+    <div class="student-row">
+      <div class="student-avatar {% if s.pk in checked_in_ids %}present{% endif %}">
+        {{ s.user.last_name|slice:":1" }}{{ s.user.first_name|slice:":1" }}
+      </div>
+      <div class="student-info">
+        <div class="name">{{ s.user.get_full_name }}</div>
+        <div class="mat">{{ s.matricule }}</div>
+      </div>
+      <div class="status-dot {% if s.pk in checked_in_ids %}present{% else %}absent{% endif %}"></div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+  const inp = document.getElementById('matricule');
+  if (inp) {
+    inp.addEventListener('input', () => { inp.value = inp.value.toUpperCase(); });
+    inp.focus();
+  }
+</script>
+</body>
+</html>

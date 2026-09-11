@@ -1,0 +1,44 @@
+{% extends 'base/base.html' %}
+{% block title %}Présentation du département{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0f766e;"><i class="bi bi-camera-reels-fill"></i></span>
+    Présentation — {{ department.name }}
+  </h1>
+  <a href="{% url 'admissions:mes_filieres_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<div class="card-section p-4 mx-auto" style="max-width: 700px;">
+  <p class="text-muted small">
+    Cette image ou cette vidéo est affichée en tête de la bande de votre département
+    sur le portail public d'admission, une fois celle-ci dépliée.
+  </p>
+
+  {% if department.presentation_image or department.presentation_video %}
+  <div class="mb-4">
+    <p class="small fw-semibold mb-2">Aperçu actuel</p>
+    {% if department.presentation_video %}
+    <video src="{{ department.presentation_video.url }}" controls style="max-width:100%;max-height:220px;border-radius:10px;"></video>
+    {% elif department.presentation_image %}
+    <img src="{{ department.presentation_image.url }}" alt="Présentation" style="max-width:100%;max-height:220px;border-radius:10px;object-fit:cover;">
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% for field in form %}
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
+      {% if field.help_text %}<div class="text-muted small mt-1">{{ field.help_text }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+  </form>
+</div>
+{% endblock %}

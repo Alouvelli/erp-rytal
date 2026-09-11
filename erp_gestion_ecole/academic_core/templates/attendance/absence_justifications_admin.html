@@ -1,0 +1,103 @@
+{% extends 'base/base.html' %}
+{% block title %}Justifications d'absences{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_list' %}">Émargements</a></li>
+<li class="breadcrumb-item active">Justifications d'absences</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#dc2626;"><i class="bi bi-file-earmark-check-fill"></i></span>
+    Justifications d'absences — {{ dept.name }}
+  </h1>
+</div>
+
+<div class="card-section">
+  {% if justifications %}
+  <div class="table-responsive">
+    <table class="table" style="margin:0;">
+      <thead style="background:#f8fafc;">
+        <tr>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;padding:10px 16px;">Étudiant</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;">Séance</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;">Motif</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;">Pièce jointe</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;">Soumise le</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;text-align:center;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for att in justifications %}
+        {% with sheet=att.attendance_sheet entry=att.attendance_sheet.timetable_entry %}
+        <tr>
+          <td style="padding:10px 16px;font-size:.84rem;">
+            <div style="font-weight:700;color:#1e293b;">{{ att.student.full_name }}</div>
+            <div style="font-size:.72rem;color:#94a3b8;">{{ att.student.matricule }}</div>
+          </td>
+          <td style="font-size:.83rem;">
+            <div style="font-weight:600;">{{ sheet.session_date|date:"d/m/Y" }}</div>
+            <div style="font-size:.75rem;color:#64748b;">
+              {% if entry %}{{ entry.subject.title }} — {{ entry.class_group.name }}{% endif %}
+            </div>
+          </td>
+          <td style="font-size:.82rem;color:#475569;max-width:280px;">{{ att.justification_reason }}</td>
+          <td style="font-size:.82rem;">
+            {% if att.justification_document %}
+            <a href="{{ att.justification_document.url }}" target="_blank" class="btn btn-outline-secondary btn-sm" style="font-size:.72rem;padding:2px 8px;">
+              <i class="bi bi-paperclip me-1"></i>Voir
+            </a>
+            {% else %}<span style="color:#cbd5e1;">—</span>{% endif %}
+          </td>
+          <td style="font-size:.78rem;color:#94a3b8;white-space:nowrap;">{{ att.justification_submitted_at|date:"d/m/Y H:i" }}</td>
+          <td style="text-align:center;white-space:nowrap;">
+            <form method="post" action="{% url 'attendance:absence_justification_review' att.pk %}" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="approve">
+              <button type="submit" class="btn btn-success btn-sm" style="font-size:.72rem;padding:3px 10px;">
+                <i class="bi bi-check-lg"></i> Approuver
+              </button>
+            </form>
+            <button type="button" class="btn btn-outline-danger btn-sm ms-1" style="font-size:.72rem;padding:3px 10px;"
+                    data-bs-toggle="modal" data-bs-target="#rejectModal{{ att.pk }}">
+              <i class="bi bi-x-lg"></i> Rejeter
+            </button>
+
+            <div class="modal fade" id="rejectModal{{ att.pk }}" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <form method="post" action="{% url 'attendance:absence_justification_review' att.pk %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="reject">
+                    <div class="modal-header" style="background:#dc2626;color:#fff;">
+                      <h6 class="modal-title">Rejeter la justification</h6>
+                      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                      <label class="form-label" style="font-size:.82rem;font-weight:600;">Motif du rejet (optionnel)</label>
+                      <textarea name="admin_note" class="form-control form-control-sm" rows="3"
+                                placeholder="Précisez pourquoi la justification n'est pas acceptée…"></textarea>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+                      <button type="submit" class="btn btn-danger btn-sm">Rejeter</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-5" style="color:#94a3b8;">
+    <i class="bi bi-check-circle d-block mb-2" style="font-size:3rem;color:#bbf7d0;"></i>
+    <div style="font-weight:600;font-size:.95rem;color:#166534;">Aucune justification en attente</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

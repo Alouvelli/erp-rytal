@@ -1,0 +1,101 @@
+{% extends 'base/base.html' %}
+{% block title %}COIP — Alumni{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item active">Alumni</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-mortarboard-fill"></i></span>
+    Alumni
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'coip:alumni_create' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Nouvelle fiche alumni
+    </a>
+  </div>
+</div>
+
+<div class="card-section mb-3">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Recherche</label>
+        <input type="text" name="q" class="form-control form-control-sm" value="{{ request.GET.q }}" placeholder="Nom, entreprise, poste…">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Secteur</label>
+        <select name="secteur" class="form-select form-select-sm">
+          <option value="">Tous</option>
+          {% for code, label in secteur_choices %}
+          <option value="{{ code }}" {% if selected_secteur == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Promotion</label>
+        <select name="promotion" class="form-select form-select-sm">
+          <option value="">Toutes</option>
+          {% for p in promotions %}
+          <option value="{{ p }}" {% if selected_promotion == p %}selected{% endif %}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{% url 'coip:alumni_list' %}" class="btn btn-outline-secondary btn-sm">Réinit.</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ul"></i></span>
+      Liste des alumni
+    </h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table" id="tbl-alumni">
+      <thead>
+        <tr>
+          <th>Nom</th><th>Promotion</th><th>Filière</th><th>Entreprise</th><th>Poste</th><th>Secteur</th><th>Statut</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in alumni_list %}
+        <tr>
+          <td style="font-size:.85rem;font-weight:600;"><a href="{% url 'coip:alumni_detail' a.pk %}">{{ a.get_full_name }}</a></td>
+          <td style="font-size:.82rem;">{{ a.promotion|default:"—" }}</td>
+          <td style="font-size:.82rem;color:#64748b;">{{ a.filiere.name|default:"—" }}</td>
+          <td style="font-size:.82rem;">{{ a.entreprise_actuelle|default:"—" }}</td>
+          <td style="font-size:.82rem;color:#64748b;">{{ a.poste_occupe|default:"—" }}</td>
+          <td style="font-size:.82rem;color:#64748b;">{{ a.get_secteur_activite_display|default:"—" }}</td>
+          <td>
+            {% if a.is_employed %}<span class="badge bg-success">En activité</span>{% else %}<span class="badge bg-secondary">Sans emploi</span>{% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'coip:alumni_detail' a.pk %}" class="btn-action" title="Voir"><i class="bi bi-eye"></i></a>
+              <a href="{% url 'coip:alumni_edit' a.pk %}" class="btn-action edit" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'coip:alumni_delete' a.pk %}" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-4">Aucun alumni enregistré.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+$(document).ready(function(){
+  $('#tbl-alumni').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}});
+});
+</script>
+{% endblock %}

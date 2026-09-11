@@ -1,0 +1,115 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if form.instance.pk %}Modifier{% else %}Nouvelle{% endif %} fiche alumni{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:alumni_list' %}">Alumni</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Modifier{% else %}Nouvelle fiche{% endif %}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-mortarboard-fill"></i></span>
+    {% if form.instance.pk %}Modifier la fiche alumni{% else %}Nouvelle fiche alumni{% endif %}
+  </h1>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-pencil"></i></span>
+          Informations
+        </h6>
+      </div>
+      <div class="p-4">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Prénom <span class="text-danger">*</span></label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.first_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Nom <span class="text-danger">*</span></label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.last_name.errors.0 }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Email</label>
+              {{ form.email }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Téléphone</label>
+              {{ form.phone }}
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Promotion</label>
+              {{ form.promotion }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Diplôme obtenu</label>
+              {{ form.diplome }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Année d'obtention</label>
+              {{ form.annee_obtention }}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Filière</label>
+              {{ form.filiere }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Photo</label>
+              {{ form.photo }}
+            </div>
+
+            <div class="col-12"><hr></div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Entreprise actuelle</label>
+              {{ form.entreprise_actuelle }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Poste occupé</label>
+              {{ form.poste_occupe }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Secteur d'activité</label>
+              {{ form.secteur_activite }}
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+              <div class="form-check">
+                {{ form.is_employed }}
+                <label class="form-check-label" style="font-size:.85rem;">Actuellement en activité</label>
+              </div>
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Pays</label>
+              {{ form.pays }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Ville</label>
+              {{ form.ville }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">LinkedIn</label>
+              {{ form.linkedin }}
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end border-top pt-3 mt-3">
+            <a href="{% url 'coip:alumni_list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

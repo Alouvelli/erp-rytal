@@ -1,0 +1,163 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Rapport mensuel de pointage — {{ mois_label }} {{ annee }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'hr:dashboard' %}">Ressources Humaines</a></li>
+<li class="breadcrumb-item active">Rapport mensuel</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0d2244;"><i class="bi bi-bar-chart-line-fill"></i></span>
+    Rapport mensuel de pointage
+  </h1>
+</div>
+
+<!-- Filtres -->
+<div class="card-section mb-3">
+  <div style="padding:16px 20px;">
+    <form method="get" class="d-flex flex-wrap gap-3 align-items-end">
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Mois</label>
+        <select name="mois" class="form-select form-select-sm" style="min-width:160px;">
+          {% for val, label in mois_choices %}
+          <option value="{{ val }}" {% if val == mois %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:5px;">Année</label>
+        <select name="annee" class="form-select form-select-sm" style="min-width:110px;">
+          {% for y in annees %}
+          <option value="{{ y }}" {% if y == annee %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+    </form>
+  </div>
+</div>
+
+<!-- Résumé + exports -->
+<div class="card-section mb-3">
+  <div class="card-section-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#0d2244;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;">
+        <i class="bi bi-calendar-month"></i>
+      </span>
+      {{ mois_label }} {{ annee }} — {{ jours_ouvres }} jour{{ jours_ouvres|pluralize }} ouvré{{ jours_ouvres|pluralize }} · {{ rows|length }} employé{{ rows|length|pluralize }}
+    </h6>
+    <div class="d-flex gap-2">
+      <a href="{% url 'hr:rapport_mensuel_pdf' %}?mois={{ mois }}&annee={{ annee }}"
+         class="btn btn-sm btn-outline-danger" target="_blank">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+      </a>
+      <a href="{% url 'hr:rapport_mensuel_word' %}?mois={{ mois }}&annee={{ annee }}"
+         class="btn btn-sm btn-outline-primary">
+        <i class="bi bi-file-earmark-word me-1"></i>Word
+      </a>
+      <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i>Imprimer
+      </button>
+    </div>
+  </div>
+
+  <!-- Tableau -->
+  {% if rows %}
+  <div class="table-responsive">
+    <table class="table" style="margin:0;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Nom & Prénom</th>
+          <th>Matricule</th>
+          <th>Rôle</th>
+          <th class="text-center">Jours ouvrés</th>
+          <th class="text-center" style="color:#16a34a;">Présences</th>
+          <th class="text-center" style="color:#d97706;">Retards</th>
+          <th class="text-center" style="color:#dc2626;">Absences</th>
+          <th class="text-center" style="color:#94a3b8;">Non enregistrés</th>
+          <th class="text-center">Taux présence</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% with taux=row.present|add:row.retard %}
+        <tr style="font-size:.85rem;">
+          <td style="color:#94a3b8;">{{ forloop.counter }}</td>
+          <td style="font-weight:600;">{{ row.emp.get_full_name }}</td>
+          <td style="color:#64748b;font-family:monospace;font-size:.8rem;">{{ row.emp.matricule_employe|default:"—" }}</td>
+          <td style="color:#64748b;">{{ row.emp.role.get_name_display|default:"—" }}</td>
+          <td class="text-center fw-semibold">{{ row.jours_ouvres }}</td>
+          <td class="text-center">
+            <span class="badge" style="background:#dcfce7;color:#15803d;font-size:.8rem;font-weight:700;">
+              {{ row.present }}
+            </span>
+          </td>
+          <td class="text-center">
+            <span class="badge" style="background:#fef3c7;color:#b45309;font-size:.8rem;font-weight:700;">
+              {{ row.retard }}
+            </span>
+          </td>
+          <td class="text-center">
+            <span class="badge" style="background:#fee2e2;color:#b91c1c;font-size:.8rem;font-weight:700;">
+              {{ row.absent }}
+            </span>
+          </td>
+          <td class="text-center">
+            <span class="badge" style="background:#f1f5f9;color:#64748b;font-size:.8rem;">
+              {{ row.non_enregistre }}
+            </span>
+          </td>
+          <td class="text-center">
+            {% if row.jours_ouvres > 0 %}
+            {% widthratio row.present row.jours_ouvres 100 as pct %}
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div style="flex:1;height:6px;border-radius:999px;background:#e2e8f0;">
+                <div style="height:6px;border-radius:999px;background:{% if pct|add:0 >= 80 %}#16a34a{% elif pct|add:0 >= 50 %}#d97706{% else %}#dc2626{% endif %};width:{{ pct }}%;"></div>
+              </div>
+              <span style="font-size:.75rem;font-weight:700;color:#374151;">{{ pct }}%</span>
+            </div>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+      <tfoot style="background:#f8fafc;font-weight:700;font-size:.83rem;">
+        <tr>
+          <td colspan="4">Totaux</td>
+          <td class="text-center">—</td>
+          <td class="text-center" style="color:#16a34a;">
+            {% with total=0 %}
+            {% for r in rows %}{% with total=total|add:r.present %}{% endwith %}{% endfor %}
+            {{ rows|length }}×
+            {% endwith %}
+          </td>
+          <td colspan="4"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-5" style="color:#94a3b8;">
+    <i class="bi bi-calendar-x" style="font-size:2.5rem;display:block;margin-bottom:10px;"></i>
+    Aucune donnée de pointage pour {{ mois_label }} {{ annee }}.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Légende -->
+<div class="card-section py-3 px-4">
+  <div class="d-flex flex-wrap gap-4" style="font-size:.8rem;">
+    <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#16a34a;margin-right:5px;"></span>Présence : arrivée avant 08h15</span>
+    <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#d97706;margin-right:5px;"></span>Retard : arrivée entre 08h15 et 11h30</span>
+    <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#dc2626;margin-right:5px;"></span>Absent : après 11h30 ou non pointé</span>
+    <span><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:#94a3b8;margin-right:5px;"></span>Non enregistré : jours ouvrés sans pointage</span>
+  </div>
+</div>
+
+{% endblock %}

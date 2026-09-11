@@ -1,0 +1,62 @@
+{% extends 'base/base.html' %}
+{% block title %}Supprimer l'inscription{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:validation_inscription_list' %}">Validation inscriptions</a></li>
+<li class="breadcrumb-item active">Supprimer</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-5">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#dc2626;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-trash-fill"></i></span>
+          Confirmer la suppression
+        </h6>
+      </div>
+      <div style="padding:24px;">
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px 20px;margin-bottom:20px;">
+          <div style="font-weight:700;color:#991b1b;margin-bottom:6px;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>Êtes-vous sûr de vouloir supprimer cette inscription ?
+          </div>
+          <div style="font-size:.85rem;color:#7f1d1d;">Cette action est irréversible.</div>
+        </div>
+
+        <table class="table table-sm table-borderless mb-4" style="font-size:.85rem;">
+          <tr>
+            <td class="text-muted" style="width:40%;">Étudiant</td>
+            <td class="fw-semibold">{{ enrollment.student.user.get_full_name }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted">Matricule</td>
+            <td class="fw-semibold">{{ enrollment.student.matricule }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted">Classe</td>
+            <td class="fw-semibold">{{ enrollment.class_group }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted">Année académique</td>
+            <td class="fw-semibold">{{ enrollment.academic_year }}</td>
+          </tr>
+          <tr>
+            <td class="text-muted">Statut</td>
+            <td><span class="badge" style="background:#f59e0b;color:#fff;">En attente</span></td>
+          </tr>
+        </table>
+
+        <form method="post" class="d-flex gap-2 justify-content-end">
+          {% csrf_token %}
+          <a href="{% url 'accounting:validation_inscription_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-x-lg me-1"></i>Annuler
+          </a>
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="bi bi-trash-fill me-1"></i>Supprimer l'inscription
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

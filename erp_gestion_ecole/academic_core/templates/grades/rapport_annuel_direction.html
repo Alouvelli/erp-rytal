@@ -1,0 +1,691 @@
+{% extends 'base/base.html' %}
+{% block title %}Rapport Annuel de la Direction{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Rapport Annuel de la Direction</li>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+@media print {
+  @page { size: landscape; margin: 8mm; }
+  #class-results-section { font-size: 9px; }
+  #class-results-section table { white-space: normal !important; }
+  /* Impression globale : toutes les rubriques repliées s'impriment quand
+     même (Par genre/Par nationalité/les 4 tableaux de résultats par classe). */
+  .collapse:not(.show) { display: block !important; height: auto !important; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0f766e;"><i class="bi bi-graph-up-arrow"></i></span>
+    Rapport Annuel de la Direction
+  </h1>
+  {% if selected_department and selected_year %}
+  <div class="d-flex gap-2 flex-wrap no-print">
+    <button type="button" class="btn btn-sm btn-outline-dark" onclick="window.print()">
+      <i class="bi bi-printer me-1"></i>Imprimer tout
+    </button>
+    <a href="{% url 'grades:rapport_annuel_pdf' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}" class="btn btn-sm" style="background:#dc2626;color:#fff;">
+      <i class="bi bi-file-earmark-pdf-fill me-1"></i>PDF
+    </a>
+    <a href="{% url 'grades:rapport_annuel_excel' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}" class="btn btn-sm" style="background:#166534;color:#fff;">
+      <i class="bi bi-file-earmark-excel-fill me-1"></i>Excel
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Filtres -->
+<div class="card-section mb-3">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label fw-semibold" style="font-size:.82rem;">Année académique</label>
+        <select name="year" class="form-select" onchange="this.form.submit()">
+          {% for y in academic_years %}
+          <option value="{{ y.pk }}" {% if selected_year.pk == y.pk %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:.82rem;">Département</label>
+        <select name="department" class="form-select" onchange="this.form.submit()">
+          <option value="">— Tous les départements —</option>
+          {% for d in departments %}
+          <option value="{{ d.pk }}" {% if selected_department.pk == d.pk %}selected{% endif %}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label fw-semibold" style="font-size:.82rem;">Semestre</label>
+        <select name="semester" class="form-select" onchange="this.form.submit()">
+          <option value="">— Choisir —</option>
+          {% for sem in semesters %}
+          <option value="{{ sem.pk }}" {% if selected_semester.pk == sem.pk %}selected{% endif %}>
+            {{ sem.level.name|default:"" }} — {{ sem.label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-funnel me-1"></i>Afficher
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if not selected_year %}
+<div class="alert alert-warning">Aucune année académique disponible pour cette faculté.</div>
+
+{% elif not selected_department %}
+<!-- Vue d'ensemble : un résumé par département -->
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#0f766e;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-building"></i></span>
+      Résultats {{ selected_year.label }} — par département
+    </h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0" style="font-size:.85rem;">
+      <thead style="background:#f8fafc;">
+        <tr>
+          <th class="ps-3">Département</th>
+          <th class="text-center">Effectif</th>
+          <th class="text-center">Admis</th>
+          <th class="text-center">Non admis</th>
+          <th class="text-center">Absent examen</th>
+          <th class="text-center">Taux de réussite</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in department_summaries %}
+        {% cycle '#0ea5e9' '#7c3aed' '#d97706' '#059669' '#dc2626' '#0f766e' as dept_color silent %}
+        <tr style="border-left:4px solid {{ dept_color }};">
+          <td class="ps-3 fw-semibold">{{ row.department.name }}</td>
+          <td class="text-center">{{ row.total }}</td>
+          <td class="text-center" style="color:#166534;">{{ row.admis }}</td>
+          <td class="text-center" style="color:#b91c1c;">{{ row.non_admis }}</td>
+          <td class="text-center text-muted">{{ row.non_disponible }}</td>
+          <td class="text-center">
+            {% if row.total %}{% widthratio row.admis row.total 100 %} %{% else %}—{% endif %}
+          </td>
+          <td class="text-end pe-3">
+            <a href="?year={{ selected_year.pk }}&department={{ row.department.pk }}" class="btn btn-sm"
+               style="background:{{ dept_color }};color:#fff;font-weight:600;">
+              Voir le détail <i class="bi bi-chevron-right"></i>
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-4">Aucun département pour cette faculté.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% else %}
+<!-- Détail d'un département -->
+
+<!-- Résultats par classe (nouveau format, par semestre) -->
+{% if not selected_semester %}
+<div class="alert alert-info" style="font-size:.85rem;">
+  <i class="bi bi-info-circle-fill me-1"></i>
+  Sélectionnez un semestre ci-dessus pour afficher le tableau détaillé des résultats par classe
+  (format « Direction des Études »).
+</div>
+{% elif class_results %}
+<div class="card-section mb-4" id="class-results-section">
+  <div class="card-section-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#0f766e;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-clipboard-data"></i></span>
+      Résultats par classe — {{ class_results.semester.level.name|default:"" }} {{ class_results.semester.label }}
+    </h6>
+    <div class="d-flex gap-2 flex-wrap no-print">
+      <a href="{% url 'grades:reclamation_class_list' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-flag me-1"></i>Réclamations de notes
+      </a>
+      <button type="button" class="btn btn-sm btn-outline-dark" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i>Imprimer
+      </button>
+      <a href="{% url 'grades:class_results_excel' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}"
+         class="btn btn-sm" style="background:#166534;color:#fff;">
+        <i class="bi bi-file-earmark-excel-fill me-1"></i>Excel
+      </a>
+      <a href="{% url 'grades:class_results_pdf' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}"
+         class="btn btn-sm" style="background:#dc2626;color:#fff;">
+        <i class="bi bi-file-earmark-pdf-fill me-1"></i>PDF
+      </a>
+      <a href="{% url 'grades:class_results_word' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}"
+         class="btn btn-sm" style="background:#1d4ed8;color:#fff;">
+        <i class="bi bi-file-earmark-word-fill me-1"></i>Word
+      </a>
+    </div>
+  </div>
+
+  <!-- Session Normale -->
+  <div class="overflow-hidden" style="border-top:1px solid #e2e8f0;">
+    <div class="card-section-header" data-bs-toggle="collapse" data-bs-target="#sn-collapse"
+         aria-expanded="false" aria-controls="sn-collapse"
+         style="cursor:pointer;background:#059669;border:none;">
+      <h6 class="card-section-title mb-0" style="color:#fff;">
+        <i class="bi bi-check-circle-fill me-2"></i>Session Normale
+      </h6>
+      <div class="d-flex align-items-center gap-2 no-print" onclick="event.stopPropagation();">
+        <a href="{% url 'grades:class_results_excel' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}&section=normale"
+           class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="Excel">
+          <i class="bi bi-file-earmark-excel"></i>
+        </a>
+        <a href="{% url 'grades:class_results_pdf' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}&section=normale"
+           class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="PDF">
+          <i class="bi bi-file-earmark-pdf"></i>
+        </a>
+        <a href="{% url 'grades:class_results_word' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}&section=normale"
+           class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="Word">
+          <i class="bi bi-file-earmark-word"></i>
+        </a>
+        <button type="button" class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;"
+                onclick="rapportPrintSection('sn-table','Session Normale');" title="Imprimer">
+          <i class="bi bi-printer"></i>
+        </button>
+      </div>
+      <i class="bi bi-chevron-down" style="color:#fff;transition:transform .2s;"></i>
+    </div>
+    <div class="collapse" id="sn-collapse">
+      <div class="table-responsive">
+        <table id="sn-table" class="table table-bordered table-sm mb-0" style="font-size:.76rem;white-space:nowrap;">
+          <thead style="background:#f8fafc;">
+            <tr>
+              <th rowspan="2" class="ps-2 align-middle">Classe</th>
+              <th rowspan="2" class="text-center align-middle">Effectif Total</th>
+              <th colspan="2" class="text-center">Effectif Composé</th>
+              <th colspan="2" class="text-center">Abandons</th>
+              <th colspan="2" class="text-center" style="background:#ecfdf5;">Admis</th>
+              <th colspan="2" class="text-center">Non Admis</th>
+              <th colspan="2" class="text-center">Absent Examen</th>
+              <th rowspan="2" class="text-center align-middle" style="background:#ecfdf5;">Taux réussite</th>
+              <th rowspan="2" class="text-center align-middle">Taux H</th>
+              <th rowspan="2" class="text-center align-middle">Taux F</th>
+              <th rowspan="2" class="text-center align-middle">Meilleure moyenne</th>
+            </tr>
+            <tr>
+              <th class="text-center">H</th><th class="text-center">F</th>
+              <th class="text-center">H</th><th class="text-center">F</th>
+              <th class="text-center" style="background:#ecfdf5;">H</th><th class="text-center" style="background:#ecfdf5;">F</th>
+              <th class="text-center">H</th><th class="text-center">F</th>
+              <th class="text-center">H</th><th class="text-center">F</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in class_results.rows %}
+            <tr>
+              <td class="ps-2 fw-semibold">{{ row.class_group.name }}</td>
+              <td class="text-center">{{ row.normale.effectif_total }}</td>
+              <td class="text-center">{{ row.normale.composes.M }}</td><td class="text-center">{{ row.normale.composes.F }}</td>
+              <td class="text-center text-muted">{{ row.normale.abandons.M }}</td><td class="text-center text-muted">{{ row.normale.abandons.F }}</td>
+              <td class="text-center" style="color:#166534;">{{ row.normale.admis.M }}</td><td class="text-center" style="color:#166534;">{{ row.normale.admis.F }}</td>
+              <td class="text-center" style="color:#b91c1c;">{{ row.normale.non_admis.M }}</td><td class="text-center" style="color:#b91c1c;">{{ row.normale.non_admis.F }}</td>
+              <td class="text-center text-muted">{{ row.normale.absent_examen.M }}</td><td class="text-center text-muted">{{ row.normale.absent_examen.F }}</td>
+              <td class="text-center fw-semibold">{% if row.normale.taux_reussite != None %}{{ row.normale.taux_reussite }} %{% else %}—{% endif %}</td>
+              <td class="text-center">{% if row.normale.taux_h != None %}{{ row.normale.taux_h }} %{% else %}—{% endif %}</td>
+              <td class="text-center">{% if row.normale.taux_f != None %}{{ row.normale.taux_f }} %{% else %}—{% endif %}</td>
+              <td class="text-center">
+                {% if row.normale.meilleure_moyenne %}
+                  <strong>{{ row.normale.meilleure_moyenne|floatformat:2 }}/20</strong>
+                  <div class="text-muted" style="font-size:.7rem;">{{ row.normale.meilleure_moyenne_etudiant.user.get_full_name }}</div>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="16" class="text-center text-muted py-4">Aucune classe pour ce département/niveau sur ce semestre.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session Normale — après réclamation -->
+  <div class="overflow-hidden" style="border-top:1px solid #e2e8f0;">
+    <div class="card-section-header" data-bs-toggle="collapse" data-bs-target="#snr-collapse"
+         aria-expanded="false" aria-controls="snr-collapse"
+         style="cursor:pointer;background:#0f766e;border:none;">
+      <h6 class="card-section-title mb-0" style="color:#fff;">
+        <i class="bi bi-patch-check-fill me-2"></i>Session Normale — après réclamation
+      </h6>
+      <div class="d-flex align-items-center gap-2 no-print" onclick="event.stopPropagation();">
+        <a href="{% url 'grades:class_results_excel' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}&section=normale_reclamation"
+           class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="Excel">
+          <i class="bi bi-file-earmark-excel"></i>
+        </a>
+        <a href="{% url 'grades:class_results_pdf' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}&section=normale_reclamation"
+           class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="PDF">
+          <i class="bi bi-file-earmark-pdf"></i>
+        </a>
+        <a href="{% url 'grades:class_results_word' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}&section=normale_reclamation"
+           class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="Word">
+          <i class="bi bi-file-earmark-word"></i>
+        </a>
+        <button type="button" class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;"
+                onclick="rapportPrintSection('snr-table','Session Normale — après réclamation');" title="Imprimer">
+          <i class="bi bi-printer"></i>
+        </button>
+      </div>
+      <i class="bi bi-chevron-down" style="color:#fff;transition:transform .2s;"></i>
+    </div>
+    <div class="collapse" id="snr-collapse">
+      <div class="table-responsive">
+        <table id="snr-table" class="table table-bordered table-sm mb-0" style="font-size:.76rem;white-space:nowrap;">
+          <thead style="background:#f8fafc;">
+            <tr>
+              <th rowspan="2" class="ps-2 align-middle">Classe</th>
+              <th rowspan="2" class="text-center align-middle">Effectif Total</th>
+              <th colspan="2" class="text-center">Effectif Composé</th>
+              <th colspan="2" class="text-center">Abandons</th>
+              <th colspan="2" class="text-center" style="background:#ccfbf1;">Admis</th>
+              <th colspan="2" class="text-center">Non Admis</th>
+              <th colspan="2" class="text-center">Absent Examen</th>
+              <th rowspan="2" class="text-center align-middle" style="background:#ccfbf1;">Taux réussite</th>
+              <th rowspan="2" class="text-center align-middle">Taux H</th>
+              <th rowspan="2" class="text-center align-middle">Taux F</th>
+              <th rowspan="2" class="text-center align-middle">Meilleure moyenne</th>
+            </tr>
+            <tr>
+              <th class="text-center">H</th><th class="text-center">F</th>
+              <th class="text-center">H</th><th class="text-center">F</th>
+              <th class="text-center" style="background:#ccfbf1;">H</th><th class="text-center" style="background:#ccfbf1;">F</th>
+              <th class="text-center">H</th><th class="text-center">F</th>
+              <th class="text-center">H</th><th class="text-center">F</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in class_results.rows %}
+            <tr>
+              <td class="ps-2 fw-semibold">{{ row.class_group.name }}</td>
+              <td class="text-center">{{ row.normale_reclamation.effectif_total }}</td>
+              <td class="text-center">{{ row.normale_reclamation.composes.M }}</td><td class="text-center">{{ row.normale_reclamation.composes.F }}</td>
+              <td class="text-center text-muted">{{ row.normale_reclamation.abandons.M }}</td><td class="text-center text-muted">{{ row.normale_reclamation.abandons.F }}</td>
+              <td class="text-center" style="color:#166534;">{{ row.normale_reclamation.admis.M }}</td><td class="text-center" style="color:#166534;">{{ row.normale_reclamation.admis.F }}</td>
+              <td class="text-center" style="color:#b91c1c;">{{ row.normale_reclamation.non_admis.M }}</td><td class="text-center" style="color:#b91c1c;">{{ row.normale_reclamation.non_admis.F }}</td>
+              <td class="text-center text-muted">{{ row.normale_reclamation.absent_examen.M }}</td><td class="text-center text-muted">{{ row.normale_reclamation.absent_examen.F }}</td>
+              <td class="text-center fw-semibold">{% if row.normale_reclamation.taux_reussite != None %}{{ row.normale_reclamation.taux_reussite }} %{% else %}—{% endif %}</td>
+              <td class="text-center">{% if row.normale_reclamation.taux_h != None %}{{ row.normale_reclamation.taux_h }} %{% else %}—{% endif %}</td>
+              <td class="text-center">{% if row.normale_reclamation.taux_f != None %}{{ row.normale_reclamation.taux_f }} %{% else %}—{% endif %}</td>
+              <td class="text-center">
+                {% if row.normale_reclamation.meilleure_moyenne %}
+                  <strong>{{ row.normale_reclamation.meilleure_moyenne|floatformat:2 }}/20</strong>
+                  <div class="text-muted" style="font-size:.7rem;">{{ row.normale_reclamation.meilleure_moyenne_etudiant.user.get_full_name }}</div>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="16" class="text-center text-muted py-4">Aucune classe pour ce département/niveau sur ce semestre.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session de Rattrapage -->
+  <div class="overflow-hidden" style="border-top:1px solid #e2e8f0;">
+    <div class="card-section-header" data-bs-toggle="collapse" data-bs-target="#sr-collapse"
+         aria-expanded="false" aria-controls="sr-collapse"
+         style="cursor:pointer;background:#b45309;border:none;">
+      <h6 class="card-section-title mb-0" style="color:#fff;">
+        <i class="bi bi-arrow-repeat me-2"></i>Session de Rattrapage — avant réclamation
+      </h6>
+      <div class="d-flex align-items-center gap-2 no-print" onclick="event.stopPropagation();">
+        <a href="{% url 'grades:class_results_excel' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}&section=rattrapage"
+           class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="Excel">
+          <i class="bi bi-file-earmark-excel"></i>
+        </a>
+        <a href="{% url 'grades:class_results_pdf' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}&section=rattrapage"
+           class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="PDF">
+          <i class="bi bi-file-earmark-pdf"></i>
+        </a>
+        <a href="{% url 'grades:class_results_word' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}&section=rattrapage"
+           class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="Word">
+          <i class="bi bi-file-earmark-word"></i>
+        </a>
+        <button type="button" class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;"
+                onclick="rapportPrintSection('sr-table','Session de Rattrapage — avant réclamation');" title="Imprimer">
+          <i class="bi bi-printer"></i>
+        </button>
+      </div>
+      <i class="bi bi-chevron-down" style="color:#fff;transition:transform .2s;"></i>
+    </div>
+    <div class="collapse" id="sr-collapse">
+      <div class="table-responsive">
+        <table id="sr-table" class="table table-bordered table-sm mb-0" style="font-size:.76rem;white-space:nowrap;">
+          <thead style="background:#f8fafc;">
+            <tr>
+              <th rowspan="2" class="ps-2 align-middle">Classe</th>
+              <th rowspan="2" class="text-center align-middle">Effectif Total</th>
+              <th colspan="2" class="text-center">Effectif Composé</th>
+              <th colspan="2" class="text-center" style="background:#fef3c7;">Admis</th>
+              <th colspan="2" class="text-center">Non Admis</th>
+              <th colspan="2" class="text-center">Absent Examen</th>
+              <th colspan="2" class="text-center" style="background:#ede9fe;">Réclamation</th>
+              <th rowspan="2" class="text-center align-middle" style="background:#fef3c7;">Taux réussite</th>
+              <th rowspan="2" class="text-center align-middle">Taux H</th>
+              <th rowspan="2" class="text-center align-middle">Taux F</th>
+              <th rowspan="2" class="text-center align-middle">Meilleure moyenne</th>
+            </tr>
+            <tr>
+              <th class="text-center">H</th><th class="text-center">F</th>
+              <th class="text-center" style="background:#fef3c7;">H</th><th class="text-center" style="background:#fef3c7;">F</th>
+              <th class="text-center">H</th><th class="text-center">F</th>
+              <th class="text-center">H</th><th class="text-center">F</th>
+              <th class="text-center" style="background:#ede9fe;">H</th><th class="text-center" style="background:#ede9fe;">F</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in class_results.rows %}
+            <tr>
+              <td class="ps-2 fw-semibold">{{ row.class_group.name }}</td>
+              <td class="text-center">{{ row.rattrapage.effectif_total }}</td>
+              <td class="text-center">{{ row.rattrapage.composes.M }}</td><td class="text-center">{{ row.rattrapage.composes.F }}</td>
+              <td class="text-center" style="color:#166534;">{{ row.rattrapage.admis.M }}</td><td class="text-center" style="color:#166534;">{{ row.rattrapage.admis.F }}</td>
+              <td class="text-center" style="color:#b91c1c;">{{ row.rattrapage.non_admis.M }}</td><td class="text-center" style="color:#b91c1c;">{{ row.rattrapage.non_admis.F }}</td>
+              <td class="text-center text-muted">{{ row.rattrapage.absent_examen.M }}</td><td class="text-center text-muted">{{ row.rattrapage.absent_examen.F }}</td>
+              <td class="text-center" style="color:#5b21b6;">{{ row.rattrapage.reclamation.M }}</td><td class="text-center" style="color:#5b21b6;">{{ row.rattrapage.reclamation.F }}</td>
+              <td class="text-center fw-semibold">{% if row.rattrapage.taux_reussite != None %}{{ row.rattrapage.taux_reussite }} %{% else %}—{% endif %}</td>
+              <td class="text-center">{% if row.rattrapage.taux_h != None %}{{ row.rattrapage.taux_h }} %{% else %}—{% endif %}</td>
+              <td class="text-center">{% if row.rattrapage.taux_f != None %}{{ row.rattrapage.taux_f }} %{% else %}—{% endif %}</td>
+              <td class="text-center">
+                {% if row.rattrapage.meilleure_moyenne %}
+                  <strong>{{ row.rattrapage.meilleure_moyenne|floatformat:2 }}/20</strong>
+                  <div class="text-muted" style="font-size:.7rem;">{{ row.rattrapage.meilleure_moyenne_etudiant.user.get_full_name }}</div>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="16" class="text-center text-muted py-4">Aucune classe pour ce département/niveau sur ce semestre.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Session de Rattrapage — après réclamation -->
+  <div class="overflow-hidden" style="border-top:1px solid #e2e8f0;">
+    <div class="card-section-header" data-bs-toggle="collapse" data-bs-target="#srr-collapse"
+         aria-expanded="false" aria-controls="srr-collapse"
+         style="cursor:pointer;background:#5b21b6;border:none;">
+      <h6 class="card-section-title mb-0" style="color:#fff;">
+        <i class="bi bi-patch-check-fill me-2"></i>Session de Rattrapage — après réclamation
+      </h6>
+      <div class="d-flex align-items-center gap-2 no-print" onclick="event.stopPropagation();">
+        <a href="{% url 'grades:class_results_excel' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}&section=rattrapage_reclamation"
+           class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="Excel">
+          <i class="bi bi-file-earmark-excel"></i>
+        </a>
+        <a href="{% url 'grades:class_results_pdf' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}&section=rattrapage_reclamation"
+           class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="PDF">
+          <i class="bi bi-file-earmark-pdf"></i>
+        </a>
+        <a href="{% url 'grades:class_results_word' %}?department={{ selected_department.pk }}&year={{ selected_year.pk }}&semester={{ selected_semester.pk }}&section=rattrapage_reclamation"
+           class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;" title="Word">
+          <i class="bi bi-file-earmark-word"></i>
+        </a>
+        <button type="button" class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;"
+                onclick="rapportPrintSection('srr-table','Session de Rattrapage — après réclamation');" title="Imprimer">
+          <i class="bi bi-printer"></i>
+        </button>
+      </div>
+      <i class="bi bi-chevron-down" style="color:#fff;transition:transform .2s;"></i>
+    </div>
+    <div class="collapse" id="srr-collapse">
+      <div class="table-responsive">
+        <table id="srr-table" class="table table-bordered table-sm mb-0" style="font-size:.76rem;white-space:nowrap;">
+          <thead style="background:#f8fafc;">
+            <tr>
+              <th rowspan="2" class="ps-2 align-middle">Classe</th>
+              <th rowspan="2" class="text-center align-middle">Effectif Total</th>
+              <th colspan="2" class="text-center">Effectif Composé</th>
+              <th colspan="2" class="text-center" style="background:#ede9fe;">Admis</th>
+              <th colspan="2" class="text-center">Non Admis</th>
+              <th colspan="2" class="text-center">Absent Examen</th>
+              <th colspan="2" class="text-center" style="background:#ede9fe;">Réclamation</th>
+              <th rowspan="2" class="text-center align-middle" style="background:#ede9fe;">Taux réussite</th>
+              <th rowspan="2" class="text-center align-middle">Taux H</th>
+              <th rowspan="2" class="text-center align-middle">Taux F</th>
+              <th rowspan="2" class="text-center align-middle">Meilleure moyenne</th>
+            </tr>
+            <tr>
+              <th class="text-center">H</th><th class="text-center">F</th>
+              <th class="text-center" style="background:#ede9fe;">H</th><th class="text-center" style="background:#ede9fe;">F</th>
+              <th class="text-center">H</th><th class="text-center">F</th>
+              <th class="text-center">H</th><th class="text-center">F</th>
+              <th class="text-center" style="background:#ede9fe;">H</th><th class="text-center" style="background:#ede9fe;">F</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in class_results.rows %}
+            <tr>
+              <td class="ps-2 fw-semibold">{{ row.class_group.name }}</td>
+              <td class="text-center">{{ row.rattrapage_reclamation.effectif_total }}</td>
+              <td class="text-center">{{ row.rattrapage_reclamation.composes.M }}</td><td class="text-center">{{ row.rattrapage_reclamation.composes.F }}</td>
+              <td class="text-center" style="color:#166534;">{{ row.rattrapage_reclamation.admis.M }}</td><td class="text-center" style="color:#166534;">{{ row.rattrapage_reclamation.admis.F }}</td>
+              <td class="text-center" style="color:#b91c1c;">{{ row.rattrapage_reclamation.non_admis.M }}</td><td class="text-center" style="color:#b91c1c;">{{ row.rattrapage_reclamation.non_admis.F }}</td>
+              <td class="text-center text-muted">{{ row.rattrapage_reclamation.absent_examen.M }}</td><td class="text-center text-muted">{{ row.rattrapage_reclamation.absent_examen.F }}</td>
+              <td class="text-center" style="color:#5b21b6;">{{ row.rattrapage_reclamation.reclamation.M }}</td><td class="text-center" style="color:#5b21b6;">{{ row.rattrapage_reclamation.reclamation.F }}</td>
+              <td class="text-center fw-semibold">{% if row.rattrapage_reclamation.taux_reussite != None %}{{ row.rattrapage_reclamation.taux_reussite }} %{% else %}—{% endif %}</td>
+              <td class="text-center">{% if row.rattrapage_reclamation.taux_h != None %}{{ row.rattrapage_reclamation.taux_h }} %{% else %}—{% endif %}</td>
+              <td class="text-center">{% if row.rattrapage_reclamation.taux_f != None %}{{ row.rattrapage_reclamation.taux_f }} %{% else %}—{% endif %}</td>
+              <td class="text-center">
+                {% if row.rattrapage_reclamation.meilleure_moyenne %}
+                  <strong>{{ row.rattrapage_reclamation.meilleure_moyenne|floatformat:2 }}/20</strong>
+                  <div class="text-muted" style="font-size:.7rem;">{{ row.rattrapage_reclamation.meilleure_moyenne_etudiant.user.get_full_name }}</div>
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="16" class="text-center text-muted py-4">Aucune classe pour ce département/niveau sur ce semestre.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="p-3" style="font-size:.76rem;color:#64748b;border-top:1px solid #e2e8f0;">
+    <i class="bi bi-info-circle me-1"></i>
+    « Effectif composé » est une approximation : un étudiant est compté comme ayant composé dès
+    qu'au moins une note d'examen a été saisie pour ce semestre (le système ne distingue pas
+    encore « absent » de « pas encore noté »). Côté Session de Rattrapage (avant et après
+    réclamation), aucune donnée de présence propre à l'épreuve de rattrapage n'existe :
+    « Effectif composé » y reprend tout l'effectif de cette session et « Absent Examen » y reste
+    à 0. Les abandons ne sont comptés que côté Session Normale (avant et après réclamation). Les
+    tableaux « après réclamation » reprennent exactement les mêmes colonnes que leur tableau de
+    base, en y intégrant l'effet des réclamations traitées favorablement (un étudiant y devient
+    Admis s'il ne l'était pas déjà). Les réclamations proviennent du
+    <a href="{% url 'grades:reclamation_class_list' %}">suivi des réclamations de notes</a>.
+  </div>
+</div>
+{% endif %}
+
+{% with s=detail.summary %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card-section p-3 text-center">
+      <div class="text-muted" style="font-size:.78rem;">Effectif</div>
+      <div class="fw-bold" style="font-size:1.5rem;color:var(--navy);">{{ s.total }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card-section p-3 text-center">
+      <div class="text-muted" style="font-size:.78rem;">Admis</div>
+      <div class="fw-bold" style="font-size:1.5rem;color:#166534;">{{ s.admis }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card-section p-3 text-center">
+      <div class="text-muted" style="font-size:.78rem;">Non admis</div>
+      <div class="fw-bold" style="font-size:1.5rem;color:#b91c1c;">{{ s.non_admis }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card-section p-3 text-center">
+      <div class="text-muted" style="font-size:.78rem;">Taux de réussite</div>
+      <div class="fw-bold" style="font-size:1.5rem;color:#0f766e;">
+        {% if s.total %}{% widthratio s.admis s.total 100 %} %{% else %}—{% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if s.non_disponible %}
+<div class="alert alert-warning" style="font-size:.85rem;">
+  <i class="bi bi-exclamation-triangle-fill me-1"></i>
+  {{ s.non_disponible }} étudiant(s) sans résultat annuel calculable (bulletins S1/S2 non encore générés) — comptabilisé(s) à part, hors taux de réussite.
+</div>
+{% endif %}
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-6">
+    <div class="card-section p-3">
+      <h6 class="fw-bold mb-2" style="font-size:.85rem;color:var(--navy);">Répartition par genre</h6>
+      <canvas id="genderChart" height="180"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card-section p-3">
+      <h6 class="fw-bold mb-2" style="font-size:.85rem;color:var(--navy);">Répartition par nationalité</h6>
+      <canvas id="nationalityChart" height="180"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-6">
+    <div class="card-section overflow-hidden">
+      <div class="card-section-header" data-bs-toggle="collapse" data-bs-target="#pg-collapse"
+           aria-expanded="false" aria-controls="pg-collapse"
+           style="cursor:pointer;background:#0ea5e9;border:none;">
+        <h6 class="card-section-title" style="color:#fff;">
+          <i class="bi bi-people-fill me-2"></i>Par genre
+        </h6>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-sm no-print" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;"
+                  onclick="event.stopPropagation();rapportPrintSection('pg-table','Par genre');">
+            <i class="bi bi-printer"></i>
+          </button>
+          <i class="bi bi-chevron-down" style="color:#fff;transition:transform .2s;"></i>
+        </div>
+      </div>
+      <div class="collapse" id="pg-collapse">
+        <div class="table-responsive">
+          <table id="pg-table" class="table table-sm mb-0" style="font-size:.82rem;">
+            <thead style="background:#f8fafc;"><tr><th class="ps-3">Genre</th><th class="text-center">Effectif</th><th class="text-center">Admis</th><th class="text-center">Non admis</th></tr></thead>
+            <tbody>
+              {% for label, row in s.by_gender.items %}
+              <tr><td class="ps-3">{{ label }}</td><td class="text-center">{{ row.total }}</td><td class="text-center" style="color:#166534;">{{ row.admis }}</td><td class="text-center" style="color:#b91c1c;">{{ row.non_admis }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card-section overflow-hidden">
+      <div class="card-section-header" data-bs-toggle="collapse" data-bs-target="#pn-collapse"
+           aria-expanded="false" aria-controls="pn-collapse"
+           style="cursor:pointer;background:#7c3aed;border:none;">
+        <h6 class="card-section-title" style="color:#fff;">
+          <i class="bi bi-globe-americas me-2"></i>Par nationalité
+        </h6>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-sm no-print" style="background:rgba(255,255,255,.2);color:#fff;padding:2px 8px;"
+                  onclick="event.stopPropagation();rapportPrintSection('pn-table','Par nationalité');">
+            <i class="bi bi-printer"></i>
+          </button>
+          <i class="bi bi-chevron-down" style="color:#fff;transition:transform .2s;"></i>
+        </div>
+      </div>
+      <div class="collapse" id="pn-collapse">
+        <div class="table-responsive">
+          <table id="pn-table" class="table table-sm mb-0" style="font-size:.82rem;">
+            <thead style="background:#f8fafc;"><tr><th class="ps-3">Nationalité</th><th class="text-center">Effectif</th><th class="text-center">Admis</th><th class="text-center">Non admis</th></tr></thead>
+            <tbody>
+              {% for label, row in s.by_nationality.items %}
+              <tr><td class="ps-3">{{ label }}</td><td class="text-center">{{ row.total }}</td><td class="text-center" style="color:#166534;">{{ row.admis }}</td><td class="text-center" style="color:#b91c1c;">{{ row.non_admis }}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endwith %}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if selected_department and selected_year %}
+<script>
+new Chart(document.getElementById('genderChart'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ gender_labels_json|safe }},
+    datasets: [{ data: {{ gender_totals_json|safe }}, backgroundColor: ['#1e3a5f', '#0ea5e9', '#94a3b8'] }],
+  },
+  options: { responsive: true, maintainAspectRatio: true },
+});
+
+new Chart(document.getElementById('nationalityChart'), {
+  type: 'bar',
+  data: {
+    labels: {{ nationality_labels_json|safe }},
+    datasets: [{ label: 'Effectif', data: {{ nationality_totals_json|safe }}, backgroundColor: '#0f766e' }],
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+  },
+});
+
+function rapportPrintSection(tableId, title) {
+  var table = document.getElementById(tableId);
+  if (!table) return;
+  var win = window.open('', '_blank');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8">' +
+    '<title>' + title + '</title><style>' +
+    'body{font-family:Arial,sans-serif;font-size:11px;margin:16px;}' +
+    'h2{color:#00173B;margin-bottom:4px;}' +
+    'p{color:#64748b;font-size:10px;margin:0 0 10px;}' +
+    'table{width:100%;border-collapse:collapse;}' +
+    'th{background:#00173B;color:#fff;padding:5px 8px;text-align:center;font-size:9px;}' +
+    'td{padding:4px 8px;border-bottom:1px solid #e2e8f0;font-size:9px;text-align:center;}' +
+    'tr:nth-child(even) td{background:#f8fafc;}' +
+    '@media print{body{margin:8px;}}' +
+    '</style></head><body>' +
+    '<h2>' + title + '</h2>' +
+    '<p>Généré le ' + new Date().toLocaleDateString('fr-FR') + '</p>' +
+    table.outerHTML + '</body></html>');
+  win.document.close();
+  win.focus();
+  setTimeout(function () { win.print(); }, 400);
+}
+
+document.querySelectorAll('#pg-collapse, #pn-collapse, #sn-collapse, #sr-collapse').forEach(function (el) {
+  var chevron = el.previousElementSibling.querySelector('.bi-chevron-down');
+  if (!chevron) return;
+  el.addEventListener('show.bs.collapse', function () { chevron.style.transform = 'rotate(180deg)'; });
+  el.addEventListener('hide.bs.collapse', function () { chevron.style.transform = ''; });
+});
+</script>
+{% endif %}
+{% endblock %}

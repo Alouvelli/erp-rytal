@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rapport d'audit — {% if inst_config %}{{ inst_config.nom }}{% endif %}</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #1e293b; background: #fff; }
+
+/* ── Barre de téléchargement (masquée à l'impression) ─── */
+.pdf-toolbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 999;
+  background: #1e3a5f; color: #fff; padding: 10px 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 13px; gap: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+.pdf-toolbar .tb-left { display: flex; align-items: center; gap: 10px; }
+.pdf-toolbar .tb-actions { display: flex; gap: 8px; }
+.btn-pdf {
+  background: #2563eb; color: #fff; border: none; border-radius: 7px;
+  padding: 7px 16px; font-size: 12px; font-weight: 700; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-pdf:hover { background: #1d4ed8; }
+.btn-close-pdf {
+  background: rgba(255,255,255,.15); color: #fff; border: 1px solid rgba(255,255,255,.3);
+  border-radius: 7px; padding: 7px 14px; font-size: 12px; cursor: pointer;
+}
+.btn-close-pdf:hover { background: rgba(255,255,255,.25); }
+
+/* ── Page ───────────────────────────────────────────────── */
+.page {
+  max-width: 900px; margin: 68px auto 32px; padding: 32px 36px;
+  background: #fff;
+}
+
+/* ── En-tête avec logo ──────────────────────────────────── */
+.pdf-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  border-bottom: 3px solid #1e3a5f; padding-bottom: 16px; margin-bottom: 20px;
+}
+.pdf-header-left { display: flex; align-items: center; gap: 16px; }
+.pdf-logo { max-height: 72px; max-width: 120px; object-fit: contain; }
+.pdf-logo-placeholder {
+  width: 72px; height: 72px; background: #1e3a5f; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 22px; font-weight: 800;
+}
+.pdf-inst-name { font-size: 16px; font-weight: 800; color: #1e3a5f; line-height: 1.2; }
+.pdf-inst-sigle { font-size: 11px; color: #64748b; margin-top: 3px; }
+.pdf-header-right { text-align: right; }
+.pdf-title { font-size: 18px; font-weight: 800; color: #1e3a5f; }
+.pdf-subtitle { font-size: 10px; color: #64748b; margin-top: 4px; }
+.pdf-meta { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+
+/* ── Sections ───────────────────────────────────────────── */
+.section { margin-bottom: 20px; }
+.section-title {
+  font-size: 12px; font-weight: 700; color: #1e3a5f;
+  border-left: 4px solid #2563eb; padding-left: 8px; margin-bottom: 10px;
+  text-transform: uppercase; letter-spacing: .05em;
+}
+
+/* ── KPI grid ────────────────────────────────────────────── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; }
+.kpi-card {
+  border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px;
+  border-top: 3px solid #2563eb;
+}
+.kpi-card.green { border-top-color: #16a34a; }
+.kpi-card.red   { border-top-color: #dc2626; }
+.kpi-card.yellow{ border-top-color: #d97706; }
+.kpi-card.gray  { border-top-color: #64748b; }
+.kpi-label { font-size: 8px; text-transform: uppercase; letter-spacing: .06em; color: #64748b; }
+.kpi-value { font-size: 20px; font-weight: 800; color: #1e3a5f; line-height: 1.1; }
+.kpi-sub   { font-size: 8px; color: #94a3b8; }
+
+/* ── Recommandations ─────────────────────────────────────── */
+.reco-card {
+  display: flex; gap: 10px; padding: 10px 12px; border-radius: 8px;
+  border-left: 4px solid transparent; margin-bottom: 8px;
+}
+.reco-card.danger  { border-left-color: #dc2626; background: #fff1f2; }
+.reco-card.warning { border-left-color: #d97706; background: #fffbeb; }
+.reco-card.info    { border-left-color: #2563eb; background: #eff6ff; }
+.reco-card.success { border-left-color: #16a34a; background: #f0fdf4; }
+.reco-icon { font-size: 14px; flex-shrink: 0; }
+.reco-title { font-size: 10px; font-weight: 700; color: #1e293b; }
+.reco-msg   { font-size: 9px; color: #374151; margin-top: 2px; line-height: 1.4; }
+
+/* ── Barres ──────────────────────────────────────────────── */
+.bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 9px; }
+.bar-label { width: 140px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #374151; }
+.bar-track { flex: 1; height: 7px; background: #f1f5f9; border-radius: 99px; overflow: hidden; }
+.bar-fill  { height: 100%; border-radius: 99px; background: #2563eb; }
+.bar-val   { width: 36px; text-align: right; font-weight: 700; color: #1e3a5f; }
+
+/* ── Table ───────────────────────────────────────────────── */
+.pdf-table { width: 100%; border-collapse: collapse; font-size: 9px; }
+.pdf-table th {
+  background: #f8fafc; color: #64748b; font-size: 8px; text-transform: uppercase;
+  letter-spacing: .05em; padding: 5px 8px; border-bottom: 1px solid #e2e8f0; font-weight: 700;
+}
+.pdf-table td { padding: 4px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.pdf-table tr:last-child td { border-bottom: none; }
+
+/* ── Badge action ────────────────────────────────────────── */
+.badge-action {
+  display: inline-block; padding: 1px 6px; border-radius: 4px;
+  font-size: 8px; font-weight: 700; letter-spacing: .04em;
+}
+.badge-LOGIN  { background:#eff6ff;color:#2563eb; }
+.badge-LOGOUT { background:#f1f5f9;color:#64748b; }
+.badge-CREATE { background:#f0fdf4;color:#16a34a; }
+.badge-UPDATE { background:#fef3c7;color:#d97706; }
+.badge-DELETE { background:#fff1f2;color:#dc2626; }
+.badge-VIEW   { background:#f5f3ff;color:#7c3aed; }
+.badge-VALIDATE{ background:#ecfdf5;color:#059669; }
+.badge-CANCEL { background:#fff7ed;color:#ea580c; }
+
+/* ── Deux colonnes ───────────────────────────────────────── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* ── Pied de page ────────────────────────────────────────── */
+.pdf-footer {
+  border-top: 1px solid #e2e8f0; margin-top: 24px; padding-top: 10px;
+  text-align: center; font-size: 8px; color: #94a3b8;
+}
+
+/* ── Impression ──────────────────────────────────────────── */
+@media print {
+  .pdf-toolbar { display: none !important; }
+  .page { margin-top: 0 !important; }
+  body { font-size: 10px; }
+  .kpi-grid { grid-template-columns: repeat(4, 1fr); }
+  .two-col { grid-template-columns: 1fr 1fr; }
+  .section { break-inside: avoid; }
+  .reco-card { break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .kpi-card  { break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .bar-fill  { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+
+<!-- Barre d'actions (masquée à l'impression) -->
+<div class="pdf-toolbar">
+  <div class="tb-left">
+    <span style="font-size:16px;">🛡</span>
+    <span><strong>Rapport d'audit</strong>{% if inst_config %} — {{ inst_config.nom }}{% endif %}</span>
+  </div>
+  <div class="tb-actions">
+    <button class="btn-pdf" onclick="window.print()">
+      ⬇ Télécharger en PDF
+    </button>
+    <button class="btn-close-pdf" onclick="window.close()">✕ Fermer</button>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- En-tête avec logo -->
+  <div class="pdf-header">
+    <div class="pdf-header-left">
+      {% if logo_b64 %}
+        <img class="pdf-logo" src="{{ logo_b64 }}" alt="Logo">
+      {% elif inst_config and inst_config.sigle %}
+        <div class="pdf-logo-placeholder">{{ inst_config.sigle|slice:":2"|upper }}</div>
+      {% endif %}
+      <div>
+        <div class="pdf-inst-name">{% if inst_config %}{{ inst_config.nom }}{% else %}Rapport d'audit{% endif %}</div>
+        {% if inst_config and inst_config.sigle %}
+          <div class="pdf-inst-sigle">{{ inst_config.sigle }}</div>
+        {% endif %}
+        {% if inst_config and inst_config.slogan %}
+          <div class="pdf-inst-sigle" style="font-style:italic;">{{ inst_config.slogan }}</div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="pdf-header-right">
+      <div class="pdf-title">RAPPORT D'AUDIT GÉNÉRAL</div>
+      <div class="pdf-subtitle">
+        {% if date_from %}Période : {{ date_from|date:"d/m/Y" }} → {{ today|date:"d/m/Y" }}
+        {% else %}Toutes périodes{% endif %}
+      </div>
+      <div class="pdf-meta">Généré le {{ today|date:"d/m/Y" }}</div>
+      {% if inst_config and inst_config.dg_nom %}
+        <div class="pdf-meta" style="margin-top:4px;">{{ inst_config.dg_titre }} : {{ inst_config.dg_nom }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Actions enregistrées</div>
+      <div class="kpi-value">{{ total_logs }}</div>
+      <div class="kpi-sub">Sur la période</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Utilisateurs actifs</div>
+      <div class="kpi-value">{{ total_entries }}</div>
+      <div class="kpi-sub">Créneaux planifiés</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Émargements validés</div>
+      <div class="kpi-value">{{ sheets_signed }}</div>
+      <div class="kpi-sub">{{ sheets_pending }} en attente</div>
+    </div>
+    <div class="kpi-card {% if avg_pct < 40 %}red{% elif avg_pct < 60 %}yellow{% else %}green{% endif %}">
+      <div class="kpi-label">Avancement moyen</div>
+      <div class="kpi-value">{{ avg_pct }}<small style="font-size:12px">%</small></div>
+      <div class="kpi-sub">{{ complete_count }} module(s) terminé(s)</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total feuilles</div>
+      <div class="kpi-value">{{ total_sheets }}</div>
+      <div class="kpi-sub">Émargements au total</div>
+    </div>
+    <div class="kpi-card gray">
+      <div class="kpi-label">Modules suivis</div>
+      <div class="kpi-value">{{ nb_prog }}</div>
+      <div class="kpi-sub">SubjectProgress actifs</div>
+    </div>
+    <div class="kpi-card {% if active_holidays %}red{% else %}green{% endif %}">
+      <div class="kpi-label">Suspensions actives</div>
+      <div class="kpi-value">{{ active_holidays|length }}</div>
+      <div class="kpi-sub">{{ upcoming_holidays|length }} programmée(s)</div>
+    </div>
+  </div>
+
+  <!-- Recommandations -->
+  {% if recommendations %}
+  <div class="section">
+    <div class="section-title">💡 Recommandations ({{ recommendations|length }})</div>
+    {% for reco in recommendations %}
+    <div class="reco-card {{ reco.level }}">
+      <div class="reco-icon">{{ reco.icon }}</div>
+      <div>
+        <div class="reco-title">{{ reco.title }}</div>
+        <div class="reco-msg">{{ reco.message }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Activité & Modules -->
+  <div class="two-col">
+    <div class="section">
+      <div class="section-title">Activité par type d'action</div>
+      {% for row in actions_stats %}
+      {% with max_val=actions_stats.0.nb %}
+      <div class="bar-row">
+        <span class="bar-label">
+          <span class="badge-action badge-{{ row.action }}">{{ row.action }}</span>
+        </span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:{% if max_val %}{% widthratio row.nb max_val 100 %}%{% else %}0%{% endif %};
+            background:{% if row.action == 'CREATE' %}#16a34a{% elif row.action == 'DELETE' %}#dc2626{% elif row.action == 'UPDATE' %}#d97706{% elif row.action == 'LOGIN' %}#2563eb{% else %}#64748b{% endif %};"></div>
+        </div>
+        <span class="bar-val">{{ row.nb }}</span>
+      </div>
+      {% endwith %}
+      {% endfor %}
+    </div>
+
+    <div class="section">
+      <div class="section-title">Activité par module applicatif</div>
+      {% for row in modules_stats %}
+      {% with max_val=modules_stats.0.nb %}
+      <div class="bar-row">
+        <span class="bar-label" title="{{ row.model_name }}">{{ row.model_name }}</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:{% widthratio row.nb max_val 100 %}%;background:#7c3aed;"></div>
+        </div>
+        <span class="bar-val">{{ row.nb }}</span>
+      </div>
+      {% endwith %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Top utilisateurs -->
+  <div class="section">
+    <div class="section-title">Top 10 utilisateurs les plus actifs</div>
+    <table class="pdf-table">
+      <thead>
+        <tr>
+          <th>#</th><th>Utilisateur</th><th>Rôle</th><th style="text-align:right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in top_users %}
+        <tr>
+          <td style="color:#94a3b8;">{{ forloop.counter }}</td>
+          <td><strong>{{ u.user__first_name }} {{ u.user__last_name }}</strong></td>
+          <td style="color:#64748b;">{{ u.user__role__name|default:"—" }}</td>
+          <td style="text-align:right;font-weight:700;color:#1e3a5f;">{{ u.nb }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 50 dernières actions -->
+  <div class="section">
+    <div class="section-title">50 dernières actions enregistrées</div>
+    <table class="pdf-table">
+      <thead>
+        <tr><th>Date / Heure</th><th>Utilisateur</th><th>Action</th><th>Module</th><th>Objet</th><th>IP</th></tr>
+      </thead>
+      <tbody>
+        {% for log in recent_logs %}
+        <tr>
+          <td style="color:#64748b;white-space:nowrap;">{{ log.timestamp|date:"d/m/Y H:i" }}</td>
+          <td><strong>{{ log.user.get_full_name|default:log.user.username }}</strong></td>
+          <td><span class="badge-action badge-{{ log.action }}">{{ log.action }}</span></td>
+          <td style="color:#374151;">{{ log.model_name|default:"—" }}</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ log.object_repr|default:"—"|truncatechars:40 }}</td>
+          <td style="color:#94a3b8;">{{ log.ip_address|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pied de page -->
+  <div class="pdf-footer">
+    {% if inst_config %}{{ inst_config.nom }} — {% endif %}
+    Rapport d'audit généré le {{ today|date:"d/m/Y" }}
+    {% if date_from %} · Période : {{ date_from|date:"d/m/Y" }} → {{ today|date:"d/m/Y" }}{% endif %}
+    · Plateforme GestionEmploisDuTemps
+  </div>
+
+</div>
+
+<script>
+// Auto-print quand la page est chargée via le bouton "Télécharger"
+if (window.location.search.includes('autoprint=1')) {
+  window.addEventListener('load', function() {
+    setTimeout(function() { window.print(); }, 400);
+  });
+}
+</script>
+</body>
+</html>

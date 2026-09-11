@@ -1,0 +1,602 @@
+{% extends 'base/base.html' %}
+{% block title %}Journal d'audit{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Journal d'audit</li>{% endblock %}
+
+{% block content %}
+<style>
+  .audit-badge { display:inline-block;padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:700;letter-spacing:.03em; }
+  .ab-LOGIN    { background:#dbeafe;color:#1e40af; }
+  .ab-LOGOUT   { background:#f1f5f9;color:#475569; }
+  .ab-VIEW     { background:#f0fdf4;color:#166534; }
+  .ab-CREATE   { background:#dcfce7;color:#15803d; }
+  .ab-UPDATE   { background:#fef9c3;color:#854d0e; }
+  .ab-DELETE   { background:#fee2e2;color:#991b1b; }
+  .ab-VALIDATE { background:#ede9fe;color:#5b21b6; }
+  .ab-CANCEL   { background:#ffedd5;color:#9a3412; }
+  .filter-card { background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:18px 20px;margin-bottom:16px; }
+  .filter-row  { display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end; }
+  .fg label    { font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px; }
+  .fg select,.fg input { border:1.5px solid #e2e8f0;border-radius:7px;padding:6px 10px;font-size:.83rem;background:#f8fafc;color:#1e293b;outline:none; }
+  .fg select:focus,.fg input:focus { border-color:var(--navy); }
+  .audit-table thead th { font-size:.71rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#64748b;background:#f8fafc;border-bottom:2px solid #e2e8f0;padding:9px 10px;white-space:nowrap; }
+  .audit-table tbody td { font-size:.81rem;padding:8px 10px;border-bottom:1px solid #f1f5f9;vertical-align:middle; }
+  .audit-table tbody tr:hover { background:#f8fafc; }
+  .audit-table tbody tr.row-selected { background:#eff6ff !important; }
+  .url-cell { font-family:monospace;font-size:.72rem;color:#94a3b8;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block; }
+  .user-link { font-weight:700;color:var(--navy);text-decoration:none; }
+  .user-link:hover { text-decoration:underline; }
+  .role-badge { font-size:.66rem;font-weight:600;color:#64748b;display:block; }
+
+  /* Barre flottante de sélection */
+  #selection-bar {
+    display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--navy);color:#fff;border-radius:14px;padding:10px 20px;
+    display:none;align-items:center;gap:16px;box-shadow:0 8px 32px rgba(0,0,0,.25);
+    z-index:9999;white-space:nowrap;
+  }
+  #selection-bar.visible { display:flex; }
+  #sel-count { font-weight:800;font-size:.9rem; }
+  .sel-btn { padding:6px 14px;border-radius:8px;font-size:.82rem;font-weight:700;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:5px; }
+  .sel-btn-delete { background:#ef4444;color:#fff; }
+  .sel-btn-delete:hover { background:#dc2626; }
+  .sel-btn-cancel { background:rgba(255,255,255,.15);color:#fff; }
+  .sel-btn-cancel:hover { background:rgba(255,255,255,.25); }
+
+  .cb-row { width:16px;height:16px;accent-color:var(--navy);cursor:pointer; }
+  .cb-all  { width:16px;height:16px;accent-color:var(--navy);cursor:pointer; }
+
+  .btn-del { display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:#fee2e2;color:#991b1b;border:none;cursor:pointer;font-size:.8rem; }
+  .btn-del:hover { background:#fecaca; }
+  .btn-eye { display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:6px;background:#eff6ff;color:#1d4ed8;border:none;cursor:pointer;font-size:.8rem; }
+  .btn-eye:hover { background:#dbeafe; }
+  /* Modal détail */
+  #detail-modal-overlay {
+    display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:10000;
+    align-items:center;justify-content:center;padding:20px;
+  }
+  #detail-modal-overlay.open { display:flex; }
+  #detail-modal {
+    background:#fff;border-radius:14px;width:100%;max-width:680px;max-height:90vh;
+    overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);
+    animation:fadeUp .15s ease;
+  }
+  @keyframes fadeUp { from { opacity:0;transform:translateY(12px); } to { opacity:1;transform:translateY(0); } }
+  .dm-header { background:var(--navy);color:#fff;padding:16px 20px;border-radius:14px 14px 0 0;display:flex;align-items:center;justify-content:space-between; }
+  .dm-header h6 { margin:0;font-size:.9rem;font-weight:700;display:flex;align-items:center;gap:8px; }
+  .dm-close { background:rgba(255,255,255,.15);border:none;color:#fff;width:28px;height:28px;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:1rem; }
+  .dm-close:hover { background:rgba(255,255,255,.3); }
+  .dm-body { padding:20px; }
+  .dm-grid { display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px; }
+  .dm-field { }
+  .dm-label { font-size:.68rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px; }
+  .dm-value { font-size:.83rem;color:#1e293b;font-weight:600;word-break:break-all; }
+  .dm-value.mono { font-family:monospace;font-size:.78rem;color:#475569; }
+  .dm-section-title { font-size:.72rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin:16px 0 8px; }
+  .dm-changes { background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 14px;font-family:monospace;font-size:.77rem;color:#374151;white-space:pre-wrap;word-break:break-word;max-height:220px;overflow-y:auto; }
+  .dm-detail-text { background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-size:.81rem;color:#374151;line-height:1.5; }
+  .dm-url { background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-family:monospace;font-size:.76rem;color:#475569;word-break:break-all; }
+  .dm-ua { background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:.74rem;color:#64748b;word-break:break-all;line-height:1.4; }
+
+  .pagination-bar { display:flex;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;gap:8px; }
+  .page-info { font-size:.8rem;color:#64748b; }
+  .page-links a,.page-links span { display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;font-size:.8rem;font-weight:600;margin:0 1px;text-decoration:none; }
+  .page-links .current-page { background:var(--navy);color:#fff; }
+  .page-links a { border:1.5px solid #e2e8f0;color:var(--navy); }
+  .page-links a:hover { background:#eff6ff; }
+</style>
+
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-shield-check"></i></span>Journal d'audit
+  </h1>
+</div>
+
+<!-- Onglets -->
+<div style="display:flex;gap:0;border-bottom:2px solid #e2e8f0;margin-bottom:20px;">
+  <a href="{% url 'accounts:audit_log' %}"
+     style="padding:9px 22px;font-size:.84rem;font-weight:700;text-decoration:none;border-bottom:3px solid var(--navy);color:var(--navy);margin-bottom:-2px;display:flex;align-items:center;gap:6px;">
+    <i class="bi bi-list-ul"></i>Journal
+  </a>
+  <a href="{% url 'accounts:audit_backup_list' %}"
+     style="padding:9px 22px;font-size:.84rem;font-weight:600;text-decoration:none;color:#64748b;margin-bottom:-2px;display:flex;align-items:center;gap:6px;">
+    <i class="bi bi-archive"></i>Sauvegardes
+  </a>
+</div>
+
+<!-- Filtres -->
+<div class="filter-card">
+  <form method="get" id="filter-form">
+    <div class="filter-row">
+      <div class="fg">
+        <label>Utilisateur</label>
+        <select name="user_id" style="min-width:200px;">
+          <option value="">— Tous —</option>
+          {% for u in all_users %}
+          <option value="{{ u.pk }}" {% if filters.user_id == u.pk|stringformat:"s" %}selected{% endif %}>
+            {{ u.get_full_name|default:u.username }} ({{ u.role }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Type d'action</label>
+        <select name="action">
+          <option value="">— Toutes —</option>
+          {% for code,label in action_choices %}
+          <option value="{{ code }}" {% if filters.action == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fg">
+        <label>Date exacte</label>
+        <input type="date" name="date" value="{{ filters.date|default:'' }}">
+      </div>
+      <div class="fg">
+        <label>Jour</label>
+        <input type="number" name="day" min="1" max="31" placeholder="JJ" style="width:65px;" value="{{ filters.day|default:'' }}">
+      </div>
+      <div class="fg">
+        <label>Mois</label>
+        <select name="month" style="width:115px;">
+          <option value="">— Mois —</option>
+          <option value="1"  {% if filters.month == "1"  %}selected{% endif %}>Janvier</option>
+          <option value="2"  {% if filters.month == "2"  %}selected{% endif %}>Février</option>
+          <option value="3"  {% if filters.month == "3"  %}selected{% endif %}>Mars</option>
+          <option value="4"  {% if filters.month == "4"  %}selected{% endif %}>Avril</option>
+          <option value="5"  {% if filters.month == "5"  %}selected{% endif %}>Mai</option>
+          <option value="6"  {% if filters.month == "6"  %}selected{% endif %}>Juin</option>
+          <option value="7"  {% if filters.month == "7"  %}selected{% endif %}>Juillet</option>
+          <option value="8"  {% if filters.month == "8"  %}selected{% endif %}>Août</option>
+          <option value="9"  {% if filters.month == "9"  %}selected{% endif %}>Septembre</option>
+          <option value="10" {% if filters.month == "10" %}selected{% endif %}>Octobre</option>
+          <option value="11" {% if filters.month == "11" %}selected{% endif %}>Novembre</option>
+          <option value="12" {% if filters.month == "12" %}selected{% endif %}>Décembre</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Année</label>
+        <input type="number" name="year" min="2020" max="2099" style="width:85px;" value="{{ filters.year|default:current_year }}">
+      </div>
+      <div class="fg">
+        <label>&nbsp;</label>
+        <div style="display:flex;gap:8px;">
+          <button type="submit" style="padding:7px 16px;background:var(--navy);color:#fff;border:none;border-radius:7px;font-size:.83rem;font-weight:700;cursor:pointer;">
+            <i class="bi bi-search me-1"></i>Filtrer
+          </button>
+          <a href="{% url 'accounts:audit_log' %}" style="padding:7px 12px;background:#f1f5f9;color:#475569;border-radius:7px;font-size:.83rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+            <i class="bi bi-x-lg"></i>Réinitialiser
+          </a>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Barre de stats -->
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;background:#dbeafe;color:#1e40af;font-size:.8rem;font-weight:700;">
+      <i class="bi bi-list-ul"></i>{{ paginator.count }} entrée{{ paginator.count|pluralize }}
+    </span>
+    <span style="font-size:.8rem;color:#94a3b8;">— Page {{ page_obj.number }}/{{ paginator.num_pages }}</span>
+  </div>
+  {% if paginator.count > 0 %}
+  <form method="post" action="{% url 'accounts:audit_log_delete_all' %}"
+        onsubmit="return confirm('Supprimer TOUTES les {{ paginator.count }} entrées filtrées ?')">
+    {% csrf_token %}
+    {% if filters.user_id %}<input type="hidden" name="user_id" value="{{ filters.user_id }}">{% endif %}
+    {% if filters.date %}<input type="hidden" name="date" value="{{ filters.date }}">{% endif %}
+    <button type="submit" style="padding:5px 14px;background:#fee2e2;color:#991b1b;border:1.5px solid #fecaca;border-radius:7px;font-size:.8rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;">
+      <i class="bi bi-trash3-fill"></i>Tout supprimer ({{ paginator.count }})
+    </button>
+  </form>
+  {% endif %}
+</div>
+
+<!-- Formulaire principal avec cases à cocher -->
+<form method="post" action="{% url 'accounts:audit_log_delete_selected' %}" id="bulk-form">
+  {% csrf_token %}
+
+  <!-- Tableau -->
+  <div class="card-section" style="padding:0;">
+    <div class="table-responsive">
+      <table class="table audit-table mb-0">
+        <thead>
+          <tr>
+            <th style="width:36px;">
+              <input type="checkbox" class="cb-all" id="cb-all" title="Tout sélectionner">
+            </th>
+            <th>Date &amp; Heure</th>
+            <th>Utilisateur</th>
+            <th>Action</th>
+            <th>Description</th>
+            <th>URL visitée</th>
+            <th>IP</th>
+            <th style="width:60px;"></th>
+          </tr>
+        </thead>
+        <tbody id="audit-tbody">
+          {% for log in logs %}
+          <tr data-id="{{ log.pk }}">
+            <td>
+              <input type="checkbox" class="cb-row" name="selected_ids" value="{{ log.pk }}">
+            </td>
+            <td style="white-space:nowrap;">
+              <div style="font-weight:700;font-size:.8rem;">{{ log.timestamp|date:"d/m/Y" }}</div>
+              <div style="color:#94a3b8;font-size:.74rem;">{{ log.timestamp|date:"H:i:s" }}</div>
+            </td>
+            <td>
+              {% if log.user %}
+              <a href="{% url 'accounts:audit_user_detail' log.user.pk %}" class="user-link">
+                {{ log.user.get_full_name|default:log.user.username }}
+              </a>
+              <span class="role-badge">{{ log.user.role }}</span>
+              {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+            </td>
+            <td><span class="audit-badge ab-{{ log.action }}">{{ log.get_action_display }}</span></td>
+            <td style="max-width:280px;color:#374151;">{{ log.details|default:log.object_repr|default:"—" }}</td>
+            <td><span class="url-cell" title="{{ log.url }}">{{ log.url|default:"—" }}</span></td>
+            <td style="font-size:.75rem;color:#94a3b8;font-family:monospace;">{{ log.ip_address|default:"—" }}</td>
+            <td>
+              <div style="display:flex;gap:4px;align-items:center;">
+                <button type="button" class="btn-eye" title="Voir les détails"
+                        onclick="openDetail({
+                          id: {{ log.pk }},
+                          date: '{{ log.timestamp|date:"d/m/Y à H:i:s" }}',
+                          user: '{{ log.user.get_full_name|default:log.user.username|default:"—"|escapejs }}',
+                          role: '{{ log.user.role|default:"—"|escapejs }}',
+                          user_id: '{{ log.user.pk|default:"" }}',
+                          action: '{{ log.get_action_display|escapejs }}',
+                          action_code: '{{ log.action }}',
+                          description: '{{ log.details|default:log.object_repr|default:"—"|escapejs }}',
+                          model: '{{ log.model_name|default:"—"|escapejs }}',
+                          object_id: '{{ log.object_id|default:"—" }}',
+                          object_repr: '{{ log.object_repr|default:"—"|escapejs }}',
+                          url: '{{ log.url|default:"—"|escapejs }}',
+                          ip: '{{ log.ip_address|default:"—" }}',
+                          ua: '{{ log.user_agent|default:"—"|escapejs }}',
+                          changes: {{ log.changes|default:"null"|safe }}
+                        })">
+                  <i class="bi bi-eye"></i>
+                </button>
+                <button type="button" class="btn-del" title="Supprimer cette entrée"
+                        onclick="deleteSingle({{ log.pk }}, this)">
+                  <i class="bi bi-trash3"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-5" style="color:#94a3b8;">
+              <i class="bi bi-shield-slash" style="font-size:2rem;display:block;margin-bottom:8px;"></i>
+              Aucune entrée pour ces critères.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</form>
+
+<!-- Barre flottante de sélection -->
+<div id="selection-bar">
+  <i class="bi bi-check2-square" style="font-size:1.1rem;"></i>
+  <span><span id="sel-count">0</span> entrée(s) sélectionnée(s)</span>
+  <button type="button" class="sel-btn sel-btn-delete" onclick="deleteSelected()">
+    <i class="bi bi-trash3-fill"></i>Supprimer la sélection
+  </button>
+  <button type="button" class="sel-btn sel-btn-cancel" onclick="clearSelection()">
+    <i class="bi bi-x-lg"></i>Annuler
+  </button>
+</div>
+
+<!-- Pagination -->
+{% if paginator.num_pages > 1 %}
+<div class="pagination-bar">
+  <span class="page-info">Entrées {{ page_obj.start_index }}–{{ page_obj.end_index }} sur {{ paginator.count }}</span>
+  <div class="page-links">
+    {% if page_obj.has_previous %}
+    <a href="?{% for k,v in filters.items %}{{ k }}={{ v }}&{% endfor %}page=1"><i class="bi bi-chevron-double-left"></i></a>
+    <a href="?{% for k,v in filters.items %}{{ k }}={{ v }}&{% endfor %}page={{ page_obj.previous_page_number }}"><i class="bi bi-chevron-left"></i></a>
+    {% endif %}
+    {% for num in paginator.page_range %}
+      {% if num == page_obj.number %}<span class="current-page">{{ num }}</span>
+      {% elif num >= page_obj.number|add:"-3" and num <= page_obj.number|add:"3" %}
+      <a href="?{% for k,v in filters.items %}{{ k }}={{ v }}&{% endfor %}page={{ num }}">{{ num }}</a>
+      {% endif %}
+    {% endfor %}
+    {% if page_obj.has_next %}
+    <a href="?{% for k,v in filters.items %}{{ k }}={{ v }}&{% endfor %}page={{ page_obj.next_page_number }}"><i class="bi bi-chevron-right"></i></a>
+    <a href="?{% for k,v in filters.items %}{{ k }}={{ v }}&{% endfor %}page={{ paginator.num_pages }}"><i class="bi bi-chevron-double-right"></i></a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<script>
+const cbAll  = document.getElementById('cb-all');
+const form   = document.getElementById('bulk-form');
+const selBar = document.getElementById('selection-bar');
+const selCnt = document.getElementById('sel-count');
+
+function getChecked() {
+  return document.querySelectorAll('.cb-row:checked');
+}
+
+function updateBar() {
+  const n = getChecked().length;
+  selCnt.textContent = n;
+  if (n > 0) selBar.classList.add('visible');
+  else        selBar.classList.remove('visible');
+  // Sync état "tout sélectionner"
+  const all = document.querySelectorAll('.cb-row');
+  cbAll.indeterminate = n > 0 && n < all.length;
+  cbAll.checked = n === all.length && all.length > 0;
+}
+
+function clearSelection() {
+  document.querySelectorAll('.cb-row').forEach(cb => cb.checked = false);
+  cbAll.checked = false;
+  cbAll.indeterminate = false;
+  updateBar();
+}
+
+function deleteSelected() {
+  const n = getChecked().length;
+  if (!n) return;
+  if (!confirm(`Supprimer les ${n} entrée(s) sélectionnée(s) ?`)) return;
+  form.submit();
+}
+
+// Cases à cocher individuelles
+document.querySelectorAll('.cb-row').forEach(cb => {
+  cb.addEventListener('change', function() {
+    const row = this.closest('tr');
+    if (this.checked) row.classList.add('row-selected');
+    else row.classList.remove('row-selected');
+    updateBar();
+  });
+});
+
+// Tout sélectionner / désélectionner
+cbAll.addEventListener('change', function() {
+  document.querySelectorAll('.cb-row').forEach(cb => {
+    cb.checked = this.checked;
+    const row = cb.closest('tr');
+    if (this.checked) row.classList.add('row-selected');
+    else row.classList.remove('row-selected');
+  });
+  updateBar();
+});
+
+// Clic sur une ligne sélectionne la case
+document.querySelectorAll('#audit-tbody tr').forEach(row => {
+  row.addEventListener('click', function(e) {
+    if (e.target.type === 'checkbox' || e.target.closest('a') || e.target.closest('button')) return;
+    const cb = this.querySelector('.cb-row');
+    if (!cb) return;
+    cb.checked = !cb.checked;
+    if (cb.checked) this.classList.add('row-selected');
+    else this.classList.remove('row-selected');
+    updateBar();
+  });
+  row.style.cursor = 'pointer';
+});
+
+// Suppression individuelle sans rechargement
+function deleteSingle(pk, btn) {
+  if (!confirm('Supprimer cette entrée ?')) return;
+  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  fetch(`/accounts/audit/${pk}/delete/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: ''
+  }).then(r => {
+    if (r.ok || r.redirected) {
+      const row = btn.closest('tr');
+      row.style.transition = 'opacity .3s';
+      row.style.opacity = '0';
+      setTimeout(() => { row.remove(); updateBar(); }, 300);
+    }
+  });
+}
+
+// ── Modal détail — fonctions déclarées avant le DOM ──────────────────────────
+function openDetail(d) {
+  const overlay = document.getElementById('detail-modal-overlay');
+  if (!overlay) return;
+
+  const BADGES = {
+    LOGIN:'#dbeafe|#1e40af', LOGOUT:'#f1f5f9|#475569', VIEW:'#f0fdf4|#166534',
+    CREATE:'#dcfce7|#15803d', UPDATE:'#fef9c3|#854d0e', DELETE:'#fee2e2|#991b1b',
+    VALIDATE:'#ede9fe|#5b21b6', CANCEL:'#ffedd5|#9a3412'
+  };
+  const [bg, fg] = (BADGES[d.action_code] || '#f1f5f9|#475569').split('|');
+
+  document.getElementById('dm-id').textContent    = '#' + d.id;
+  document.getElementById('dm-date').textContent  = d.date;
+  document.getElementById('dm-action').innerHTML  =
+    `<span style="background:${bg};color:${fg};padding:3px 12px;border-radius:20px;font-size:.8rem;font-weight:700;">${d.action}</span>`;
+  document.getElementById('dm-user').innerHTML = d.user_id
+    ? `<a href="/accounts/audit/user/${d.user_id}/" style="font-weight:700;color:var(--navy);text-decoration:none;">${d.user}</a>`
+    : (d.user || '—');
+  document.getElementById('dm-role').textContent        = d.role   || '—';
+  document.getElementById('dm-ip').textContent          = d.ip     || '—';
+  document.getElementById('dm-model').textContent       = d.model  || '—';
+  document.getElementById('dm-object-id').textContent   = d.object_id   || '—';
+  document.getElementById('dm-object-repr').textContent = d.object_repr || '—';
+  document.getElementById('dm-description').textContent = d.description || '—';
+  document.getElementById('dm-url').textContent         = d.url || '—';
+  document.getElementById('dm-ua').textContent          = d.ua  || '—';
+
+  const changesSection    = document.getElementById('dm-changes-section');
+  const changesStructured = document.getElementById('dm-changes-structured');
+  const changesRows       = document.getElementById('dm-changes-rows');
+  const changesRaw        = document.getElementById('dm-changes');
+
+  if (d.changes && typeof d.changes === 'object' && Object.keys(d.changes).length > 0) {
+    changesSection.style.display = 'block';
+
+    // Données structurées de note (champs connus)
+    const GRADE_FIELDS = {
+      etudiant:      'Étudiant',
+      matricule:     'Matricule',
+      matiere:       'Module (EC)',
+      type_note:     'Type de note',
+      semestre:      'Semestre',
+      classe:        'Classe',
+      ancienne_note: 'Ancienne note',
+      nouvelle_note: 'Nouvelle note',
+    };
+    const isGradeLog = 'etudiant' in d.changes;
+
+    if (isGradeLog) {
+      changesStructured.style.display = 'block';
+      changesRaw.style.display        = 'none';
+      let html = '';
+      for (const [key, label] of Object.entries(GRADE_FIELDS)) {
+        if (!(key in d.changes)) continue;
+        const val = d.changes[key];
+        if (val === null || val === '' || val === undefined) continue;
+
+        let cellContent;
+        if (key === 'ancienne_note' || key === 'nouvelle_note') {
+          if (val === null || val === undefined) {
+            cellContent = '<span style="color:#94a3b8;">—</span>';
+          } else {
+            const num   = parseFloat(val);
+            const color = num >= 10 ? '#16a34a' : '#dc2626';
+            const arrow = key === 'nouvelle_note' && d.changes.ancienne_note !== null && d.changes.ancienne_note !== undefined
+              ? (num > parseFloat(d.changes.ancienne_note) ? ' <span style="color:#16a34a;">▲</span>' : num < parseFloat(d.changes.ancienne_note) ? ' <span style="color:#dc2626;">▼</span>' : '')
+              : '';
+            cellContent = `<strong style="color:${color};font-size:.88rem;">${num.toFixed(2)} / 20</strong>${arrow}`;
+          }
+        } else {
+          cellContent = String(val);
+        }
+
+        const isScore = key === 'ancienne_note' || key === 'nouvelle_note';
+        const bg      = isScore ? '#fffbeb' : 'transparent';
+        html += `<tr style="border-bottom:1px solid #f1f5f9;background:${bg};">
+          <td style="padding:7px 10px;font-size:.72rem;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;width:40%;">${label}</td>
+          <td style="padding:7px 10px;color:#1e293b;">${cellContent}</td>
+        </tr>`;
+      }
+      changesRows.innerHTML = html;
+    } else {
+      // JSON brut pour les autres cas
+      changesStructured.style.display = 'none';
+      changesRaw.style.display        = 'block';
+      changesRaw.textContent = JSON.stringify(d.changes, null, 2);
+    }
+  } else {
+    changesSection.style.display = 'none';
+  }
+
+  overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDetail() {
+  const overlay = document.getElementById('detail-modal-overlay');
+  if (overlay) overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeDetail();
+});
+
+// Attacher le clic sur l'overlay après chargement du DOM
+window.addEventListener('load', function() {
+  const overlay = document.getElementById('detail-modal-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) closeDetail();
+    });
+  }
+});
+</script>
+
+<!-- Modal détail d'une entrée d'audit -->
+<div id="detail-modal-overlay">
+  <div id="detail-modal">
+    <div class="dm-header">
+      <h6><i class="bi bi-shield-check"></i> Détail de l'entrée <span id="dm-id"></span></h6>
+      <button class="dm-close" onclick="closeDetail()" title="Fermer">&#x2715;</button>
+    </div>
+    <div class="dm-body">
+
+      <!-- Ligne 1 : date + action -->
+      <div class="dm-grid">
+        <div class="dm-field">
+          <div class="dm-label">Date &amp; Heure</div>
+          <div class="dm-value" id="dm-date"></div>
+        </div>
+        <div class="dm-field">
+          <div class="dm-label">Type d'action</div>
+          <div class="dm-value" id="dm-action"></div>
+        </div>
+      </div>
+
+      <!-- Ligne 2 : utilisateur + rôle + IP -->
+      <div class="dm-grid">
+        <div class="dm-field">
+          <div class="dm-label">Utilisateur</div>
+          <div class="dm-value" id="dm-user"></div>
+          <div style="font-size:.74rem;color:#64748b;margin-top:2px;" id="dm-role"></div>
+        </div>
+        <div class="dm-field">
+          <div class="dm-label">Adresse IP</div>
+          <div class="dm-value mono" id="dm-ip"></div>
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="dm-section-title"><i class="bi bi-card-text me-1"></i>Description</div>
+      <div class="dm-detail-text" id="dm-description"></div>
+
+      <!-- Objet concerné -->
+      <div class="dm-section-title"><i class="bi bi-database me-1"></i>Objet concerné</div>
+      <div class="dm-grid">
+        <div class="dm-field">
+          <div class="dm-label">Modèle</div>
+          <div class="dm-value mono" id="dm-model"></div>
+        </div>
+        <div class="dm-field">
+          <div class="dm-label">ID objet</div>
+          <div class="dm-value mono" id="dm-object-id"></div>
+        </div>
+      </div>
+      <div class="dm-field" style="margin-bottom:14px;">
+        <div class="dm-label">Représentation</div>
+        <div class="dm-value" id="dm-object-repr" style="font-size:.8rem;color:#475569;"></div>
+      </div>
+
+      <!-- URL -->
+      <div class="dm-section-title"><i class="bi bi-link-45deg me-1"></i>URL visitée</div>
+      <div class="dm-url" id="dm-url"></div>
+
+      <!-- User agent -->
+      <div class="dm-section-title"><i class="bi bi-browser-chrome me-1"></i>Navigateur / Agent</div>
+      <div class="dm-ua" id="dm-ua"></div>
+
+      <!-- Changements enregistrés -->
+      <div id="dm-changes-section">
+        <div class="dm-section-title"><i class="bi bi-pencil-square me-1"></i>Changements enregistrés</div>
+        <!-- Vue structurée (notes) -->
+        <div id="dm-changes-structured" style="display:none;">
+          <table style="width:100%;border-collapse:collapse;font-size:.81rem;">
+            <tbody id="dm-changes-rows"></tbody>
+          </table>
+        </div>
+        <!-- Vue JSON brute (autres cas) -->
+        <pre class="dm-changes" id="dm-changes" style="display:none;"></pre>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

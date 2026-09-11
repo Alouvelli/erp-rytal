@@ -1,0 +1,74 @@
+{% extends "base/base.html" %}
+{% block title %}Mes attestations{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-statut { display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:.73rem;font-weight:600; }
+.bdr-SOUMISE       { background:#fef3c7;color:#92400e; }
+.bdr-EN_TRAITEMENT { background:#e0f2fe;color:#0369a1; }
+.bdr-SIGNEE        { background:#dbeafe;color:#1e40af; }
+.bdr-DISPONIBLE    { background:#dcfce7;color:#15803d; }
+.bdr-REJETEE       { background:#fee2e2;color:#b91c1c; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:760px;">
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{% url 'dashboard:index' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+    <div>
+      <h5 class="mb-0 fw-bold">Mes attestations</h5>
+      <small class="text-muted">Demander et suivre mes documents RH</small>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3 fw-bold"><i class="bi bi-plus-circle text-primary me-2"></i>Nouvelle demande</div>
+    <div class="card-body p-4">
+      <form method="post" class="d-flex gap-2 flex-wrap">
+        {% csrf_token %}
+        <select name="type_document" class="form-select" style="max-width:280px;" required>
+          <option value="">— Type de document —</option>
+          <option value="ATTESTATION_TRAVAIL">Attestation de travail</option>
+          <option value="ATTESTATION_SALAIRE">Attestation de salaire</option>
+          <option value="CERTIFICAT_TRAVAIL">Certificat de travail</option>
+        </select>
+        <button class="btn btn-primary fw-semibold px-4">Demander</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3 fw-bold"><i class="bi bi-folder2-open text-info me-2"></i>Mes demandes</div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead style="background:#f8fafc;">
+            <tr style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">
+              <th class="px-3">Type</th><th>Statut</th><th>Demandé le</th><th class="text-end px-3">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in requests %}
+            <tr>
+              <td class="px-3" style="font-size:.85rem;">{{ r.get_type_document_display }}</td>
+              <td><span class="badge-statut bdr-{{ r.statut }}">{{ r.get_statut_display }}</span></td>
+              <td style="font-size:.78rem;color:#94a3b8;">{{ r.created_at|date:"d/m/Y" }}</td>
+              <td class="text-end px-3">
+                {% if r.statut == 'DISPONIBLE' and r.document %}
+                <a href="{% url 'hr:document_download' pk=r.document.pk %}" class="btn btn-xs btn-success" style="font-size:.72rem;padding:3px 9px;">
+                  <i class="bi bi-download me-1"></i>Télécharger
+                </a>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center py-5 text-muted">Aucune demande.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

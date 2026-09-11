@@ -1,0 +1,103 @@
+{% extends 'base/base.html' %}
+{% block title %}Service à la Communauté — Activités{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Service à la Communauté</li>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0d9488;"><i class="bi bi-people-fill"></i></span>
+    Service à la Communauté — Activités
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'community_service:report' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-file-earmark-bar-graph me-1"></i>Rapport d'activités
+    </a>
+    <a href="{% url 'community_service:create' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Nouvelle activité
+    </a>
+  </div>
+</div>
+
+<div class="card-section mb-3">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Recherche</label>
+        <input type="text" name="q" class="form-control form-control-sm" value="{{ request.GET.q }}" placeholder="Titre, lieu, bénéficiaires…">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Catégorie</label>
+        <select name="categorie" class="form-select form-select-sm">
+          <option value="">Toutes</option>
+          {% for code, label in categorie_choices %}
+          <option value="{{ code }}" {% if selected_categorie == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Statut</label>
+        <select name="statut" class="form-select form-select-sm">
+          <option value="">Tous</option>
+          {% for code, label in statut_choices %}
+          <option value="{{ code }}" {% if selected_statut == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{% url 'community_service:list' %}" class="btn btn-outline-secondary btn-sm">Réinitialiser</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ul"></i></span>
+      Liste des activités
+    </h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table" id="tbl-activities">
+      <thead>
+        <tr>
+          <th>Date</th><th>Titre</th><th>Catégorie</th><th>Lieu</th>
+          <th>Participants</th><th>Statut</th><th>Responsable</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in activities %}
+        <tr>
+          <td style="font-size:.82rem;white-space:nowrap;">
+            {{ a.date_debut|date:"d/m/Y" }}{% if a.date_fin %} → {{ a.date_fin|date:"d/m/Y" }}{% endif %}
+          </td>
+          <td style="font-size:.85rem;font-weight:600;">{{ a.titre }}</td>
+          <td style="font-size:.82rem;color:#64748b;">{{ a.get_categorie_display }}</td>
+          <td style="font-size:.82rem;color:#64748b;">{{ a.lieu|default:"—" }}</td>
+          <td style="font-size:.83rem;text-align:center;">{{ a.nombre_participants|default:"—" }}</td>
+          <td>
+            <span class="badge bg-{{ a.statut_color }}">{{ a.get_statut_display }}</span>
+          </td>
+          <td style="font-size:.82rem;color:#64748b;">{{ a.responsable.get_full_name|default:"—" }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'community_service:edit' a.pk %}" class="btn-action edit" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'community_service:delete' a.pk %}" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-4">Aucune activité enregistrée.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+$(document).ready(function(){
+  $('#tbl-activities').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}});
+});
+</script>
+{% endblock %}

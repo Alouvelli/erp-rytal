@@ -1,0 +1,93 @@
+{% extends "base/base.html" %}
+{% load humanize %}
+
+{% block title %}Suivi budgétaire par direction{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-bar-chart-steps me-2"></i>Suivi budgétaire par direction
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">
+      Budget alloué (Lignes budgétaires) rapproché des sorties de caisse exécutées (Entrée &amp; Sortie Caisse)
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounting:ligne_budgetaire_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-list-columns-reverse me-1"></i>Lignes budgétaires
+    </a>
+    <a href="{% url 'accounting:caisse_movement_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left-right me-1"></i>Entrée &amp; Sortie Caisse
+    </a>
+  </div>
+</div>
+
+{% if non_rattaches %}
+<div class="alert alert-warning d-flex align-items-center gap-2 mb-3" style="border-radius:10px;font-size:.82rem;">
+  <i class="bi bi-exclamation-triangle-fill"></i>
+  {{ non_rattaches }} sortie(s) de caisse exécutée(s) cette année ne sont rattachées à aucune direction — elles
+  n'apparaissent donc dans aucun total ci-dessous. Modifiez-les depuis
+  <a href="{% url 'accounting:caisse_movement_list' %}">Entrée &amp; Sortie Caisse</a> pour leur associer une direction.
+</div>
+{% endif %}
+
+<!-- Filtres -->
+<div class="card-section mb-3" style="padding:16px 20px;">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Exercice</label>
+      <select name="annee" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for y in academic_years %}
+        <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+</div>
+
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Direction</th>
+          <th class="text-end">Budget alloué</th>
+          <th class="text-end">Sorties caisse</th>
+          <th class="text-end">Restant</th>
+          <th class="text-center" style="width:160px;">Taux de consommation</th>
+          <th class="text-center" style="width:120px;">Suivi quotidien</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td style="padding:8px 16px;font-weight:700;color:var(--navy);">{{ row.direction.name }}</td>
+          <td class="text-end">{{ row.budget|floatformat:0|intcomma }} F</td>
+          <td class="text-end" style="color:#991b1b;">{{ row.sorties|floatformat:0|intcomma }} F</td>
+          <td class="text-end fw-bold" style="{% if row.restant < 0 %}color:#991b1b;{% else %}color:#166534;{% endif %}">
+            {{ row.restant|floatformat:0|intcomma }} F
+          </td>
+          <td class="text-center">
+            {% widthratio row.taux 1 100 as taux_pct %}
+            <div class="progress" style="height:8px;">
+              <div class="progress-bar {% if row.taux >= 1 %}bg-danger{% elif row.taux >= 0.8 %}bg-warning{% else %}bg-success{% endif %}"
+                   style="width:{% if taux_pct > 100 %}100{% else %}{{ taux_pct }}{% endif %}%;"></div>
+            </div>
+            <span style="font-size:.72rem;color:#64748b;">{{ taux_pct }}%</span>
+          </td>
+          <td class="text-center">
+            <a href="{% url 'accounting:suivi_budget_direction_detail' row.direction.pk %}{% if selected_year %}?annee={{ selected_year.pk }}{% endif %}"
+               class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 10px;font-size:.72rem;">
+              <i class="bi bi-calendar3 me-1"></i>Voir le détail
+            </a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:40px;">Aucune direction active définie.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

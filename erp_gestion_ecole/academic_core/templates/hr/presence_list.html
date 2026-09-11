@@ -1,0 +1,155 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Présences — {{ month_label }} {{ year }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-statut { display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:.73rem;font-weight:600; }
+.bs-PRESENT      { background:#dcfce7;color:#15803d; }
+.bs-ABSENT       { background:#fee2e2;color:#b91c1c; }
+.bs-RETARD       { background:#fef3c7;color:#92400e; }
+.bs-CONGE        { background:#e0f2fe;color:#0369a1; }
+.bs-DEMI_JOURNEE { background:#f1f5f9;color:#475569; }
+.bs-TELETRAVAIL  { background:#ede9fe;color:#5b21b6; }
+.bs-FERIE        { background:#f1f5f9;color:#374151; }
+.month-nav a { display:inline-flex;align-items:center;justify-content:center;
+  width:32px;height:32px;border-radius:8px;border:1.5px solid #e2e8f0;
+  color:#374151;text-decoration:none; }
+.month-nav a:hover { background:#eff6ff;border-color:#93c5fd; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'hr:dashboard' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+      <div>
+        <h5 class="mb-0 fw-bold">Liste des présences</h5>
+        <small class="text-muted">{{ month_label }} {{ year }}</small>
+      </div>
+    </div>
+    <div class="d-flex gap-2 no-print flex-wrap">
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i>Imprimer
+      </button>
+      <a href="{% url 'hr:presence_pdf' %}?year={{ year }}&month={{ month }}{% if user_id %}&user_id={{ user_id }}{% endif %}" class="btn btn-sm" style="background:#dc2626;color:#fff;">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+      </a>
+      <a href="{% url 'hr:presence_word' %}?year={{ year }}&month={{ month }}{% if user_id %}&user_id={{ user_id }}{% endif %}" class="btn btn-sm" style="background:#1d4ed8;color:#fff;">
+        <i class="bi bi-file-earmark-word me-1"></i>Word
+      </a>
+      <a href="{% url 'hr:export_excel' %}?year={{ year }}&month={{ month }}" class="btn btn-sm btn-outline-success fw-semibold">
+        <i class="bi bi-file-earmark-excel me-1"></i>Excel
+      </a>
+      <a href="{% url 'hr:pointage_jour' %}" class="btn btn-sm btn-primary fw-semibold">
+        <i class="bi bi-pencil-square me-1"></i>Pointage
+      </a>
+    </div>
+  </div>
+
+  <!-- Filtres -->
+  <form method="get" class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3 d-flex flex-wrap gap-3 align-items-end">
+      <div>
+        <label class="form-label fw-semibold mb-1" style="font-size:.8rem;">Mois</label>
+        <div class="month-nav d-flex align-items-center gap-2">
+          <a href="?year={{ prev_year }}&month={{ prev_month }}{% if user_id %}&user_id={{ user_id }}{% endif %}"><i class="bi bi-chevron-left"></i></a>
+          <span class="fw-bold" style="min-width:130px;text-align:center;font-size:.9rem;">{{ month_label }} {{ year }}</span>
+          <a href="?year={{ next_year }}&month={{ next_month }}{% if user_id %}&user_id={{ user_id }}{% endif %}"><i class="bi bi-chevron-right"></i></a>
+        </div>
+        <input type="hidden" name="year"  value="{{ year }}">
+        <input type="hidden" name="month" value="{{ month }}">
+      </div>
+      <div>
+        <label class="form-label fw-semibold mb-1" style="font-size:.8rem;">Employé</label>
+        <select name="user_id" class="form-select form-select-sm" style="min-width:200px;">
+          <option value="">— Tous —</option>
+          {% for emp in staff_list %}
+          <option value="{{ emp.pk }}" {% if user_id == emp.pk|stringformat:"s" %}selected{% endif %}>{{ emp.get_full_name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm fw-semibold">
+          <i class="bi bi-funnel me-1"></i>Filtrer
+        </button>
+        <a href="?year={{ year }}&month={{ month }}" class="btn btn-outline-secondary btn-sm">Réinitialiser</a>
+      </div>
+    </div>
+  </form>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3 d-flex align-items-center justify-content-between">
+      <span class="fw-bold">{{ presences|length }} enregistrement{{ presences|length|pluralize }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0" id="presTable">
+          <thead style="background:#f8fafc;">
+            <tr style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">
+              <th class="px-3">Date</th>
+              <th>Employé</th>
+              <th>Rôle</th>
+              <th>Statut</th>
+              <th>Arrivée</th>
+              <th>Départ</th>
+              <th>Durée</th>
+              <th>Observation</th>
+              <th>Enregistré par</th>
+              <th class="text-end px-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in presences %}
+            <tr>
+              <td class="px-3 fw-semibold" style="font-size:.85rem;white-space:nowrap;">{{ p.date|date:"d/m/Y" }}</td>
+              <td>
+                <a href="{% url 'hr:employe_fiche' pk=p.user.pk %}" class="fw-semibold text-decoration-none text-dark" style="font-size:.87rem;">
+                  {{ p.user.get_full_name }}
+                </a>
+              </td>
+              <td style="font-size:.78rem;color:#64748b;">{{ p.user.role.get_name_display|default:'—' }}</td>
+              <td><span class="badge-statut bs-{{ p.statut }}">{{ p.get_statut_display }}</span></td>
+              <td style="font-size:.82rem;">{{ p.heure_arrivee|time:"H:i"|default:'—' }}</td>
+              <td style="font-size:.82rem;">{{ p.heure_depart|time:"H:i"|default:'—' }}</td>
+              <td style="font-size:.82rem;">{{ p.duree_label }}</td>
+              <td style="font-size:.78rem;color:#64748b;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                  title="{{ p.justification }}">
+                {{ p.justification|default:'—'|truncatechars:35 }}
+              </td>
+              <td style="font-size:.75rem;color:#94a3b8;">{{ p.enregistre_par.get_full_name|default:'—' }}</td>
+              <td class="text-end px-3">
+                <div class="d-flex gap-1 justify-content-end">
+                  <a href="{% url 'hr:presence_edit' pk=p.pk %}" class="btn btn-xs btn-outline-primary" style="padding:3px 8px;font-size:.72rem;">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <form method="post" action="{% url 'hr:presence_delete' pk=p.pk %}" onsubmit="return confirm('Supprimer ce pointage ?');" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-xs btn-outline-danger" style="padding:3px 8px;font-size:.72rem;">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="10" class="text-center py-5 text-muted">
+                <i class="bi bi-clipboard-x" style="font-size:2rem;opacity:.3;display:block;"></i>
+                <span class="mt-2 d-block">Aucune présence enregistrée pour cette période.</span>
+                <a href="{% url 'hr:pointage_jour' %}" class="btn btn-sm btn-primary mt-3">
+                  <i class="bi bi-pencil-square me-1"></i>Commencer le pointage
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

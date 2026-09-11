@@ -1,0 +1,168 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="max-width:700px;">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="{% url 'timetable:holiday_list' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h4 class="mb-0 fw-bold" style="color:var(--navy);">
+      <i class="bi bi-pause-circle-fill me-2"></i>{{ title }}
+    </h4>
+  </div>
+
+  {% if messages %}
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-4">
+      <form method="post" id="holidayForm">
+        {% csrf_token %}
+
+        <!-- Classe(s) — multi-select uniquement à la création -->
+        {% if not holiday %}
+        <div class="mb-4">
+          <label class="form-label fw-semibold" style="color:var(--navy);">
+            Classe(s) concernée(s) <span class="text-danger">*</span>
+          </label>
+          <div style="border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;max-height:220px;overflow-y:auto;">
+            {% for cls in classes %}
+            <div class="form-check mb-1">
+              <input class="form-check-input" type="checkbox" name="class_group_ids"
+                     value="{{ cls.pk }}" id="cls-{{ cls.pk }}"
+                     {% if cls.pk|stringformat:"s" in selected_ids %}checked{% endif %}>
+              <label class="form-check-label" for="cls-{{ cls.pk }}" style="font-size:.88rem;">
+                {{ cls.name }}
+                {% if cls.program %}<span style="color:#94a3b8;font-size:.76rem;">— {{ cls.program.name }}</span>{% endif %}
+              </label>
+            </div>
+            {% empty %}
+            <div class="text-muted" style="font-size:.84rem;">Aucune classe disponible.</div>
+            {% endfor %}
+          </div>
+          <div class="d-flex gap-2 mt-2">
+            <button type="button" class="btn btn-xs btn-outline-secondary" style="font-size:.75rem;padding:2px 8px;"
+                    onclick="document.querySelectorAll('[name=class_group_ids]').forEach(c=>c.checked=true)">
+              Tout sélectionner
+            </button>
+            <button type="button" class="btn btn-xs btn-outline-secondary" style="font-size:.75rem;padding:2px 8px;"
+                    onclick="document.querySelectorAll('[name=class_group_ids]').forEach(c=>c.checked=false)">
+              Tout désélectionner
+            </button>
+          </div>
+        </div>
+        {% else %}
+        <div class="mb-4">
+          <label class="form-label fw-semibold" style="color:var(--navy);">Classe</label>
+          <div class="form-control-plaintext fw-bold" style="color:#1e3a5f;">
+            {{ holiday.class_group.name }}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Dates -->
+        <div class="row g-3 mb-4">
+          <div class="col-sm-6">
+            <label for="start_date" class="form-label fw-semibold" style="color:var(--navy);">
+              Date de début <span class="text-danger">*</span>
+            </label>
+            <input type="date" id="start_date" name="start_date" class="form-control"
+                   value="{{ holiday.start_date|date:'Y-m-d'|default:form_start_date }}"
+                   required>
+          </div>
+          <div class="col-sm-6">
+            <label for="end_date" class="form-label fw-semibold" style="color:var(--navy);">
+              Date de fin <span class="text-danger">*</span>
+            </label>
+            <input type="date" id="end_date" name="end_date" class="form-control"
+                   value="{{ holiday.end_date|date:'Y-m-d'|default:form_end_date }}"
+                   required>
+          </div>
+        </div>
+
+        <!-- Résumé des conflits enseignants (affiché dynamiquement) -->
+        {% if not holiday %}
+        <div id="conflictBox" class="alert alert-warning d-none mb-3" style="font-size:.83rem;">
+          <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>Enseignants concernés par cette période :</div>
+          <ul id="conflictList" class="mb-0 ps-3" style="font-size:.82rem;"></ul>
+        </div>
+        {% endif %}
+
+        <!-- Motif -->
+        <div class="mb-4">
+          <label for="reason" class="form-label fw-semibold" style="color:var(--navy);">
+            Motif <span style="font-weight:400;color:#94a3b8;">(optionnel)</span>
+          </label>
+          <input type="text" id="reason" name="reason" class="form-control"
+                 placeholder="Ex : Période d'examens, Congé, Fête nationale…"
+                 value="{{ holiday.reason|default:form_reason }}">
+        </div>
+
+        <!-- Info réactivation automatique -->
+        <div class="alert alert-info mb-4" style="font-size:.82rem;">
+          <i class="bi bi-info-circle-fill me-1"></i>
+          Le planning se réactive <strong>automatiquement</strong> dès le lendemain de la date de fin.
+          Aucune action manuelle n'est requise.
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i>
+            {% if holiday %}Enregistrer les modifications{% else %}Créer la suspension{% endif %}
+          </button>
+          <a href="{% url 'timetable:holiday_list' %}" class="btn btn-outline-secondary">Annuler</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% if not holiday %}
+<script>
+(function () {
+  const startInput = document.getElementById('start_date');
+  const endInput   = document.getElementById('end_date');
+  const box        = document.getElementById('conflictBox');
+  const list       = document.getElementById('conflictList');
+  let timer;
+
+  function fetchConflicts() {
+    const sd = startInput.value;
+    const ed = endInput.value;
+    if (!sd || !ed || sd > ed) { box.classList.add('d-none'); return; }
+
+    // Récupère les classes cochées
+    const checkedClasses = [...document.querySelectorAll('[name=class_group_ids]:checked')];
+    if (!checkedClasses.length) { box.classList.add('d-none'); return; }
+
+    // Collecte des teacher_ids uniques via l'API sur chaque classe
+    // Simplifié : on utilise l'API teacher-conflicts avec start/end (pas de teacher_id spécifique ici)
+    // On affiche juste un résumé des séances planifiées sur cette plage
+    fetch(`{% url 'timetable:teacher_conflicts_api' %}?start_date=${sd}&end_date=${ed}&all=1`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.conflicts && data.conflicts.length) {
+          list.innerHTML = data.conflicts.map(c =>
+            `<li>${c.subject} — ${c.class_group} — ${c.day} ${c.time}</li>`
+          ).join('');
+          box.classList.remove('d-none');
+        } else {
+          box.classList.add('d-none');
+        }
+      }).catch(() => box.classList.add('d-none'));
+  }
+
+  function debounce() { clearTimeout(timer); timer = setTimeout(fetchConflicts, 400); }
+  startInput.addEventListener('change', debounce);
+  endInput.addEventListener('change', debounce);
+})();
+</script>
+{% endif %}
+{% endblock %}

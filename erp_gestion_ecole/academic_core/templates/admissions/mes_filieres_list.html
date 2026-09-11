@@ -1,0 +1,52 @@
+{% extends 'base/base.html' %}
+{% block title %}Mes filières — Portail d'admission{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003d82;"><i class="bi bi-mortarboard-fill"></i></span>
+    Mes filières — Portail d'admission
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'admissions:department_presentation_edit' %}" class="btn btn-sm" style="background:#0f766e;color:#fff;">
+      <i class="bi bi-camera-reels-fill me-1"></i>Présentation du département
+    </a>
+    <a href="{% url 'admissions:department_admissions_dates_list' %}" class="btn btn-sm" style="background:#003d82;color:#fff;">
+      <i class="bi bi-calendar-range-fill me-1"></i>Dates d'inscription
+    </a>
+  </div>
+</div>
+
+<div class="card-section">
+  {% if programs %}
+  <div class="table-responsive">
+    <table class="table" style="margin:0;font-size:.85rem;">
+      <thead>
+        <tr><th>Filière</th><th>Niveau</th><th>Contenu portail</th><th>Ouvert aux candidatures</th><th>Places</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for p in programs %}
+        <tr>
+          <td>{{ p.name }}</td>
+          <td>{{ p.level }}</td>
+          <td>
+            {% if p.objectifs and p.competences and p.debouches and p.modalites_admission %}
+              <span class="badge bg-success">Complet</span>
+            {% elif p.objectifs or p.competences or p.debouches or p.modalites_admission %}
+              <span class="badge bg-warning text-dark">Partiel</span>
+            {% else %}
+              <span class="badge bg-secondary">Vide</span>
+            {% endif %}
+          </td>
+          <td>{% if p.ouvert_admissions %}<span class="badge bg-success">Oui</span>{% else %}<span class="badge bg-secondary">Non</span>{% endif %}</td>
+          <td>{{ p.places_disponibles|default:"Illimité" }}</td>
+          <td><a href="{% url 'admissions:filiere_content_edit' p.pk %}" class="btn btn-sm btn-outline-primary">Éditer</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted p-3 mb-0">Aucune filière dans votre département.</p>
+  {% endif %}
+</div>
+{% endblock %}

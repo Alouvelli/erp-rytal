@@ -1,0 +1,129 @@
+{% extends 'base/base.html' %}
+{% block title %}Mes notes{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Mes notes</li>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-mortarboard"></i></span>
+    Mes notes
+  </h1>
+  {% if available_years|length > 1 %}
+  <form method="get" class="d-flex align-items-center gap-2">
+    <label for="grades-year-select" class="text-muted" style="font-size:.78rem;font-weight:600;">Année académique</label>
+    <select id="grades-year-select" name="annee" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+      {% for y in available_years %}
+      <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y.label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  {% endif %}
+</div>
+
+<!-- Moyennes semestrielles -->
+{% if semester_avgs %}
+<div class="row g-3 mb-3">
+  {% for avg in semester_avgs %}
+  <div class="col-md-3 col-sm-6">
+    <div class="card-section h-100">
+      <div style="padding:16px;text-align:center;">
+        <div style="font-size:.72rem;color:#94a3b8;text-transform:uppercase;font-weight:700;letter-spacing:.05em;margin-bottom:6px;">
+          {{ avg.semester }}
+        </div>
+        <div style="font-size:2rem;font-weight:800;
+          color:{% if avg.average >= 10 %}#166534{% else %}#dc2626{% endif %};">
+          {{ avg.average }}
+        </div>
+        <div style="font-size:.74rem;color:#64748b;">/ 20</div>
+        {% if avg.mention %}
+        <div style="margin-top:8px;">
+          <span style="font-size:.73rem;padding:2px 10px;border-radius:10px;
+            background:{% if avg.average >= 14 %}#dcfce7{% elif avg.average >= 10 %}#e0f2fe{% else %}#fee2e2{% endif %};
+            color:{% if avg.average >= 14 %}#166534{% elif avg.average >= 10 %}#0369a1{% else %}#991b1b{% endif %};">
+            {{ avg.mention }}
+          </span>
+        </div>
+        {% endif %}
+        {% if avg.rank %}
+        <div style="margin-top:6px;font-size:.72rem;color:#94a3b8;">
+          Rang {{ avg.rank }}/{{ avg.total_students }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Tableau des notes -->
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <i class="bi bi-list-ol me-2" style="color:var(--navy);"></i>
+      Détail des notes
+    </h6>
+  </div>
+  <div style="padding:0 16px 16px;">
+    <table id="gradesTable" class="table table-hover align-middle" style="width:100%;">
+      <thead>
+        <tr>
+          <th>Semestre</th>
+          <th>Module (EC)</th>
+          <th>Évaluation</th>
+          <th>Type</th>
+          <th>Date</th>
+          <th style="text-align:center;">Note</th>
+          <th style="text-align:center;">/ 20</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for grade in grades %}
+        <tr>
+          <td style="font-size:.78rem;color:#64748b;">{{ grade.evaluation.semester }}</td>
+          <td>
+            <div style="font-size:.82rem;font-weight:600;color:var(--navy);">{{ grade.evaluation.subject.code }}</div>
+            <div style="font-size:.72rem;color:#94a3b8;">{{ grade.evaluation.subject.title|truncatechars:30 }}</div>
+          </td>
+          <td style="font-size:.82rem;">{{ grade.evaluation.title }}</td>
+          <td>
+            <span style="font-size:.73rem;background:#f1f5f9;padding:2px 8px;border-radius:8px;">
+              {{ grade.evaluation.evaluation_type }}
+            </span>
+          </td>
+          <td style="font-size:.8rem;white-space:nowrap;">{{ grade.evaluation.date|date:"d/m/Y" }}</td>
+          <td style="text-align:center;">
+            <span style="font-size:1rem;font-weight:800;
+              color:{% if grade.score >= grade.evaluation.max_score|floatformat:0|add:'0' %}#166534
+                   {% else %}#1e293b{% endif %};">
+              {{ grade.score }}
+            </span>
+            <span style="font-size:.72rem;color:#94a3b8;">/{{ grade.evaluation.max_score }}</span>
+          </td>
+          <td style="text-align:center;">
+            {% if grade.evaluation.max_score %}
+            {% widthratio grade.score grade.evaluation.max_score 20 %}
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">
+            <i class="bi bi-inbox d-block mb-2" style="font-size:2rem;color:#cbd5e1;"></i>
+            Aucune note disponible pour l'instant
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(function () {
+  $('#gradesTable').DataTable({ order: [[0,'asc'],[1,'asc']] });
+});
+</script>
+{% endblock %}

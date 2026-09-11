@@ -1,0 +1,72 @@
+{% extends "base/base.html" %}
+
+{% block title %}Code d'activation de la plateforme{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-shield-lock-fill me-2"></i>Code d'activation de la plateforme
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Réservé au Super Administrateur</p>
+  </div>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card-section" style="padding:24px;">
+      {% if locked %}
+      <div class="alert alert-danger" style="font-size:.82rem;">
+        <i class="bi bi-lock-fill me-1"></i>Trop de tentatives échouées. Compte verrouillé, réessayez plus tard.
+      </div>
+      {% elif not unlocked %}
+      <p class="text-muted" style="font-size:.85rem;">
+        Cet onglet est désactivé par défaut. Saisissez le code d'activation
+        actuel pour l'activer et pouvoir en définir un nouveau. Si vous ne
+        l'avez pas, il faut contacter l'administrateur de la plateforme.
+      </p>
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-4">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Code actuel <span class="text-danger">*</span></label>
+          <input type="password" name="current_code" class="form-control" required autocomplete="off">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-unlock-fill me-1"></i>Activer l'onglet</button>
+      </form>
+      {% if attempts_remaining < 4 %}
+      <div class="alert alert-warning mt-3 mb-0" style="font-size:.8rem;">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        {% if attempts_remaining == 1 %}
+          Attention : il vous reste 1 tentative avant le verrouillage du compte pendant 24h.
+        {% else %}
+          Attention : il vous reste {{ attempts_remaining }} tentatives avant le verrouillage du compte pendant 24h.
+        {% endif %}
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="alert alert-success" style="font-size:.82rem;">
+        <i class="bi bi-unlock-fill me-1"></i>Onglet activé — définissez le nouveau code ci-dessous (valable {{ unlock_minutes }} minutes).
+      </div>
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Nouveau code (12 caractères minimum) <span class="text-danger">*</span></label>
+          <input type="password" name="new_code" class="form-control" minlength="12" required autocomplete="new-password">
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Confirmer le nouveau code <span class="text-danger">*</span></label>
+          <input type="password" name="new_code_confirm" class="form-control" minlength="12" required autocomplete="new-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Modifier le code</button>
+      </form>
+
+      <div class="text-center mt-4 pt-3 border-top">
+        <a href="{% url 'accounts:platform_activation_forgot' %}" style="font-size:.8rem;color:var(--navy);text-decoration:none;">
+          <i class="bi bi-question-circle me-1"></i>Code actuel oublié ? Recevoir un lien de réinitialisation par email
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends 'base/base.html' %}
+{% block title %}Recommandation — {{ reco.student }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:recommendation_list' %}">Recommandations</a></li>
+<li class="breadcrumb-item active">{{ reco.student }}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-envelope-paper-fill"></i></span>
+    Recommandation — {{ reco.student }}
+  </h1>
+  {% if reco.lettre_pdf %}
+  <a href="{{ reco.lettre_pdf.url }}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>Voir la lettre PDF</a>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title">Demande</h6></div>
+      <div class="p-3" style="font-size:.85rem;">
+        <div class="mb-2"><strong>Étudiant :</strong> {{ reco.student }}</div>
+        <div class="mb-2"><strong>Statut :</strong> <span class="badge bg-{{ reco.statut_color }}">{{ reco.get_status_display }}</span></div>
+        <div class="mb-2"><strong>Destinataire :</strong> {{ reco.destinataire|default:"—" }}</div>
+        <div class="mb-2"><strong>Programme concerné :</strong> {{ reco.programme_concerne|default:"—" }}</div>
+        <div class="mb-2"><strong>Assignée à :</strong> {{ reco.assigned_to.get_full_name|default:"—" }}</div>
+        <div class="mb-2"><strong>Date de demande :</strong> {{ reco.date_demande|date:"d/m/Y H:i" }}</div>
+        {% if reco.date_livraison %}<div class="mb-2"><strong>Date de livraison :</strong> {{ reco.date_livraison|date:"d/m/Y H:i" }}</div>{% endif %}
+        <hr>
+        <div class="mb-2"><strong>Motif :</strong><br>{{ reco.motif|linebreaksbr }}</div>
+        {% if reco.observations_etudiant %}<div class="mb-2"><strong>Observations de l'étudiant :</strong><br>{{ reco.observations_etudiant|linebreaksbr }}</div>{% endif %}
+        {% if reco.motif_rejet %}<div class="mb-2 text-danger"><strong>Motif de rejet :</strong><br>{{ reco.motif_rejet|linebreaksbr }}</div>{% endif %}
+      </div>
+    </div>
+
+    {% if reco.status == 'SIGNEE' or reco.status == 'LIVREE' %}
+    <div class="card-section mt-3 p-3">
+      <form method="post" action="{% url 'coip:recommendation_pdf_generate' reco.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-file-earmark-pdf me-1"></i>Générer / régénérer la lettre PDF</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title">Changer le statut</h6></div>
+      <div class="p-3">
+        <form method="post">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Nouveau statut</label>
+              {{ form.status }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Assignée à</label>
+              {{ form.assigned_to }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Commentaire (obligatoire en cas de rejet)</label>
+              {{ form.comment }}
+            </div>
+          </div>
+          <div class="d-flex justify-content-end mt-3">
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Mettre à jour</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card-section mt-3">
+      <div class="card-section-header"><h6 class="card-section-title">Historique</h6></div>
+      <div class="table-responsive">
+        <table class="table table-sm mb-0">
+          <thead><tr><th>Date</th><th>Statut</th><th>Commentaire</th><th>Par</th></tr></thead>
+          <tbody>
+            {% for h in history %}
+            <tr>
+              <td style="font-size:.82rem;">{{ h.changed_at|date:"d/m/Y H:i" }}</td>
+              <td><span class="badge bg-secondary">{{ h.get_status_display }}</span></td>
+              <td style="font-size:.82rem;">{{ h.comment|default:"—" }}</td>
+              <td style="font-size:.82rem;color:#64748b;">{{ h.changed_by.get_full_name|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Aucun historique.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

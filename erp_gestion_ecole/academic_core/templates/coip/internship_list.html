@@ -1,0 +1,71 @@
+{% extends 'base/base.html' %}
+{% block title %}COIP — Stages{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item active">Stages</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-person-workspace"></i></span>
+    Stages
+  </h1>
+  <div class="d-flex gap-2">
+    <a href="{% url 'coip:offer_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-briefcase me-1"></i>Offres de stage</a>
+    <a href="{% url 'coip:internship_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Nouveau stage</a>
+  </div>
+</div>
+
+<div class="card-section mb-3">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <input type="text" name="q" class="form-control form-control-sm" value="{{ request.GET.q }}" placeholder="Étudiant, titre, partenaire…">
+      </div>
+      <div class="col-md-4">
+        <select name="status" class="form-select form-select-sm">
+          <option value="">Tous statuts</option>
+          {% for code, label in status_choices %}
+          <option value="{{ code }}" {% if selected_status == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{% url 'coip:internship_list' %}" class="btn btn-outline-secondary btn-sm">Réinit.</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="table-responsive">
+    <table class="table" id="tbl-internships">
+      <thead><tr><th>Étudiant</th><th>Titre</th><th>Partenaire</th><th>Début</th><th>Statut</th><th>Note</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for i in internships %}
+        <tr>
+          <td style="font-size:.85rem;font-weight:600;">{{ i.student }}</td>
+          <td style="font-size:.82rem;">{{ i.titre }}</td>
+          <td style="font-size:.82rem;">{{ i.partner.raison_sociale }}</td>
+          <td style="font-size:.82rem;">{{ i.date_debut|date:"d/m/Y" }}</td>
+          <td><span class="badge bg-{{ i.statut_color }}">{{ i.get_status_display }}</span></td>
+          <td style="font-size:.82rem;">{{ i.note|default:"—" }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'coip:internship_edit' i.pk %}" class="btn-action edit" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'coip:internship_delete' i.pk %}" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-center text-muted py-4">Aucun stage enregistré.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>$(document).ready(function(){ $('#tbl-internships').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}}); });</script>
+{% endblock %}

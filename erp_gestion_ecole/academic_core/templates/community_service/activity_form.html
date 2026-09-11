@@ -1,0 +1,102 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if form.instance.pk %}Modifier{% else %}Nouvelle{% endif %} activité{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'community_service:list' %}">Service à la Communauté</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Modifier{% else %}Nouvelle activité{% endif %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0d9488;"><i class="bi bi-people-fill"></i></span>
+    {% if form.instance.pk %}Modifier l'activité{% else %}Nouvelle activité{% endif %}
+  </h1>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-pencil"></i></span>
+          Informations de l'activité
+        </h6>
+      </div>
+      <div class="p-4">
+        <form method="post">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Titre <span class="text-danger">*</span></label>
+              {{ form.titre }}
+              {% if form.titre.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.titre.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Catégorie</label>
+              {{ form.categorie }}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Description</label>
+              {{ form.description }}
+            </div>
+
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Date de début <span class="text-danger">*</span></label>
+              {{ form.date_debut }}
+              {% if form.date_debut.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.date_debut.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Date de fin</label>
+              {{ form.date_fin }}
+              {% if form.date_fin.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.date_fin.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Statut</label>
+              {{ form.statut }}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Lieu</label>
+              {{ form.lieu }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Nombre de participants</label>
+              {{ form.nombre_participants }}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Bénéficiaires</label>
+              {{ form.beneficiaires }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Partenaires associés</label>
+              {{ form.partenaires }}
+            </div>
+
+            <div class="col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Responsable de l'activité</label>
+              {{ form.responsable }}
+            </div>
+
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.85rem;">Résultats / Bilan</label>
+              {{ form.resultats }}
+              <div class="form-text" style="font-size:.72rem;">
+                <i class="bi bi-info-circle me-1"></i>À compléter une fois l'activité réalisée — alimente le rapport d'activités.
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 justify-content-end border-top pt-3 mt-3">
+            <a href="{% url 'community_service:list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-check-lg me-1"></i>Enregistrer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

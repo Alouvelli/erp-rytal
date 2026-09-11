@@ -1,0 +1,67 @@
+{% extends 'base/base.html' %}
+{% block title %}COIP — Orientation{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item active">Orientation</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-compass"></i></span>
+    Séances d'orientation
+  </h1>
+  <a href="{% url 'coip:orientation_session_create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg me-1"></i>Nouvelle séance</a>
+</div>
+
+<div class="card-section mb-3">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <input type="text" name="q" class="form-control form-control-sm" value="{{ request.GET.q }}" placeholder="Nom de l'étudiant…">
+      </div>
+      <div class="col-md-4">
+        <select name="type" class="form-select form-select-sm">
+          <option value="">Tous types</option>
+          {% for code, label in type_choices %}
+          <option value="{{ code }}" {% if selected_type == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-search me-1"></i>Filtrer</button>
+        <a href="{% url 'coip:orientation_session_list' %}" class="btn btn-outline-secondary btn-sm">Réinit.</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="table-responsive">
+    <table class="table" id="tbl-orientation">
+      <thead><tr><th>Étudiant</th><th>Type</th><th>Date</th><th>Durée</th><th>Conseiller</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for s in sessions %}
+        <tr>
+          <td style="font-size:.85rem;font-weight:600;">{{ s.student }}</td>
+          <td style="font-size:.82rem;">{{ s.get_type_session_display }}</td>
+          <td style="font-size:.82rem;">{{ s.date_session|date:"d/m/Y H:i" }}</td>
+          <td style="font-size:.82rem;">{{ s.duree_minutes }} min</td>
+          <td style="font-size:.82rem;color:#64748b;">{{ s.conseiller.get_full_name|default:"—" }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'coip:orientation_session_edit' s.pk %}" class="btn-action edit" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <a href="{% url 'coip:orientation_session_delete' s.pk %}" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-muted py-4">Aucune séance enregistrée.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>$(document).ready(function(){ $('#tbl-orientation').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}}); });</script>
+{% endblock %}

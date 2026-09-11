@@ -1,0 +1,452 @@
+{% extends 'base/base.html' %}
+{% load humanize %}
+
+{% block title %}Utilisateurs non affectés{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:users_list' %}">Utilisateurs</a></li>
+<li class="breadcrumb-item active">Non affectés</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#dc2626;"><i class="bi bi-person-x-fill"></i></span>
+    Utilisateurs non affectés
+  </h1>
+  <a href="{% url 'accounts:users_list' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+{% if not dept_qs and not dir_qs and not inst_qs %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+  Aucune structure disponible. Créez d'abord des instituts, directions ou départements.
+</div>
+{% else %}
+
+<form method="post" id="assign-form">
+  {% csrf_token %}
+  <input type="hidden" name="assign_type" id="hidden-assign-type" value="department">
+  <input type="hidden" name="target_id"   id="hidden-target-id"   value="">
+
+  <!-- Barre d'action sticky -->
+  <div id="action-bar" style="position:sticky;top:0;z-index:100;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,.08);">
+
+    <!-- Ligne 1 : Tout sélectionner + compteur -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:700;font-size:.85rem;color:var(--navy);white-space:nowrap;">
+        <input type="checkbox" id="check-global" class="form-check-input" style="width:18px;height:18px;" onchange="toggleAll()">
+        Tout sélectionner
+      </label>
+      <span style="width:1px;height:22px;background:#e2e8f0;display:inline-block;"></span>
+      <span id="sel-count" style="font-size:.82rem;color:#64748b;font-weight:600;">0 sélectionné(s)</span>
+    </div>
+
+    <!-- Ligne 2 : Cascade Institut → Direction/Département -->
+    <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;">
+
+      <!-- Étape 1 : Institut -->
+      <div>
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:5px;">
+          <i class="bi bi-buildings-fill me-1"></i>1. Institut
+        </div>
+        <select id="filter-institut" class="form-select form-select-sm" style="min-width:200px;" onchange="onInstitutChange(this.value)">
+          <option value="">— Choisir un institut —</option>
+          {% for inst in inst_qs %}
+          <option value="{{ inst.faculty.pk }}" data-inst-pk="{{ inst.pk }}">{{ inst.nom }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Flèche -->
+      <div style="padding-bottom:6px;color:#cbd5e1;font-size:1.1rem;"><i class="bi bi-arrow-right"></i></div>
+
+      <!-- Étape 2 : Direction (optionnel) -->
+      <div id="step-direction" style="opacity:.4;transition:opacity .2s;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6d28d9;margin-bottom:5px;">
+          <i class="bi bi-building-fill me-1"></i>2a. Direction <span style="font-weight:400;text-transform:none;font-size:.68rem;">(optionnel)</span>
+        </div>
+        <select id="sel-dir" class="form-select form-select-sm" style="min-width:200px;"
+                onchange="onDestChange('direction', this.value)" disabled>
+          <option value="">— Aucune direction —</option>
+          {% for d in dir_qs %}
+          <option value="{{ d.pk }}" data-faculty="{{ d.faculty.pk|default:'' }}">{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Séparateur -->
+      <div style="padding-bottom:6px;color:#cbd5e1;font-size:.8rem;font-weight:600;">ou</div>
+
+      <!-- Étape 2 : Département (optionnel) -->
+      <div id="step-department" style="opacity:.4;transition:opacity .2s;">
+        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--navy);margin-bottom:5px;">
+          <i class="bi bi-diagram-3-fill me-1"></i>2b. Département <span style="font-weight:400;text-transform:none;font-size:.68rem;">(optionnel)</span>
+        </div>
+        <select id="sel-dept" class="form-select form-select-sm" style="min-width:200px;"
+                onchange="onDestChange('department', this.value)" disabled>
+          <option value="">— Aucun département —</option>
+          {% for dept in dept_qs %}
+          <option value="{{ dept.pk }}" data-faculty="{{ dept.faculty.pk|default:'' }}">
+            {{ dept.name }} ({{ dept.code }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Bouton -->
+      <div style="padding-bottom:2px;">
+        <button type="submit" id="btn-affecter" class="btn btn-primary btn-sm" style="white-space:nowrap;height:34px;" onclick="return confirmAssign()" disabled>
+          <i class="bi bi-person-check-fill me-1"></i>Affecter la sélection
+        </button>
+      </div>
+    </div>
+
+    <!-- Résumé de l'affectation choisie -->
+    <div id="assign-summary" style="margin-top:10px;display:none;font-size:.78rem;color:#374151;">
+      <i class="bi bi-info-circle me-1" style="color:var(--navy);"></i>
+      Affectation : <strong id="summary-text"></strong>
+    </div>
+  </div>
+
+  <!-- Section Enseignants -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white border-bottom py-3">
+      <h6 class="mb-0 fw-bold" style="color:var(--navy);">
+        <i class="bi bi-mortarboard-fill me-2" style="color:#7c3aed;"></i>
+        Enseignants sans département
+        <span class="badge rounded-pill ms-2" style="background:#f3e8ff;color:#7c3aed;">{{ teachers_qs.count }}</span>
+      </h6>
+    </div>
+    <div class="card-body p-0">
+      {% if teachers_qs %}
+      <table class="table table-hover align-middle mb-0">
+        <thead style="background:#f8fafc;font-size:.77rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;">
+          <tr>
+            <th class="px-3 py-3" style="width:44px;"></th>
+            <th class="py-3">Enseignant</th>
+            <th class="py-3">Matricule</th>
+            <th class="py-3">Grade</th>
+            <th class="py-3">Spécialité</th>
+            <th class="py-3 text-center">Action individuelle</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in teachers_qs %}
+          <tr>
+            <td class="px-3">
+              <input type="checkbox" name="user_ids" value="{{ t.user.pk }}"
+                     class="form-check-input cb-item" style="width:16px;height:16px;" onchange="updateCount()">
+            </td>
+            <td>
+              <div class="fw-semibold" style="color:var(--navy);font-size:.88rem;">{{ t.user.get_full_name|default:t.user.username }}</div>
+              <div class="text-muted" style="font-size:.74rem;">{{ t.user.email }}</div>
+            </td>
+            <td><span class="badge" style="background:#ede9fe;color:#5b21b6;font-size:.72rem;">{{ t.matricule }}</span></td>
+            <td style="font-size:.82rem;">{{ t.grade|default:"—" }}</td>
+            <td style="font-size:.82rem;color:#64748b;">{{ t.specialty|truncatechars:28|default:"—" }}</td>
+            <td class="text-center">
+              <button type="button" class="btn btn-sm btn-outline-primary" style="font-size:.72rem;padding:3px 10px;"
+                      data-bs-toggle="modal" data-bs-target="#modal-{{ t.user.pk }}">
+                <i class="bi bi-person-plus-fill me-1"></i>Affecter
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-4 text-muted">
+        <i class="bi bi-check-circle-fill text-success" style="font-size:1.5rem;"></i>
+        <p class="mt-2 mb-0 small">Tous les enseignants sont affectés.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Section Autres utilisateurs -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3">
+      <h6 class="mb-0 fw-bold" style="color:var(--navy);">
+        <i class="bi bi-person-fill me-2" style="color:#ca8a04;"></i>
+        Autres utilisateurs sans affectation
+        <span class="badge rounded-pill ms-2" style="background:#fef9c3;color:#854d0e;">{{ users_qs.count }}</span>
+      </h6>
+    </div>
+    <div class="card-body p-0">
+      {% if users_qs %}
+      <table class="table table-hover align-middle mb-0">
+        <thead style="background:#f8fafc;font-size:.77rem;text-transform:uppercase;letter-spacing:.05em;color:#64748b;">
+          <tr>
+            <th class="px-3 py-3" style="width:44px;"></th>
+            <th class="py-3">Utilisateur</th>
+            <th class="py-3">Rôle</th>
+            <th class="py-3">Email</th>
+            <th class="py-3 text-center">Action individuelle</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users_qs %}
+          <tr>
+            <td class="px-3">
+              <input type="checkbox" name="user_ids" value="{{ u.pk }}"
+                     class="form-check-input cb-item" style="width:16px;height:16px;" onchange="updateCount()">
+            </td>
+            <td>
+              <div class="fw-semibold" style="color:var(--navy);font-size:.88rem;">{{ u.get_full_name|default:u.username }}</div>
+              <div class="text-muted" style="font-size:.74rem;">@{{ u.username }}</div>
+            </td>
+            <td><span class="badge" style="background:#fef3c7;color:#92400e;font-size:.72rem;">{{ u.role.name|default:"—" }}</span></td>
+            <td style="font-size:.82rem;color:#64748b;">{{ u.email|default:"—" }}</td>
+            <td class="text-center">
+              <button type="button" class="btn btn-sm btn-outline-primary" style="font-size:.72rem;padding:3px 10px;"
+                      data-bs-toggle="modal" data-bs-target="#modal-{{ u.pk }}">
+                <i class="bi bi-person-plus-fill me-1"></i>Affecter
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="text-center py-4 text-muted">
+        <i class="bi bi-check-circle-fill text-success" style="font-size:1.5rem;"></i>
+        <p class="mt-2 mb-0 small">Tous les utilisateurs sont affectés.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</form>
+
+<!-- ── Modals affectation individuelle ── -->
+{% for t in teachers_qs %}
+<div class="modal fade" id="modal-{{ t.user.pk }}" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-1">
+        <h6 class="modal-title fw-bold"><i class="bi bi-person-plus-fill me-2" style="color:var(--navy);"></i>Affecter {{ t.user.get_full_name|default:t.user.username }}</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-1">
+        {% include "accounts/_modal_current_assign.html" with u=t.user %}
+        <form method="post" action="{% url 'accounts:assign_user_department' t.user.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="assign_type" class="modal-assign-type" value="">
+          <input type="hidden" name="target_id"   class="modal-target-id"   value="">
+          <input type="hidden" name="next" value="{{ request.path }}">
+          {% include "accounts/_modal_assign_fields.html" with inst_qs=inst_qs dept_qs=dept_qs dir_qs=dir_qs %}
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Confirmer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% for u in users_qs %}
+<div class="modal fade" id="modal-{{ u.pk }}" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-1">
+        <h6 class="modal-title fw-bold"><i class="bi bi-person-plus-fill me-2" style="color:var(--navy);"></i>Affecter {{ u.get_full_name|default:u.username }}</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body pt-1">
+        {% include "accounts/_modal_current_assign.html" with u=u %}
+        <form method="post" action="{% url 'accounts:assign_user_department' u.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="assign_type" class="modal-assign-type" value="">
+          <input type="hidden" name="target_id"   class="modal-target-id"   value="">
+          <input type="hidden" name="next" value="{{ request.path }}">
+          {% include "accounts/_modal_assign_fields.html" with inst_qs=inst_qs dept_qs=dept_qs dir_qs=dir_qs %}
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Confirmer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+{% endif %}
+
+<script>
+var currentType = 'department';
+var tabColors   = {department:'var(--navy)', direction:'#6d28d9', institut:'#0369a1'};
+
+// ── Sélection globale ────────────────────────────────────────────
+function toggleAll() {
+  var master = document.getElementById('check-global');
+  document.querySelectorAll('.cb-item').forEach(function(cb){ cb.checked = master.checked; });
+  updateCount();
+}
+function updateCount() {
+  var n = document.querySelectorAll('.cb-item:checked').length;
+  var t = document.querySelectorAll('.cb-item').length;
+  document.getElementById('sel-count').textContent = n + ' sélectionné' + (n > 1 ? 's' : '');
+  var m = document.getElementById('check-global');
+  m.indeterminate = n > 0 && n < t;
+  m.checked = t > 0 && n === t;
+  updateBtn();
+}
+
+// ── Cascade principale Institut → Direction / Département ─────────
+function onInstitutChange(facId) {
+  // Réinitialiser la destination précédente
+  document.getElementById('hidden-assign-type').value = '';
+  document.getElementById('hidden-target-id').value = '';
+
+  var stepDir  = document.getElementById('step-direction');
+  var stepDept = document.getElementById('step-department');
+  var selDir   = document.getElementById('sel-dir');
+  var selDept  = document.getElementById('sel-dept');
+
+  if (!facId) {
+    stepDir.style.opacity  = '.4';
+    stepDept.style.opacity = '.4';
+    selDir.disabled  = true;  selDir.value  = '';
+    selDept.disabled = true;  selDept.value = '';
+    hideSummary();
+    updateBtn();
+    return;
+  }
+
+  // Filtrer et activer Direction
+  filterSelect(selDir, facId);
+  selDir.disabled = false;
+  stepDir.style.opacity = '1';
+
+  // Filtrer et activer Département
+  filterSelect(selDept, facId);
+  selDept.disabled = false;
+  stepDept.style.opacity = '1';
+
+  // Réinitialiser les deux selects (aucun pré-sélectionné)
+  selDir.value  = '';
+  selDept.value = '';
+  hideSummary();
+  updateBtn();
+}
+
+function filterSelect(sel, facId) {
+  sel.querySelectorAll('option[data-faculty]').forEach(function(o) {
+    // Afficher si pas de filtre, ou si faculty correspond, ou si direction sans faculty (ancienne donnée)
+    var match = !facId || o.dataset.faculty === String(facId) || o.dataset.faculty === '';
+    o.style.display = match ? '' : 'none';
+  });
+}
+
+function onDestChange(type, val) {
+  if (!val) {
+    // L'utilisateur a remis sur "—", vérifier si l'autre a encore une valeur
+    updateBtn();
+    hideSummary();
+    return;
+  }
+  // Un seul choix actif à la fois : vider l'autre
+  if (type === 'direction') {
+    document.getElementById('sel-dept').value = '';
+  } else {
+    document.getElementById('sel-dir').value = '';
+  }
+  document.getElementById('hidden-assign-type').value = val ? type : '';
+  document.getElementById('hidden-target-id').value   = val;
+
+  // Résumé
+  var selEl  = document.getElementById(type === 'direction' ? 'sel-dir' : 'sel-dept');
+  var label  = selEl.options[selEl.selectedIndex] ? selEl.options[selEl.selectedIndex].text : '';
+  var instEl = document.getElementById('filter-institut');
+  var instLabel = instEl.options[instEl.selectedIndex] ? instEl.options[instEl.selectedIndex].text : '';
+  var typeLabel = {direction:'Direction', department:'Département'}[type];
+  showSummary(instLabel + ' → ' + typeLabel + ' : ' + label);
+  updateBtn();
+}
+
+function showSummary(text) {
+  var s = document.getElementById('assign-summary');
+  document.getElementById('summary-text').textContent = text;
+  s.style.display = 'block';
+}
+function hideSummary() {
+  document.getElementById('assign-summary').style.display = 'none';
+}
+
+function updateBtn() {
+  var n   = document.querySelectorAll('.cb-item:checked').length;
+  var tid = document.getElementById('hidden-target-id').value;
+  document.getElementById('btn-affecter').disabled = !(n > 0 && tid);
+}
+
+function confirmAssign() {
+  var n   = document.querySelectorAll('.cb-item:checked').length;
+  var tid = document.getElementById('hidden-target-id').value;
+  if (!n)   { alert('Sélectionnez au moins un utilisateur.'); return false; }
+  if (!tid) { alert('Choisissez une direction ou un département.'); return false; }
+  var sumText = document.getElementById('summary-text').textContent;
+  return confirm('Affecter ' + n + ' utilisateur(s) ?\n' + sumText);
+}
+
+// ── Modals individuels — même flux cascade ────────────────────────
+function modalOnInstitutChange(modal, facId) {
+  modal.querySelector('.modal-assign-type').value = '';
+  modal.querySelector('.modal-target-id').value   = '';
+
+  var selDir  = modal.querySelector('.m-dir-sel');
+  var selDept = modal.querySelector('.m-dept-sel');
+  var wDir    = modal.querySelector('.m-dir-wrap');
+  var wDept   = modal.querySelector('.m-dept-wrap');
+
+  if (!facId) {
+    if (wDir)  wDir.style.opacity  = '.4';
+    if (wDept) wDept.style.opacity = '.4';
+    if (selDir)  { selDir.disabled  = true; selDir.value  = ''; }
+    if (selDept) { selDept.disabled = true; selDept.value = ''; }
+    return;
+  }
+  if (selDir)  { filterSelect(selDir,  facId); selDir.disabled  = false; selDir.value  = ''; }
+  if (selDept) { filterSelect(selDept, facId); selDept.disabled = false; selDept.value = ''; }
+  if (wDir)  wDir.style.opacity  = '1';
+  if (wDept) wDept.style.opacity = '1';
+}
+
+function modalOnDestChange(modal, type, val) {
+  if (!val) return;
+  if (type === 'direction') {
+    var d = modal.querySelector('.m-dept-sel'); if (d) d.value = '';
+  } else {
+    var r = modal.querySelector('.m-dir-sel');  if (r) r.value = '';
+  }
+  modal.querySelector('.modal-assign-type').value = type;
+  modal.querySelector('.modal-target-id').value   = val;
+}
+
+// Initialisation au chargement
+document.addEventListener('DOMContentLoaded', function(){
+  var fi = document.getElementById('filter-institut');
+  var instOpts = fi ? fi.querySelectorAll('option[value]:not([value=""])') : [];
+  // Pré-sélectionner si un seul institut
+  if (instOpts.length === 1) {
+    fi.value = instOpts[0].value;
+    onInstitutChange(fi.value);
+  }
+
+  // Init modals : pré-sélectionner l'institut si unique
+  document.querySelectorAll('.modal').forEach(function(modal){
+    modal.addEventListener('show.bs.modal', function(){
+      var fi2 = modal.querySelector('.modal-filter-inst');
+      if (fi2) {
+        if (instOpts.length === 1) { fi2.value = instOpts[0].value; }
+        modalOnInstitutChange(modal, fi2.value);
+      }
+      modal.querySelector('.modal-assign-type').value = '';
+      modal.querySelector('.modal-target-id').value   = '';
+    });
+  });
+});
+</script>
+{% endblock %}

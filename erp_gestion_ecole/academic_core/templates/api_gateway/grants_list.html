@@ -1,0 +1,71 @@
+{% extends 'base/base.html' %}
+{% block title %}Accès API accordés{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'api_gateway:catalog_list' %}">API de Consommation</a></li>
+<li class="breadcrumb-item active">Accès accordés</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0f172a;"><i class="bi bi-key-fill"></i></span>
+    Accès API accordés
+  </h1>
+</div>
+
+<div class="card-section">
+  <div class="table-responsive">
+    <table class="table table-hover" style="margin:0;">
+      <thead style="background:#f8fafc;">
+        <tr>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;padding:10px 16px;">Utilisateur</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;">Ressource</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;">Clé</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;">Accordé le</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;">Dernière utilisation</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;text-align:center;">Statut</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;text-align:center;width:100px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for grant in grants %}
+        <tr>
+          <td style="padding:10px 16px;font-size:.84rem;">
+            <div style="font-weight:700;color:#1e293b;">{{ grant.user.get_full_name }}</div>
+            <div style="font-size:.72rem;color:#94a3b8;">{{ grant.user.email }}</div>
+          </td>
+          <td style="font-size:.83rem;">{{ grant.resource.name }}</td>
+          <td style="font-size:.78rem;"><code>{{ grant.key_prefix }}…</code></td>
+          <td style="font-size:.78rem;color:#64748b;white-space:nowrap;">{{ grant.created_at|date:"d/m/Y H:i" }}</td>
+          <td style="font-size:.78rem;color:#64748b;white-space:nowrap;">
+            {% if grant.last_used_at %}{{ grant.last_used_at|date:"d/m/Y H:i" }}{% else %}<span style="color:#cbd5e1;">Jamais</span>{% endif %}
+          </td>
+          <td style="text-align:center;">
+            {% if grant.revoked %}
+            <span style="font-size:.72rem;background:#fee2e2;color:#dc2626;padding:3px 10px;border-radius:20px;font-weight:700;">Révoqué</span>
+            {% elif grant.is_valid %}
+            <span style="font-size:.72rem;background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-weight:700;">Actif</span>
+            {% else %}
+            <span style="font-size:.72rem;background:#fef3c7;color:#92400e;padding:3px 10px;border-radius:20px;font-weight:700;">Expiré</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center;">
+            {% if not grant.revoked %}
+            <form method="post" action="{% url 'api_gateway:grant_revoke' grant.pk %}"
+                  onsubmit="return confirm('Révoquer cet accès ?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-danger btn-sm" style="font-size:.72rem;padding:3px 10px;">
+                <i class="bi bi-x-lg"></i> Révoquer
+              </button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8;">Aucun accès accordé pour le moment.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

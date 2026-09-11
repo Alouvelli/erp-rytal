@@ -1,0 +1,80 @@
+{% extends 'base/base.html' %}
+{% block title %}Éditer {{ program.name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003d82;"><i class="bi bi-pencil-square"></i></span>
+    Contenu portail — {{ program.name }}
+  </h1>
+  <a href="{% url 'admissions:mes_filieres_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<div class="card-section p-4 mx-auto" style="max-width: 700px;">
+  {% if program.presentation_image or program.presentation_video %}
+  <div class="mb-4">
+    <p class="small fw-semibold mb-2">Aperçu actuel</p>
+    {% if program.presentation_video %}
+    <video src="{{ program.presentation_video.url }}" controls style="max-width:100%;max-height:220px;border-radius:10px;"></video>
+    {% elif program.presentation_image %}
+    <img src="{{ program.presentation_image.url }}" alt="Présentation" style="max-width:100%;max-height:220px;border-radius:10px;object-fit:cover;">
+    {% endif %}
+  </div>
+  {% endif %}
+  <form method="post" enctype="multipart/form-data" id="filiere-content-form">
+    {% csrf_token %}
+    {% for field in form %}
+    <div class="mb-3">
+      {% if field.name == 'ouvert_admissions' %}
+      <div class="form-check">
+        {{ field }}
+        <label class="form-check-label small fw-semibold">{{ field.label }}</label>
+      </div>
+      {% elif 'rich-text-source' in field.field.widget.attrs.class|default:'' %}
+      <label class="form-label small fw-semibold">{{ field.label }}</label>
+      <div class="rich-text-toolbar btn-group mb-1" role="group">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="bold" title="Gras"><i class="bi bi-type-bold"></i></button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="italic" title="Italique"><i class="bi bi-type-italic"></i></button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="insertUnorderedList" title="Liste à puces"><i class="bi bi-list-ul"></i></button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="insertOrderedList" title="Liste numérotée"><i class="bi bi-list-ol"></i></button>
+      </div>
+      <div class="rich-text-editor form-control" contenteditable="true"
+           data-target="id_{{ field.name }}" style="min-height:140px;overflow-y:auto;">{{ field.value|default:''|safe }}</div>
+      {{ field }}
+      {% else %}
+      <label class="form-label small fw-semibold">{{ field.label }}</label>
+      {{ field }}
+      {% endif %}
+      {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
+      {% if field.help_text %}<div class="text-muted small mt-1">{{ field.help_text }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+  </form>
+</div>
+
+<script>
+(function() {
+  document.execCommand('styleWithCSS', false, false);
+  document.querySelectorAll('.rich-text-toolbar').forEach(function(toolbar) {
+    toolbar.querySelectorAll('button').forEach(function(btn) {
+      // mousedown + preventDefault (pas click) : un bouton cliqué sur
+      // "click" a déjà volé le focus au contenteditable au moment du
+      // mousedown, ce qui perd/collapse la sélection avant que execCommand
+      // ne s'exécute. En interceptant dès mousedown, le focus — et donc la
+      // sélection en cours dans l'éditeur — est préservé.
+      btn.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        document.execCommand(btn.dataset.cmd, false, null);
+      });
+    });
+  });
+  document.getElementById('filiere-content-form').addEventListener('submit', function() {
+    document.querySelectorAll('.rich-text-editor').forEach(function(div) {
+      document.getElementById(div.dataset.target).value = div.innerHTML;
+    });
+  });
+})();
+</script>
+{% endblock %}

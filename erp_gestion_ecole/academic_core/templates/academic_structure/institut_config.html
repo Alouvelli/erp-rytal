@@ -1,0 +1,616 @@
+{% extends 'base/base.html' %}
+{% block title %}Configuration de l'établissement{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Configuration établissement</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <div>
+    <h4 class="mb-0 fw-bold" style="color:var(--navy);">
+      <i class="bi bi-building-gear me-2" style="color:var(--accent);"></i>Configuration de l'établissement
+    </h4>
+    <p class="text-muted mb-0" style="font-size:.82rem;">Personnalisation de la plateforme pour votre institut</p>
+  </div>
+  {% if config.logo %}
+  <img src="{{ config.logo.url }}" alt="Logo" style="height:56px;object-fit:contain;border-radius:8px;border:1px solid #e2e8f0;padding:4px;background:#fff;">
+  {% endif %}
+</div>
+
+<!-- Onglets de navigation -->
+<ul class="nav nav-pills mb-4 gap-1 flex-wrap" id="configTabs">
+  {% for t_key, t_label, t_icon in tabs %}
+  <li class="nav-item">
+    <a class="nav-link {% if tab == t_key %}active{% endif %} px-3 py-2"
+       href="?tab={{ t_key }}"
+       style="border-radius:10px;font-size:.83rem;font-weight:600;{% if tab == t_key %}background:var(--navy);color:#fff;{% else %}color:var(--navy);background:#F1F5F9;{% endif %}">
+      <i class="bi bi-{{ t_icon }} me-1"></i>{{ t_label }}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB : IDENTITÉ -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+{% if tab == 'identite' %}
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="action" value="save_config">
+  <input type="hidden" name="current_tab" value="identite">
+
+  <div class="row g-4">
+    <!-- Logo -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm" style="border-radius:14px;">
+        <div class="card-header border-0 pb-0 pt-3 px-4" style="background:transparent;">
+          <h6 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-image me-2" style="color:var(--accent);"></i>Logo de l'établissement</h6>
+        </div>
+        <div class="card-body px-4 pb-4">
+          <div class="d-flex align-items-center gap-4 flex-wrap">
+            {% if config.logo %}
+            <div class="text-center">
+              <img src="{{ config.logo.url }}" alt="Logo actuel" style="max-height:120px;max-width:200px;object-fit:contain;border:2px solid #e2e8f0;border-radius:10px;padding:8px;background:#fff;">
+              <div class="mt-2">
+                <label class="form-check-label" style="font-size:.78rem;color:#64748b;cursor:pointer;">
+                  <input type="checkbox" name="remove_logo" value="1" class="form-check-input me-1"> Supprimer le logo
+                </label>
+              </div>
+            </div>
+            {% else %}
+            <div style="width:140px;height:100px;border:2px dashed #e2e8f0;border-radius:10px;display:flex;align-items:center;justify-content:center;background:#F8FAFC;">
+              <div class="text-center text-muted" style="font-size:.78rem;"><i class="bi bi-image" style="font-size:2rem;display:block;"></i>Aucun logo</div>
+            </div>
+            {% endif %}
+            <div style="flex:1;min-width:220px;">
+              <label class="form-label fw-semibold" style="font-size:.84rem;color:var(--navy);">Téléverser un nouveau logo</label>
+              <input type="file" name="logo" class="form-control" accept="image/*" style="border-radius:8px;font-size:.83rem;">
+              <div class="text-muted mt-1" style="font-size:.75rem;">Formats : PNG, JPG, SVG — recommandé fond transparent, min. 200×80 px</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Informations principales -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm" style="border-radius:14px;">
+        <div class="card-header border-0 pb-0 pt-3 px-4" style="background:transparent;">
+          <h6 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-buildings me-2" style="color:var(--accent);"></i>Informations principales</h6>
+        </div>
+        <div class="card-body px-4 pb-4">
+          <div class="row g-3">
+            <div class="col-12 col-md-8">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Nom complet de l'établissement <span class="text-danger">*</span></label>
+              <input type="text" name="nom" class="form-control" value="{{ config.nom }}" placeholder="Ex : Institut Supérieur d'Informatique" style="border-radius:8px;">
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Sigle / Acronyme</label>
+              <input type="text" name="sigle" class="form-control" value="{{ config.sigle }}" placeholder="Ex : ISI" style="border-radius:8px;">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Devise / Slogan</label>
+              <input type="text" name="slogan" class="form-control" value="{{ config.slogan }}" placeholder="Ex : L'excellence au service du numérique" style="border-radius:8px;">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coordonnées -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm" style="border-radius:14px;">
+        <div class="card-header border-0 pb-0 pt-3 px-4" style="background:transparent;">
+          <h6 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-geo-alt me-2" style="color:var(--accent);"></i>Coordonnées</h6>
+        </div>
+        <div class="card-body px-4 pb-4">
+          <div class="row g-3">
+            <div class="col-12 col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Pays</label>
+              <input type="text" name="pays" class="form-control" value="{{ config.pays }}" placeholder="Ex : Sénégal" style="border-radius:8px;">
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Ville</label>
+              <input type="text" name="ville" class="form-control" value="{{ config.ville }}" placeholder="Ex : Dakar" style="border-radius:8px;">
+            </div>
+            <div class="col-12 col-md-4">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Téléphone</label>
+              <input type="text" name="telephone" class="form-control" value="{{ config.telephone }}" placeholder="Ex : +221 33 XXX XX XX" style="border-radius:8px;">
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Adresse complète</label>
+              <textarea name="adresse" class="form-control" rows="2" placeholder="Rue, quartier, code postal…" style="border-radius:8px;">{{ config.adresse }}</textarea>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Email institutionnel</label>
+              <div class="input-group">
+                <span class="input-group-text" style="background:#F1F5F9;border-right:0;"><i class="bi bi-envelope" style="color:#64748b;"></i></span>
+                <input type="email" name="email" class="form-control" value="{{ config.email }}" placeholder="contact@isi.sn" style="border-radius:0 8px 8px 0;border-left:0;">
+              </div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Site web</label>
+              <div class="input-group">
+                <span class="input-group-text" style="background:#F1F5F9;border-right:0;"><i class="bi bi-globe" style="color:#64748b;"></i></span>
+                <input type="url" name="site_web" class="form-control" value="{{ config.site_web }}" placeholder="https://www.isi.sn" style="border-radius:0 8px 8px 0;border-left:0;">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 d-flex justify-content-end">
+    <button type="submit" class="btn px-4" style="background:var(--navy);color:#fff;border-radius:10px;font-size:.88rem;font-weight:600;">
+      <i class="bi bi-check-circle-fill me-1"></i>Enregistrer les modifications
+    </button>
+  </div>
+</form>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB : LÉGAL -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+{% elif tab == 'legal' %}
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="action" value="save_config">
+  <input type="hidden" name="current_tab" value="legal">
+
+  <!-- champs identité cachés pour ne pas les écraser -->
+  <input type="hidden" name="nom"           value="{{ config.nom }}">
+  <input type="hidden" name="sigle"         value="{{ config.sigle }}">
+  <input type="hidden" name="slogan"        value="{{ config.slogan }}">
+  <input type="hidden" name="pays"          value="{{ config.pays }}">
+  <input type="hidden" name="ville"         value="{{ config.ville }}">
+  <input type="hidden" name="adresse"       value="{{ config.adresse }}">
+  <input type="hidden" name="telephone"     value="{{ config.telephone }}">
+  <input type="hidden" name="email"         value="{{ config.email }}">
+  <input type="hidden" name="site_web"      value="{{ config.site_web }}">
+  <input type="hidden" name="dg_titre"      value="{{ config.dg_titre }}">
+  <input type="hidden" name="dg_nom"        value="{{ config.dg_nom }}">
+  <input type="hidden" name="de_titre"      value="{{ config.de_titre }}">
+  <input type="hidden" name="de_nom"        value="{{ config.de_nom }}">
+  <input type="hidden" name="couleur_primaire"   value="{{ config.couleur_primaire }}">
+  <input type="hidden" name="couleur_secondaire" value="{{ config.couleur_secondaire }}">
+
+  <div class="card border-0 shadow-sm" style="border-radius:14px;">
+    <div class="card-header border-0 pb-0 pt-3 px-4" style="background:transparent;">
+      <h6 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-file-earmark-text me-2" style="color:var(--accent);"></i>Informations légales &amp; administratives</h6>
+    </div>
+    <div class="card-body px-4 pb-4">
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <label class="form-label fw-semibold" style="font-size:.84rem;">Année de création</label>
+          <input type="number" name="annee_creation" class="form-control" value="{{ config.annee_creation|default:'' }}" min="1900" max="2099" placeholder="Ex : 1998" style="border-radius:8px;">
+        </div>
+        <div class="col-12 col-md-8">
+          <label class="form-label fw-semibold" style="font-size:.84rem;">Numéro d'autorisation / Agrément</label>
+          <input type="text" name="numero_autorisation" class="form-control" value="{{ config.numero_autorisation }}" placeholder="Ex : Arrêté n° 12345 du 01/01/2000" style="border-radius:8px;">
+        </div>
+        <div class="col-12">
+          <label class="form-label fw-semibold" style="font-size:.84rem;">Statut juridique</label>
+          <input type="text" name="statut_juridique" class="form-control" value="{{ config.statut_juridique }}" placeholder="Ex : Établissement privé d'enseignement supérieur" style="border-radius:8px;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 d-flex justify-content-end">
+    <button type="submit" class="btn px-4" style="background:var(--navy);color:#fff;border-radius:10px;font-size:.88rem;font-weight:600;">
+      <i class="bi bi-check-circle-fill me-1"></i>Enregistrer
+    </button>
+  </div>
+</form>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB : SIGNATAIRES -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+{% elif tab == 'signataires' %}
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="action" value="save_config">
+  <input type="hidden" name="current_tab" value="signataires">
+  <input type="hidden" name="nom"           value="{{ config.nom }}">
+  <input type="hidden" name="sigle"         value="{{ config.sigle }}">
+  <input type="hidden" name="slogan"        value="{{ config.slogan }}">
+  <input type="hidden" name="pays"          value="{{ config.pays }}">
+  <input type="hidden" name="ville"         value="{{ config.ville }}">
+  <input type="hidden" name="adresse"       value="{{ config.adresse }}">
+  <input type="hidden" name="telephone"     value="{{ config.telephone }}">
+  <input type="hidden" name="email"         value="{{ config.email }}">
+  <input type="hidden" name="site_web"      value="{{ config.site_web }}">
+  <input type="hidden" name="annee_creation"       value="{{ config.annee_creation|default:'' }}">
+  <input type="hidden" name="numero_autorisation"  value="{{ config.numero_autorisation }}">
+  <input type="hidden" name="statut_juridique"     value="{{ config.statut_juridique }}">
+  <input type="hidden" name="couleur_primaire"     value="{{ config.couleur_primaire }}">
+  <input type="hidden" name="couleur_secondaire"   value="{{ config.couleur_secondaire }}">
+
+  <div class="card border-0 shadow-sm" style="border-radius:14px;">
+    <div class="card-header border-0 pb-0 pt-3 px-4" style="background:transparent;">
+      <h6 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-pen me-2" style="color:var(--accent);"></i>Signataires officiels</h6>
+      <p class="text-muted mb-0" style="font-size:.78rem;">Ces informations apparaissent sur les bulletins, certificats et attestations.</p>
+    </div>
+    <div class="card-body px-4 pb-4">
+      <div class="row g-4">
+        <!-- Directeur Général -->
+        <div class="col-12 col-md-6">
+          <div class="p-3" style="background:#F8FAFC;border-radius:10px;border:1px solid #e2e8f0;">
+            <div class="fw-bold mb-3" style="font-size:.84rem;color:var(--navy);"><i class="bi bi-person-badge-fill me-1" style="color:var(--accent);"></i>Direction Générale</div>
+            <div class="mb-3">
+              <label class="form-label" style="font-size:.82rem;font-weight:600;">Titre / Fonction</label>
+              <input type="text" name="dg_titre" class="form-control form-control-sm" value="{{ config.dg_titre }}" placeholder="Ex : Directeur Général" style="border-radius:7px;">
+            </div>
+            <div>
+              <label class="form-label" style="font-size:.82rem;font-weight:600;">Nom complet</label>
+              <input type="text" name="dg_nom" class="form-control form-control-sm" value="{{ config.dg_nom }}" placeholder="Prénom NOM" style="border-radius:7px;">
+            </div>
+          </div>
+        </div>
+        <!-- Directeur des Études -->
+        <div class="col-12 col-md-6">
+          <div class="p-3" style="background:#F8FAFC;border-radius:10px;border:1px solid #e2e8f0;">
+            <div class="fw-bold mb-3" style="font-size:.84rem;color:var(--navy);"><i class="bi bi-person-badge me-1" style="color:var(--accent);"></i>Direction des Études</div>
+            <div class="mb-3">
+              <label class="form-label" style="font-size:.82rem;font-weight:600;">Titre / Fonction</label>
+              <input type="text" name="de_titre" class="form-control form-control-sm" value="{{ config.de_titre }}" placeholder="Ex : Directrice des Études" style="border-radius:7px;">
+            </div>
+            <div>
+              <label class="form-label" style="font-size:.82rem;font-weight:600;">Nom complet</label>
+              <input type="text" name="de_nom" class="form-control form-control-sm" value="{{ config.de_nom }}" placeholder="Prénom NOM" style="border-radius:7px;">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 d-flex justify-content-end">
+    <button type="submit" class="btn px-4" style="background:var(--navy);color:#fff;border-radius:10px;font-size:.88rem;font-weight:600;">
+      <i class="bi bi-check-circle-fill me-1"></i>Enregistrer
+    </button>
+  </div>
+</form>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB : FILIATIONS -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+{% elif tab == 'filiations' %}
+
+<!-- Formulaire d'ajout -->
+<div class="card border-0 shadow-sm mb-4" style="border-radius:14px;">
+  <div class="card-header border-0 pb-0 pt-3 px-4" style="background:transparent;">
+    <h6 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-plus-circle me-2" style="color:var(--accent);"></i>Ajouter une filiation / tutelle</h6>
+  </div>
+  <div class="card-body px-4 pb-4">
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_filiation">
+      <div class="row g-3 align-items-end">
+        <div class="col-12 col-md-4">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Nom <span class="text-danger">*</span></label>
+          <input type="text" name="fil_nom" class="form-control form-control-sm {% if errors.fil_nom %}is-invalid{% endif %}"
+                 placeholder="Ex : Ministère de l'Enseignement Supérieur" style="border-radius:7px;" required>
+          {% if errors.fil_nom %}<div class="invalid-feedback">{{ errors.fil_nom }}</div>{% endif %}
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Type</label>
+          <select name="fil_type" class="form-select form-select-sm" style="border-radius:7px;">
+            {% for val, lbl in TYPE_CHOICES %}
+            <option value="{{ val }}">{{ lbl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Logo</label>
+          <input type="file" name="fil_logo" class="form-control form-control-sm" accept="image/*" style="border-radius:7px;">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Site web</label>
+          <input type="url" name="fil_site_web" class="form-control form-control-sm" placeholder="https://…" style="border-radius:7px;">
+        </div>
+        <div class="col-3 col-md-1">
+          <label class="form-label fw-semibold" style="font-size:.83rem;">Ordre</label>
+          <input type="number" name="fil_ordre" class="form-control form-control-sm" value="0" min="0" style="border-radius:7px;">
+        </div>
+        <div class="col-3 col-md-1 text-center">
+          <label class="form-label fw-semibold d-block" style="font-size:.83rem;">Actif</label>
+          <div class="form-check form-switch d-flex justify-content-center">
+            <input class="form-check-input" type="checkbox" name="fil_actif" value="1" checked style="cursor:pointer;">
+          </div>
+        </div>
+        <div class="col-12 col-md-auto">
+          <button type="submit" class="btn btn-sm w-100" style="background:var(--navy);color:#fff;border-radius:8px;font-size:.83rem;white-space:nowrap;">
+            <i class="bi bi-plus-lg me-1"></i>Ajouter
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Liste des filiations -->
+<div class="card border-0 shadow-sm" style="border-radius:14px;">
+  <div class="card-header border-0 pb-0 pt-3 px-4" style="background:transparent;">
+    <h6 class="fw-bold mb-0" style="color:var(--navy);">Filiations enregistrées <span class="badge ms-1" style="background:#E0E7FF;color:#3730a3;border-radius:20px;font-size:.75rem;">{{ filiations|length }}</span></h6>
+  </div>
+  <div class="card-body p-0">
+    {% if filiations %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0" style="font-size:.83rem;">
+        <thead>
+          <tr style="background:#F8FAFC;">
+            <th class="ps-4 py-2">Logo</th>
+            <th class="py-2">Nom</th>
+            <th class="py-2">Type</th>
+            <th class="py-2">Site web</th>
+            <th class="py-2 text-center">Ordre</th>
+            <th class="py-2 text-center">Statut</th>
+            <th class="py-2 text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for fil in filiations %}
+          <tr>
+            <td class="ps-4 py-2">
+              {% if fil.logo %}
+              <img src="{{ fil.logo.url }}" alt="{{ fil.nom }}" style="height:36px;max-width:80px;object-fit:contain;border-radius:5px;border:1px solid #e2e8f0;background:#fff;padding:2px;">
+              {% else %}
+              <span style="font-size:.75rem;color:#94a3b8;font-style:italic;">—</span>
+              {% endif %}
+            </td>
+            <td class="py-2 fw-semibold" style="color:var(--navy);">{{ fil.nom }}</td>
+            <td class="py-2">
+              <span class="badge" style="
+                {% if fil.type_filiation == 'TUTELLE' %}background:#DBEAFE;color:#1e40af;
+                {% elif fil.type_filiation == 'PARTENAIRE' %}background:#DCFCE7;color:#166534;
+                {% elif fil.type_filiation == 'ACCREDITATION' %}background:#FEF3C7;color:#92400e;
+                {% else %}background:#F3E8FF;color:#6b21a8;{% endif %}
+                border-radius:6px;font-size:.75rem;font-weight:600;">
+                {{ fil.get_type_filiation_display }}
+              </span>
+            </td>
+            <td class="py-2">
+              {% if fil.site_web %}
+              <a href="{{ fil.site_web }}" target="_blank" class="text-decoration-none" style="font-size:.78rem;color:#3b82f6;">
+                <i class="bi bi-box-arrow-up-right me-1"></i>{{ fil.site_web|truncatechars:35 }}
+              </a>
+              {% else %}—{% endif %}
+            </td>
+            <td class="py-2 text-center">{{ fil.ordre }}</td>
+            <td class="py-2 text-center">
+              {% if fil.actif %}
+              <span class="badge" style="background:#DCFCE7;color:#166534;border-radius:6px;font-size:.75rem;">Actif</span>
+              {% else %}
+              <span class="badge" style="background:#F1F5F9;color:#94a3b8;border-radius:6px;font-size:.75rem;">Inactif</span>
+              {% endif %}
+            </td>
+            <td class="py-2 text-center">
+              <div class="d-flex gap-1 justify-content-center">
+                <!-- Bouton modifier -->
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        style="border-radius:7px;font-size:.75rem;padding:2px 8px;"
+                        onclick="openEditModal({{ fil.pk }},'{{ fil.nom|escapejs }}','{{ fil.type_filiation }}','{{ fil.site_web|escapejs }}',{{ fil.ordre }},{{ fil.actif|yesno:'true,false' }})">
+                  <i class="bi bi-pencil-fill"></i>
+                </button>
+                <!-- Bouton supprimer -->
+                <form method="post" style="display:inline;" onsubmit="return confirm('Supprimer « {{ fil.nom|escapejs }} » ?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete_filiation">
+                  <input type="hidden" name="fil_pk" value="{{ fil.pk }}">
+                  <button type="submit" class="btn btn-sm btn-outline-danger" style="border-radius:7px;font-size:.75rem;padding:2px 8px;">
+                    <i class="bi bi-trash3-fill"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-diagram-2" style="font-size:2.5rem;display:block;margin-bottom:.5rem;"></i>
+      Aucune filiation enregistrée. Ajoutez-en une ci-dessus.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Modal modification filiation -->
+<div class="modal fade" id="editFiliationModal" tabindex="-1">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content" style="border-radius:14px;border:0;box-shadow:0 16px 48px rgba(0,0,0,.14);">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-bold" style="color:var(--navy);"><i class="bi bi-pencil-fill me-2" style="color:var(--accent);"></i>Modifier la filiation</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit_filiation">
+        <input type="hidden" name="fil_pk" id="edit-fil-pk">
+        <div class="modal-body px-4">
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.84rem;">Nom</label>
+            <input type="text" name="fil_nom" id="edit-fil-nom" class="form-control" style="border-radius:8px;">
+          </div>
+          <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Type</label>
+              <select name="fil_type" id="edit-fil-type" class="form-select" style="border-radius:8px;">
+                {% for val, lbl in TYPE_CHOICES %}
+                <option value="{{ val }}">{{ lbl }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6 col-md-3">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Ordre</label>
+              <input type="number" name="fil_ordre" id="edit-fil-ordre" class="form-control" min="0" style="border-radius:8px;">
+            </div>
+            <div class="col-6 col-md-3 d-flex flex-column justify-content-end">
+              <label class="form-label fw-semibold" style="font-size:.84rem;">Actif</label>
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="fil_actif" id="edit-fil-actif" value="1" style="cursor:pointer;">
+              </div>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.84rem;">Site web</label>
+            <input type="url" name="fil_site_web" id="edit-fil-site-web" class="form-control" placeholder="https://…" style="border-radius:8px;">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-semibold" style="font-size:.84rem;">Remplacer le logo</label>
+            <input type="file" name="fil_logo" class="form-control" accept="image/*" style="border-radius:8px;font-size:.83rem;">
+          </div>
+          <label class="form-check-label" style="font-size:.78rem;color:#64748b;cursor:pointer;">
+            <input type="checkbox" name="remove_fil_logo" value="1" class="form-check-input me-1"> Supprimer le logo actuel
+          </label>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal" style="border-radius:8px;">Annuler</button>
+          <button type="submit" class="btn btn-sm px-4" style="background:var(--navy);color:#fff;border-radius:8px;">
+            <i class="bi bi-check-circle-fill me-1"></i>Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB : APPARENCE -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+{% elif tab == 'apparence' %}
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="action" value="save_config">
+  <input type="hidden" name="current_tab" value="apparence">
+  <input type="hidden" name="nom"                  value="{{ config.nom }}">
+  <input type="hidden" name="sigle"                value="{{ config.sigle }}">
+  <input type="hidden" name="slogan"               value="{{ config.slogan }}">
+  <input type="hidden" name="pays"                 value="{{ config.pays }}">
+  <input type="hidden" name="ville"                value="{{ config.ville }}">
+  <input type="hidden" name="adresse"              value="{{ config.adresse }}">
+  <input type="hidden" name="telephone"            value="{{ config.telephone }}">
+  <input type="hidden" name="email"                value="{{ config.email }}">
+  <input type="hidden" name="site_web"             value="{{ config.site_web }}">
+  <input type="hidden" name="annee_creation"       value="{{ config.annee_creation|default:'' }}">
+  <input type="hidden" name="numero_autorisation"  value="{{ config.numero_autorisation }}">
+  <input type="hidden" name="statut_juridique"     value="{{ config.statut_juridique }}">
+  <input type="hidden" name="dg_titre"             value="{{ config.dg_titre }}">
+  <input type="hidden" name="dg_nom"               value="{{ config.dg_nom }}">
+  <input type="hidden" name="de_titre"             value="{{ config.de_titre }}">
+  <input type="hidden" name="de_nom"               value="{{ config.de_nom }}">
+
+  <div class="card border-0 shadow-sm" style="border-radius:14px;">
+    <div class="card-header border-0 pb-0 pt-3 px-4" style="background:transparent;">
+      <h6 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-palette2 me-2" style="color:var(--accent);"></i>Palette de couleurs</h6>
+      <p class="text-muted mb-0" style="font-size:.78rem;">Ces couleurs sont utilisées dans les documents PDF générés.</p>
+    </div>
+    <div class="card-body px-4 pb-4">
+      <div class="row g-4 align-items-center">
+        <div class="col-12 col-md-4">
+          <label class="form-label fw-semibold" style="font-size:.84rem;">Couleur principale</label>
+          <div class="d-flex align-items-center gap-3">
+            <input type="color" name="couleur_primaire" id="cp-primary"
+                   value="{{ config.couleur_primaire }}"
+                   style="width:56px;height:40px;border-radius:8px;border:1px solid #e2e8f0;cursor:pointer;padding:2px;">
+            <input type="text" id="cp-primary-hex" class="form-control"
+                   value="{{ config.couleur_primaire }}" placeholder="#00173B"
+                   style="border-radius:8px;font-family:monospace;max-width:110px;"
+                   oninput="document.getElementById('cp-primary').value=this.value">
+          </div>
+          <div class="mt-2 p-2 text-white text-center fw-bold" id="preview-primary"
+               style="background:{{ config.couleur_primaire }};border-radius:8px;font-size:.8rem;">Aperçu couleur principale</div>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label fw-semibold" style="font-size:.84rem;">Couleur secondaire</label>
+          <div class="d-flex align-items-center gap-3">
+            <input type="color" name="couleur_secondaire" id="cp-secondary"
+                   value="{{ config.couleur_secondaire }}"
+                   style="width:56px;height:40px;border-radius:8px;border:1px solid #e2e8f0;cursor:pointer;padding:2px;">
+            <input type="text" id="cp-secondary-hex" class="form-control"
+                   value="{{ config.couleur_secondaire }}" placeholder="#D4AF37"
+                   style="border-radius:8px;font-family:monospace;max-width:110px;"
+                   oninput="document.getElementById('cp-secondary').value=this.value">
+          </div>
+          <div class="mt-2 p-2 text-center fw-bold" id="preview-secondary"
+               style="background:{{ config.couleur_secondaire }};border-radius:8px;font-size:.8rem;color:#000;">Aperçu couleur secondaire</div>
+        </div>
+        <div class="col-12 col-md-4">
+          <label class="form-label fw-semibold" style="font-size:.84rem;">Aperçu combiné</label>
+          <div style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;">
+            <div id="preview-header" style="background:{{ config.couleur_primaire }};padding:10px 14px;font-size:.82rem;font-weight:700;color:#fff;">
+              {{ config.nom|default:"Nom de l'établissement" }}
+            </div>
+            <div id="preview-accent" style="background:{{ config.couleur_secondaire }};height:5px;"></div>
+            <div style="padding:10px 14px;font-size:.78rem;color:#475569;background:#fff;">
+              {{ config.sigle|default:"SIGLE" }} — {{ config.slogan|default:"Devise de l'établissement" }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4 d-flex justify-content-end">
+    <button type="submit" class="btn px-4" style="background:var(--navy);color:#fff;border-radius:10px;font-size:.88rem;font-weight:600;">
+      <i class="bi bi-check-circle-fill me-1"></i>Enregistrer les couleurs
+    </button>
+  </div>
+</form>
+{% endif %}
+
+<!-- Dernière mise à jour -->
+{% if config.updated_at %}
+<div class="mt-3 text-end text-muted" style="font-size:.75rem;">
+  <i class="bi bi-clock-history me-1"></i>
+  Dernière modification : {{ config.updated_at|date:"d/m/Y à H:i" }}
+  {% if config.updated_by %}par <strong>{{ config.updated_by.get_full_name }}</strong>{% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── Couleurs — sync input[color] ↔ input[text] ─────────────────────────────
+(function(){
+  const cp    = document.getElementById('cp-primary');
+  const cs    = document.getElementById('cp-secondary');
+  const cpHex = document.getElementById('cp-primary-hex');
+  const csHex = document.getElementById('cp-secondary-hex');
+  const prevP = document.getElementById('preview-primary');
+  const prevS = document.getElementById('preview-secondary');
+  const prevH = document.getElementById('preview-header');
+  const prevA = document.getElementById('preview-accent');
+
+  if (cp) {
+    cp.addEventListener('input', function(){
+      if (cpHex) cpHex.value = cp.value;
+      if (prevP) prevP.style.background = cp.value;
+      if (prevH) prevH.style.background = cp.value;
+    });
+  }
+  if (cs) {
+    cs.addEventListener('input', function(){
+      if (csHex) csHex.value = cs.value;
+      if (prevS) prevS.style.background = cs.value;
+      if (prevA) prevA.style.background = cs.value;
+    });
+  }
+})();
+
+// ── Modal filiation ────────────────────────────────────────────────────────
+function openEditModal(pk, nom, type, siteWeb, ordre, actif) {
+  document.getElementById('edit-fil-pk').value       = pk;
+  document.getElementById('edit-fil-nom').value      = nom;
+  document.getElementById('edit-fil-type').value     = type;
+  document.getElementById('edit-fil-site-web').value = siteWeb;
+  document.getElementById('edit-fil-ordre').value    = ordre;
+  document.getElementById('edit-fil-actif').checked  = actif;
+  new bootstrap.Modal(document.getElementById('editFiliationModal')).show();
+}
+</script>
+{% endblock %}

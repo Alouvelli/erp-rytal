@@ -1,0 +1,349 @@
+{% extends 'base/base.html' %}
+{% block title %}Émargement — Cahier de texte{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_list' %}">Émargements</a></li>
+<li class="breadcrumb-item active">Signer</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:{% if is_dept_admin %}#b45309{% else %}var(--navy){% endif %};"><i class="bi bi-pen"></i></span>
+    {% if is_dept_admin %}Émargement administrateur{% else %}Émargement — Cahier de texte{% endif %}
+  </h1>
+</div>
+
+<!-- Bannière volume horaire atteint -->
+{% if not volume_ok and not is_dept_admin %}
+<div style="background:#fff1f2;border:1px solid #fecaca;border-radius:10px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:flex-start;gap:14px;">
+  <i class="bi bi-lock-fill" style="font-size:1.6rem;color:#dc2626;flex-shrink:0;margin-top:2px;"></i>
+  <div>
+    <div style="font-weight:700;color:#dc2626;font-size:.9rem;">Volume horaire atteint — Émargement bloqué</div>
+    <div style="font-size:.83rem;color:#7f1d1d;margin-top:4px;">{{ volume_msg }}</div>
+    <a href="{% url 'attendance:extra_request_create' %}?subject={{ sheet.timetable_entry.subject.pk }}&class={{ sheet.timetable_entry.class_group.pk }}&year={{ sheet.timetable_entry.semester.academic_year.pk }}"
+       style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;background:#dc2626;color:#fff;border-radius:8px;padding:6px 14px;font-size:.8rem;font-weight:600;text-decoration:none;">
+      <i class="bi bi-send"></i>Demander des séances supplémentaires
+    </a>
+  </div>
+</div>
+{% endif %}
+
+<!-- Bannière fenêtre temporelle -->
+{% if not signing_allowed and not is_dept_admin and volume_ok %}
+<div style="background:#fff1f2;border:1px solid #fecaca;border-radius:10px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:14px;">
+  <i class="bi bi-clock-history" style="font-size:1.6rem;color:#dc2626;flex-shrink:0;"></i>
+  <div>
+    <div style="font-weight:700;color:#dc2626;font-size:.9rem;">Émargement non disponible</div>
+    <div style="font-size:.83rem;color:#7f1d1d;margin-top:2px;">{{ time_window_msg }}</div>
+  </div>
+</div>
+{% elif signing_allowed and window_opens_at and window_closes_at %}
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:14px;">
+  <i class="bi bi-check-circle-fill" style="font-size:1.4rem;color:#16a34a;flex-shrink:0;"></i>
+  <div style="font-size:.83rem;color:#14532d;">
+    <strong>Fenêtre d'émargement ouverte</strong> — de {{ window_opens_at|time:"H:i" }} à {{ window_closes_at|time:"H:i" }}
+  </div>
+</div>
+{% endif %}
+
+{% if is_dept_admin %}
+<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:14px;">
+  <i class="bi bi-shield-fill-check" style="font-size:1.4rem;color:#b45309;flex-shrink:0;"></i>
+  <div style="font-size:.83rem;color:#78350f;">
+    <strong>Mode administrateur</strong> — Vous signez au nom de l'enseignant
+    <strong>{{ sheet.timetable_entry.teacher.user.get_full_name }}</strong>.
+    La fiche sera <strong>directement validée</strong> après soumission.
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+
+  <!-- Résumé de la séance -->
+  <div class="col-lg-4">
+    <div class="card-section h-100">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-info-circle"></i></span>
+          Récapitulatif de la séance
+        </h6>
+      </div>
+      <div class="p-4">
+        <div class="mb-3 pb-2 border-bottom d-flex justify-content-between" style="font-size:.85rem;">
+          <span style="color:#64748b;font-weight:600;">Enseignant</span>
+          <span style="font-weight:700;color:#1e293b;text-align:right;max-width:60%;">{{ sheet.timetable_entry.teacher.user.get_full_name }}</span>
+        </div>
+        <div class="mb-3 pb-2 border-bottom d-flex justify-content-between" style="font-size:.85rem;">
+          <span style="color:#64748b;font-weight:600;">Module (EC)</span>
+          <span style="font-weight:700;color:#1e293b;text-align:right;max-width:55%;">{{ sheet.timetable_entry.subject.code }} — {{ sheet.timetable_entry.subject.title }}</span>
+        </div>
+        <div class="mb-3 pb-2 border-bottom d-flex justify-content-between" style="font-size:.85rem;">
+          <span style="color:#64748b;font-weight:600;">Classe</span>
+          <span>{{ sheet.timetable_entry.class_group.name }}</span>
+        </div>
+        <div class="mb-3 pb-2 border-bottom d-flex justify-content-between" style="font-size:.85rem;">
+          <span style="color:#64748b;font-weight:600;">Niveau</span>
+          <span>{{ sheet.timetable_entry.class_group.level|default:"—" }}</span>
+        </div>
+        <div class="mb-3 pb-2 border-bottom d-flex justify-content-between" style="font-size:.85rem;">
+          <span style="color:#64748b;font-weight:600;">Date</span>
+          <span>{{ sheet.session_date|date:"l d/m/Y" }}</span>
+        </div>
+        <div class="mb-3 pb-2 border-bottom d-flex justify-content-between" style="font-size:.85rem;">
+          <span style="color:#64748b;font-weight:600;">Créneau</span>
+          <span>{{ sheet.timetable_entry.start_time|time:"H:i" }} – {{ sheet.timetable_entry.end_time|time:"H:i" }}</span>
+        </div>
+        <div class="mb-3 d-flex justify-content-between" style="font-size:.85rem;">
+          <span style="color:#64748b;font-weight:600;">Durée</span>
+          <span>{{ sheet.timetable_entry.duration_hours|floatformat:1 }} h</span>
+        </div>
+
+        {% if not is_dept_admin %}
+        <!-- Fenêtre d'émargement pour l'enseignant -->
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-top:16px;font-size:.78rem;color:#475569;">
+          <div style="font-weight:700;margin-bottom:6px;"><i class="bi bi-clock me-1"></i>Fenêtre d'émargement</div>
+          <div>Ouverture : <strong>{{ sheet.timetable_entry.start_time|time:"H:i" }}</strong> − 10 min</div>
+          <div>Fermeture : <strong>{{ sheet.timetable_entry.start_time|time:"H:i" }}</strong> + 20 min</div>
+          <div style="margin-top:4px;color:#94a3b8;">Uniquement le jour de la séance.</div>
+        </div>
+        {% endif %}
+
+        {% if hourly_rate and session_amount %}
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;margin-top:16px;">
+          <div style="font-size:.75rem;font-weight:700;color:#166534;margin-bottom:6px;">
+            <i class="bi bi-cash-coin me-1"></i>Honoraire de cette séance
+          </div>
+          <div class="d-flex justify-content-between" style="font-size:.82rem;color:#15803d;">
+            <span>{{ hourly_rate.rate_per_hour|floatformat:0 }} FCFA/h</span>
+            <span>× {{ sheet.timetable_entry.duration_hours|floatformat:1 }}h</span>
+          </div>
+          <div style="font-size:.9rem;font-weight:800;color:#166534;text-align:right;margin-top:6px;border-top:1px solid #bbf7d0;padding-top:6px;">
+            = {{ session_amount|floatformat:0 }} FCFA
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Progression volume horaire -->
+        {% if progress %}
+        {% with pct=progress.percent_done %}
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-top:16px;">
+          <div style="font-size:.75rem;font-weight:700;color:#1e293b;margin-bottom:8px;">
+            <i class="bi bi-bar-chart-fill me-1"></i>Volume horaire — {{ sheet.timetable_entry.subject.title }}
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:.75rem;color:#64748b;margin-bottom:4px;">
+            <span>{{ progress.hours_done|floatformat:1 }}h effectuées</span>
+            <span>{{ progress.volume_total|floatformat:1 }}h total</span>
+          </div>
+          <div style="height:8px;background:#e2e8f0;border-radius:20px;overflow:hidden;">
+            <div style="height:100%;width:{% if pct > 100 %}100{% else %}{{ pct }}{% endif %}%;background:{% if pct >= 100 %}#dc2626{% elif pct >= 90 %}#f59e0b{% elif pct >= 60 %}#3b82f6{% else %}#22c55e{% endif %};border-radius:20px;transition:width .4s;"></div>
+          </div>
+          <div style="text-align:right;font-size:.72rem;font-weight:700;margin-top:4px;color:{% if pct >= 100 %}#dc2626{% elif pct >= 90 %}#b45309{% elif pct >= 60 %}#1d4ed8{% else %}#166534{% endif %};">
+            {{ pct }}%
+          </div>
+          {% if progress.is_complete %}
+          <div style="margin-top:6px;font-size:.72rem;color:#dc2626;font-weight:600;">
+            <i class="bi bi-exclamation-triangle me-1"></i>Volume atteint — émargement bloqué
+          </div>
+          {% endif %}
+        </div>
+        {% endwith %}
+        {% elif sheet.timetable_entry.subject.volume_hours %}
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;margin-top:16px;">
+          <div style="font-size:.75rem;font-weight:700;color:#1e293b;margin-bottom:8px;">
+            <i class="bi bi-bar-chart-fill me-1"></i>Volume horaire — {{ sheet.timetable_entry.subject.title }}
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:.75rem;color:#64748b;margin-bottom:4px;">
+            <span>0h effectuées</span>
+            <span>{{ sheet.timetable_entry.subject.volume_hours|floatformat:1 }}h total</span>
+          </div>
+          <div style="height:8px;background:#e2e8f0;border-radius:20px;overflow:hidden;">
+            <div style="height:100%;width:0%;background:#22c55e;border-radius:20px;"></div>
+          </div>
+          <div style="text-align:right;font-size:.72rem;font-weight:700;margin-top:4px;color:#166534;">0%</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulaire -->
+  <div class="col-lg-8">
+    {% if not signing_allowed and not is_dept_admin %}
+    <!-- Formulaire bloqué pour l'enseignant hors fenêtre -->
+    <div class="card-section">
+      <div class="p-4" style="text-align:center;padding:50px 20px !important;">
+        <i class="bi bi-hourglass-split d-block mb-3" style="font-size:3rem;color:#cbd5e1;"></i>
+        <div style="font-size:1rem;font-weight:700;color:#64748b;margin-bottom:10px;">Émargement indisponible</div>
+        <div style="font-size:.85rem;color:#94a3b8;max-width:360px;margin:0 auto;">{{ time_window_msg }}</div>
+      </div>
+    </div>
+    {% else %}
+    <form method="post" id="sign-form">
+      {% csrf_token %}
+
+      <div class="card-section mb-4">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:26px;height:26px;border-radius:6px;background:#7c3aed;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-journal-richtext"></i></span>
+            Cahier de Texte Numérique <span style="color:#ef4444;margin-left:4px;">*</span>
+          </h6>
+          <span style="font-size:.72rem;color:#7c3aed;font-weight:600;background:#ede9fe;padding:3px 10px;border-radius:20px;">
+            <i class="bi bi-info-circle me-1"></i>Ces informations alimentent le cahier de texte
+          </span>
+        </div>
+        <div class="p-4">
+          <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:11px 14px;margin-bottom:18px;display:flex;gap:9px;align-items:flex-start;">
+            <i class="bi bi-exclamation-triangle-fill" style="color:#d97706;flex-shrink:0;margin-top:1px;"></i>
+            <div style="font-size:.82rem;color:#92400e;">
+              Les <strong>objectifs pédagogiques</strong> et le <strong>contenu de la séance</strong> sont <strong>obligatoires</strong>.
+              Ces informations seront automatiquement enregistrées dans le <strong>Cahier de Texte Numérique</strong> de la classe.
+            </div>
+          </div>
+
+          <!-- Sélecteur de séance depuis le plan de cours -->
+          <div class="mb-4" id="planSessionPicker" style="display:none;">
+            <label class="form-label" style="font-weight:700;font-size:.85rem;color:#1e3a5f;">
+              <i class="bi bi-journal-text me-1" style="color:#7c3aed;"></i>
+              Séance du plan de cours
+            </label>
+            <select id="planSessionSelect" class="form-select form-select-sm">
+              <option value="">— Remplir manuellement —</option>
+            </select>
+            <div style="font-size:.75rem;color:#7c3aed;margin-top:4px;">
+              <i class="bi bi-info-circle me-1"></i>Sélectionnez la séance prévue : les objectifs et le contenu ci-dessous seront remplis automatiquement.
+            </div>
+          </div>
+
+          <!-- Objectifs pédagogiques — OBLIGATOIRE -->
+          <div class="mb-4">
+            <label class="form-label" style="font-weight:700;font-size:.85rem;color:#1e3a5f;">
+              <i class="bi bi-bullseye me-1" style="color:#7c3aed;"></i>
+              Objectifs pédagogiques de la séance <span style="color:#ef4444;">*</span>
+            </label>
+            <textarea name="lesson_objectives" id="lesson_objectives" class="form-control" rows="3"
+              placeholder="Quels objectifs les étudiants auront-ils atteint à l'issue de cette séance ? (compétences visées, notions à maîtriser…)"
+              required>{{ sheet.lesson_objectives }}</textarea>
+            <div id="obj-counter" style="font-size:.75rem;color:#94a3b8;text-align:right;margin-top:3px;">0 caractère</div>
+          </div>
+
+          <!-- Contenu réalisé — OBLIGATOIRE -->
+          <div>
+            <label class="form-label" style="font-weight:700;font-size:.85rem;color:#1e3a5f;">
+              <i class="bi bi-card-text me-1" style="color:#0891b2;"></i>
+              Contenu réalisé lors de la séance <span style="color:#ef4444;">*</span>
+            </label>
+            <textarea name="lesson_content" id="lesson_content" class="form-control" rows="5"
+              placeholder="Décrivez le contenu du cours dispensé : thèmes abordés, notions enseignées, exercices réalisés, avancement du programme…"
+              required>{{ sheet.lesson_content }}</textarea>
+            <div id="content-counter" style="font-size:.75rem;color:#94a3b8;text-align:right;margin-top:3px;">0 caractère</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-section">
+        <div class="card-section-header">
+          <h6 class="card-section-title">
+            <span style="width:26px;height:26px;border-radius:6px;background:{% if is_dept_admin %}#b45309{% else %}var(--navy){% endif %};display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-pen"></i></span>
+            {% if is_dept_admin %}Signature & Validation administrateur{% else %}Signature électronique{% endif %}
+          </h6>
+        </div>
+        <div class="p-4">
+          <div class="mb-4">
+            <label class="form-label" style="font-weight:600;font-size:.85rem;">
+              Observations <span style="color:#94a3b8;font-weight:400;">(optionnel)</span>
+            </label>
+            <textarea name="comment" class="form-control" rows="2"
+              placeholder="Remarques particulières sur le déroulement du cours…">{{ sheet.teacher_comment }}</textarea>
+          </div>
+          <div style="background:{% if is_dept_admin %}#fffbeb{% else %}#fefce8{% endif %};border:1px solid {% if is_dept_admin %}#fde68a{% else %}#fde68a{% endif %};border-radius:8px;padding:14px;margin-bottom:20px;font-size:.83rem;color:{% if is_dept_admin %}#78350f{% else %}#92400e{% endif %};">
+            <i class="bi bi-{% if is_dept_admin %}shield-fill-check{% else %}exclamation-triangle-fill{% endif %} me-2"></i>
+            {% if is_dept_admin %}
+            En signant, vous certifiez agir en tant qu'administrateur du département au nom de l'enseignant. La fiche sera immédiatement <strong>validée</strong>.
+            {% else %}
+            En signant, vous certifiez avoir dispensé ce cours et que le contenu renseigné est exact.
+            {% endif %}
+          </div>
+          <div class="d-flex gap-2 justify-content-end">
+            <a href="{% url 'attendance:sheet_list' %}" class="btn btn-outline-secondary btn-sm">
+              <i class="bi bi-x-lg me-1"></i>Annuler
+            </a>
+            <button type="submit" class="btn {% if is_dept_admin %}btn-warning{% else %}btn-primary{% endif %} btn-sm">
+              <i class="bi bi-{% if is_dept_admin %}shield-check{% else %}pen{% endif %} me-1"></i>
+              {% if is_dept_admin %}Signer & Valider{% else %}Confirmer et signer{% endif %}
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const PLAN_SESSIONS = JSON.parse('{{ plan_sessions_json|escapejs }}');
+
+(function wirePlanSessionPicker() {
+  if (!PLAN_SESSIONS.length) return;
+  const picker = document.getElementById('planSessionPicker');
+  const select = document.getElementById('planSessionSelect');
+  const objField = document.getElementById('lesson_objectives');
+  const contentField = document.getElementById('lesson_content');
+  if (!picker || !select || !objField || !contentField) return;
+
+  PLAN_SESSIONS.forEach(function(s) {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = 'Séance ' + s.numero + ' — ' + s.titre;
+    select.appendChild(opt);
+  });
+  picker.style.display = 'block';
+
+  select.addEventListener('change', function() {
+    const session = PLAN_SESSIONS.find(s => String(s.id) === select.value);
+    if (!session) return;
+    objField.value = session.objectif || '';
+    contentField.value = session.contenu || '';
+    objField.dispatchEvent(new Event('input'));
+    contentField.dispatchEvent(new Event('input'));
+  });
+})();
+
+function wireCounter(fieldId, counterId, minLen) {
+  const ta  = document.getElementById(fieldId);
+  const ctr = document.getElementById(counterId);
+  if (!ta || !ctr) return ta;
+  function update() {
+    const n = ta.value.length;
+    ctr.textContent = n + ' caractère' + (n !== 1 ? 's' : '');
+    ctr.style.color = n >= minLen ? '#16a34a' : '#94a3b8';
+  }
+  ta.addEventListener('input', update);
+  update();
+  return ta;
+}
+const taObj     = wireCounter('lesson_objectives', 'obj-counter',     20);
+const taContent = wireCounter('lesson_content',    'content-counter', 30);
+
+const form = document.getElementById('sign-form');
+if (form) {
+  form.addEventListener('submit', function(e) {
+    let blocked = false;
+    [
+      { ta: taObj,     ctr: 'obj-counter',     label: 'Les objectifs pédagogiques sont obligatoires.' },
+      { ta: taContent, ctr: 'content-counter', label: 'Le contenu de la séance est obligatoire.' },
+    ].forEach(function(f) {
+      if (f.ta && !f.ta.value.trim()) {
+        e.preventDefault();
+        f.ta.classList.add('is-invalid');
+        const ctr = document.getElementById(f.ctr);
+        if (ctr) { ctr.style.color = '#ef4444'; ctr.textContent = f.label; }
+        if (!blocked) { f.ta.scrollIntoView({ behavior: 'smooth', block: 'center' }); f.ta.focus(); }
+        blocked = true;
+      }
+    });
+  });
+}
+</script>
+{% endblock %}

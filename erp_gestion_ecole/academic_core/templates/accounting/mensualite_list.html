@@ -1,0 +1,924 @@
+{% extends "base/base.html" %}
+{% load humanize l10n %}
+
+{% block title %}Paiements Mensualités{% endblock %}
+
+{% block content %}
+<style>
+.cell-paid   { background:#dcfce7; color:#166534; }
+.cell-unpaid { background:#fee2e2; color:#991b1b; }
+.cell-none   { background:#f8fafc; color:#94a3b8; cursor:default; }
+.month-cell  { text-align:center; padding:4px 2px; border-radius:6px; font-size:.7rem;
+               font-weight:600; min-width:36px; transition:opacity .15s; }
+.cell-icon:hover { opacity:.75; }
+.cell-icon   { cursor:pointer; display:block; }
+.cell-amount { font-size:.64rem; font-weight:700; margin-top:1px; letter-spacing:.01em; }
+.cell-amount-editable { cursor:pointer; text-decoration:underline dotted; text-underline-offset:2px; }
+.cell-amount-editable:hover { opacity:.7; }
+.month-cell-td { position:relative; }
+.recu-btn { display:block; margin-top:3px; font-size:.65rem; color:#166534; text-decoration:none; text-align:center; }
+.recu-btn:hover { opacity:.7; }
+.prog-bar-wrap { height:5px; background:#e2e8f0; border-radius:3px; overflow:hidden; }
+.prog-bar      { height:100%; background:#22c55e; border-radius:3px; transition:width .3s; }
+</style>
+
+<!-- En-tête page -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);">
+      <i class="bi bi-calendar-check me-2" style="color:#0891b2;"></i>Paiement des Mensualités
+    </h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Suivi et enregistrement des mensualités de scolarité</p>
+  </div>
+</div>
+
+<!-- Filtres -->
+<div class="card-section mb-3" style="padding:16px 20px;">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Année académique</label>
+      <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+        {% for y in years %}
+        <option value="{{ y.pk }}" {% if selected_year and y.pk == selected_year.pk %}selected{% endif %}>{{ y }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Niveau</label>
+      <select name="level" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">— Tous les niveaux —</option>
+        {% for lv in levels %}
+        <option value="{{ lv.pk }}" {% if selected_level and lv.pk == selected_level.pk %}selected{% endif %}>{{ lv.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Classe</label>
+      <select name="classe" class="form-select form-select-sm" onchange="this.form.submit()">
+        <option value="">— Toutes les classes —</option>
+        {% for c in classes %}
+        <option value="{{ c.pk }}" {% if selected_class and c.pk == selected_class.pk %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" style="font-size:.78rem;font-weight:600;">Recherche étudiant</label>
+      <div class="input-group input-group-sm">
+        <input type="text" name="q" value="{{ search }}" class="form-control" placeholder="Nom, prénom, matricule…">
+        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-search"></i></button>
+      </div>
+    </div>
+    <div class="col-md-2">
+      {% if search or selected_class or selected_level %}
+      <a href="?{% if selected_year %}year={{ selected_year.pk }}{% endif %}" class="btn btn-outline-secondary btn-sm w-100">
+        <i class="bi bi-x-circle me-1"></i>Réinitialiser
+      </a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<!-- Résumé rapide -->
+{% if class_groups %}
+<div class="row g-2 mb-3">
+  <div class="col-md-3">
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 16px;">
+      <div style="font-size:.72rem;color:#166534;font-weight:600;text-transform:uppercase;">Étudiants affichés</div>
+      <div style="font-size:1.6rem;font-weight:800;color:#166534;">{{ total_students }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 16px;">
+      <div style="font-size:.72rem;color:#1e40af;font-weight:600;text-transform:uppercase;">Mois payés (total)</div>
+      <div style="font-size:1.6rem;font-weight:800;color:#1e40af;">{{ total_paid }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px 16px;">
+      <div style="font-size:.72rem;color:#9a3412;font-weight:600;text-transform:uppercase;">Impayés — mois en cours</div>
+      <div style="font-size:1.6rem;font-weight:800;color:#9a3412;">{{ total_unpaid_current }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:12px 16px;">
+      <div style="font-size:.72rem;color:#6b21a8;font-weight:600;text-transform:uppercase;">Mois en cours</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#6b21a8;">{{ today|date:"F Y" }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Un tableau par classe : chaque classe n'affiche que ses propres mois à payer -->
+{% for group in class_groups %}
+<div class="card-section mb-3" style="padding:0;">
+  <!-- En-tête accordéon cliquable -->
+  <div id="table-toggle-header-{{ group.class_group.pk }}"
+       style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-radius:12px;user-select:none;gap:14px;flex-wrap:wrap;">
+    <div onclick="toggleTable({{ group.class_group.pk }})" style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:220px;">
+      <span style="width:28px;height:28px;border-radius:7px;background:#0891b2;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-table" style="color:#fff;font-size:.75rem;"></i>
+      </span>
+      <div>
+        <span style="font-weight:700;font-size:.92rem;color:var(--navy);">Suivi mensuel — {{ group.class_group.name }} — {{ group.class_group.program.name }}</span>
+        <span style="font-size:.75rem;color:#64748b;margin-left:8px;">
+          {{ group.rows|length }} étudiant{{ group.rows|length|pluralize }} · {{ group.months|length }} mois
+        </span>
+      </div>
+    </div>
+    <div class="input-group input-group-sm" style="max-width:230px;" onclick="event.stopPropagation();">
+      <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+      <input type="text" class="form-control" placeholder="Rechercher un étudiant…"
+             oninput="filterClassTable({{ group.class_group.pk }}, this.value)">
+    </div>
+    <i id="table-chevron-{{ group.class_group.pk }}" class="bi bi-chevron-up" style="color:#64748b;font-size:.9rem;transition:transform .25s;cursor:pointer;transform:rotate(180deg);"
+       onclick="toggleTable({{ group.class_group.pk }})"></i>
+  </div>
+  <!-- Corps du tableau (dépliable, replié par défaut) -->
+  <div id="table-body-{{ group.class_group.pk }}" class="mensualite-class-body" style="overflow-x:auto;transition:all .25s;display:none;">
+    <table class="table table-hover mb-0" style="font-size:.82rem;min-width:800px;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="min-width:180px;padding:10px 12px;">Étudiant</th>
+          {% for y, m, label, long in group.months %}
+          <th style="text-align:center;padding:6px 3px;font-size:.7rem;min-width:44px;" title="{{ long }} {{ y }}">
+            {{ label }}<br><span style="color:#94a3b8;font-weight:400;">{{ y }}</span>
+          </th>
+          {% endfor %}
+          {% if group.is_l3_m2 %}
+          <th style="text-align:center;padding:6px 3px;font-size:.68rem;min-width:70px;color:#7c3aed;">Frais Soutenance Normale</th>
+          <th style="text-align:center;padding:6px 3px;font-size:.68rem;min-width:70px;color:#7c3aed;">Frais Soutenance Spéciale</th>
+          {% endif %}
+          <th style="min-width:80px;text-align:center;">Progression</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in group.rows %}
+        {% with enr=row.enrollment %}
+        <tr data-enr="{{ enr.pk }}" data-name="{{ enr.student.user.get_full_name|lower }}">
+          <td style="padding:8px 12px;">
+            <div class="fw-bold" style="font-size:.84rem;">
+              {{ enr.student.user.get_full_name }}
+              {% if enr.student.is_boursier %}
+              <span class="badge ms-1" style="background:#ede9fe;color:#6d28d9;font-size:.62rem;font-weight:700;border-radius:6px;padding:2px 6px;" title="Étudiant boursier">
+                <i class="bi bi-award-fill"></i> Boursier
+              </span>
+              {% endif %}
+            </div>
+            <div style="font-size:.72rem;color:#64748b;">{{ enr.student.matricule }}</div>
+          </td>
+          {% for cell in row.month_cells %}
+          {% with is_prepared=cell.inst.prepared_by_id %}
+          <td class="month-cell-td" style="padding:4px 2px;text-align:center;">
+            {% if cell.expected is not None %}
+              {% if enr.student.is_boursier and user.is_caissier and not cell.paid and not is_prepared %}
+                <!-- Boursier, Caissier, mois pas encore préparé par le Trésorier Général : verrouillé -->
+                <div class="month-cell cell-none" title="Étudiant boursier — cette échéance doit d'abord être préparée par le Trésorier Général">
+                  <i class="bi bi-lock-fill" style="font-size:.75rem;color:#a78bfa;"></i>
+                  <div style="font-size:.62rem;color:#a78bfa;font-weight:700;">À préparer</div>
+                </div>
+              {% elif enr.student.is_boursier and not user.is_caissier and not cell.paid and not is_prepared %}
+                <!-- Boursier, Trésorier Général/Admin, pas encore préparé : action « Préparer » -->
+                <div class="month-cell cell-unpaid">
+                  <span class="cell-icon" title="Préparer cette échéance pour le Caissier (boursier)"
+                        onclick="openPayModal({{ enr.pk }}, {{ cell.year }}, {{ cell.month }}, 'prepare', '{% localize off %}{{ cell.expected }}{% endlocalize %}', '{{ cell.label }} {{ cell.year }}', {{ cell.inst.pk|default:'null' }}, false)">
+                    <i class="bi bi-clipboard-check" style="font-size:.8rem;color:#7c3aed;"></i>
+                  </span>
+                  <div class="cell-amount cell-amount-editable" title="Cliquer pour préparer / modifier le montant"
+                       onclick="event.stopPropagation(); openPayModal({{ enr.pk }}, {{ cell.year }}, {{ cell.month }}, 'prepare', '{% localize off %}{{ cell.expected }}{% endlocalize %}', '{{ cell.label }} {{ cell.year }}', {{ cell.inst.pk|default:'null' }}, false)">
+                    {{ cell.expected|floatformat:0|intcomma }}
+                  </div>
+                </div>
+              {% else %}
+              <div class="month-cell {% if cell.paid %}cell-paid{% else %}cell-unpaid{% endif %}">
+                <span class="cell-icon"
+                      title="{% if cell.paid %}Payé : {{ cell.amount|intcomma }} FCFA le {{ cell.inst.paid_date|date:'d/m/Y' }}{% elif enr.student.is_boursier and user.is_caissier %}Préparé par le Trésorier Général — cliquer pour valider l'encaissement{% elif enr.student.is_boursier %}Préparé — en attente d'encaissement par la caisse{% else %}Impayé — {{ cell.expected|intcomma }} FCFA attendus{% endif %}"
+                      onclick="openPayModal({{ enr.pk }}, {{ cell.year }}, {{ cell.month }}, '{% if cell.paid %}unpay{% else %}pay{% endif %}', '{% localize off %}{{ cell.expected }}{% endlocalize %}', '{{ cell.label }} {{ cell.year }}', {{ cell.inst.pk|default:'null' }}, {% if enr.student.is_boursier and user.is_caissier %}true{% else %}false{% endif %})">
+                  {% if cell.paid %}
+                    <i class="bi bi-check-circle-fill" style="font-size:.8rem;"></i>
+                  {% elif enr.student.is_boursier %}
+                    <i class="bi bi-shield-check" style="font-size:.8rem;color:#7c3aed;"></i>
+                  {% else %}
+                    <i class="bi bi-x-circle" style="font-size:.8rem;"></i>
+                  {% endif %}
+                </span>
+                {% if cell.paid or enr.student.is_boursier and user.is_caissier %}
+                <div class="cell-amount" title="Montant non modifiable">{{ cell.expected|floatformat:0|intcomma }}</div>
+                {% else %}
+                <div class="cell-amount cell-amount-editable" title="Cliquer pour modifier le montant"
+                     onclick="event.stopPropagation(); openAmountEdit({{ enr.pk }}, {{ cell.year }}, {{ cell.month }}, '{{ cell.label }} {{ cell.year }}', '{% localize off %}{{ cell.expected }}{% endlocalize %}')">
+                  {{ cell.expected|floatformat:0|intcomma }}
+                </div>
+                {% endif %}
+              </div>
+              {% if cell.paid and cell.expected %}
+              <a href="{% url 'accounting:mensualite_recu_pdf' enr.pk cell.year cell.month %}" target="_blank"
+                 class="recu-btn" title="Télécharger le reçu PDF">
+                <i class="bi bi-file-earmark-pdf-fill"></i> Reçu
+              </a>
+              {% endif %}
+              {% endif %}
+            {% else %}
+              <div class="month-cell cell-none" title="Montant non configuré pour ce mois">—</div>
+            {% endif %}
+          </td>
+          {% endwith %}
+          {% endfor %}
+          {% if group.is_l3_m2 %}
+          <td style="padding:4px 2px;text-align:center;">
+            <input type="number" class="form-control form-control-sm soutenance-input"
+                   data-enr="{{ enr.pk }}" data-field="frais_soutenance"
+                   value="{% if row.frais_soutenance is not None %}{{ row.frais_soutenance|floatformat:0 }}{% endif %}"
+                   min="0" step="500" placeholder="—"
+                   style="font-size:.72rem;font-weight:700;color:#7c3aed;text-align:center;padding:3px 4px;border-radius:6px;"
+                   onchange="updateSoutenanceField(this)"
+                   title="Frais de soutenance normale — informatif, sans effet sur le statut de paiement ni la carte étudiant">
+          </td>
+          <td style="padding:4px 2px;text-align:center;">
+            <input type="number" class="form-control form-control-sm soutenance-input"
+                   data-enr="{{ enr.pk }}" data-field="frais_soutenance_speciale"
+                   value="{% if row.frais_soutenance_speciale is not None %}{{ row.frais_soutenance_speciale|floatformat:0 }}{% endif %}"
+                   min="0" step="500" placeholder="—"
+                   style="font-size:.72rem;font-weight:700;color:#7c3aed;text-align:center;padding:3px 4px;border-radius:6px;"
+                   onchange="updateSoutenanceField(this)"
+                   title="Frais de soutenance spéciale — informatif, sans effet sur le statut de paiement ni la carte étudiant">
+          </td>
+          {% endif %}
+          <td style="padding:6px 12px;">
+            <div class="prog-bar-wrap">
+              <div class="prog-bar" style="width:{% if row.nb_total > 0 %}{% widthratio row.nb_paid row.nb_total 100 %}{% else %}0{% endif %}%;"></div>
+            </div>
+            <div style="font-size:.68rem;color:#64748b;text-align:center;margin-top:2px;">
+              {{ row.nb_paid }}/{{ row.nb_total }}
+            </div>
+          </td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background:#fefce8;border-top:2px solid #fde68a;">
+          <td style="padding:8px 12px;font-weight:700;color:#92400e;font-size:.78rem;">
+            <i class="bi bi-tag-fill me-1"></i>Mensualité de la classe
+            <button type="button" class="btn btn-sm" style="background:none;border:none;color:#92400e;padding:0 0 0 6px;"
+                    title="Modifier la mensualité de la classe" onclick="openClassFeeModal({{ group.class_group.pk }})">
+              <i class="bi bi-pencil-square"></i>
+            </button>
+          </td>
+          {% for y, m, label, long in group.months %}
+          <td style="text-align:center;font-size:.68rem;font-weight:700;color:#92400e;padding:4px 2px;" title="{{ long }} {{ y }}">
+            {% if group.class_frais_mensuel %}{{ group.class_frais_mensuel|floatformat:0 }}{% else %}—{% endif %}
+          </td>
+          {% endfor %}
+          {% if group.is_l3_m2 %}
+          <td></td>
+          <td></td>
+          {% endif %}
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+<!-- ══ Modal édition mensualité / montant global de cette classe ═════════════════ -->
+<div class="modal fade" id="modalClassFee-{{ group.class_group.pk }}" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:#d97706;color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-cash-coin me-2"></i>Frais de la classe — {{ group.class_group.name }}</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'accounting:mensualite_update_class_fee' %}">
+        {% csrf_token %}
+        <input type="hidden" name="class_id" value="{{ group.class_group.pk }}">
+        {% if selected_year %}<input type="hidden" name="year_id" value="{{ selected_year.pk }}">{% endif %}
+        <div class="modal-body p-4">
+          <p style="font-size:.82rem;color:#64748b;">
+            Ces montants sont ceux définis à la création de la classe. Toute modification ici est
+            automatiquement prise en compte pour tous les étudiants de la classe sans mensualité individuelle
+            (définie lors de la validation d'inscription).
+          </p>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Mensualité (FCFA)</label>
+            <input type="number" name="frais_mensuel" class="form-control" min="0" step="500"
+                   value="{% if group.class_frais_mensuel %}{{ group.class_frais_mensuel|floatformat:0 }}{% endif %}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold" style="font-size:.82rem;">Montant global de la formation (FCFA)</label>
+            <input type="number" name="montant_global" class="form-control" min="0" step="500"
+                   value="{% if group.class_montant_global %}{{ group.class_montant_global|floatformat:0 }}{% endif %}">
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-sm" style="background:#d97706;color:#fff;">
+            <i class="bi bi-check-lg me-1"></i>Enregistrer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+{% else %}
+<div class="card-section text-center py-5 text-muted">
+  <i class="bi bi-calendar-x" style="font-size:2rem;opacity:.4;"></i>
+  <p class="mt-2 mb-0">Aucun étudiant trouvé pour les critères sélectionnés.</p>
+</div>
+{% endif %}
+
+<!-- ══ Modal Paiement ═══════════════════════════════════════════════════════ -->
+<div id="pay-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:28px 32px;width:420px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.25);">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+      <div>
+        <h6 class="mb-0 fw-bold" id="modal-title">Enregistrer un paiement</h6>
+        <small class="text-muted" id="modal-subtitle"></small>
+      </div>
+      <button onclick="closePayModal()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#64748b;line-height:1;">&times;</button>
+    </div>
+
+    <!-- Contenu annulation -->
+    <div id="unpay-content" style="display:none;">
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:14px;margin-bottom:16px;">
+        <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+        <strong>Annuler ce paiement ?</strong>
+        <p class="mb-0 mt-1" style="font-size:.82rem;color:#78350f;">Cette action marquera le mois comme <em>impayé</em> et mettra à jour le QR Code de la carte.</p>
+      </div>
+    </div>
+
+    <!-- Contenu paiement -->
+    <div id="pay-content">
+      <!-- Boursier : montant verrouillé, préparé par le Trésorier Général -->
+      <div id="pay-locked-notice" style="display:none;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:.78rem;color:#5b21b6;">
+        <i class="bi bi-shield-lock-fill me-1"></i>Étudiant boursier — montant préparé par le Trésorier Général, non modifiable.
+      </div>
+      <!-- Montant attendu (affiché, non éditable) -->
+      <div class="mb-3">
+        <label class="form-label fw-semibold" style="font-size:.82rem;">Mensualité due (FCFA)</label>
+        <div id="mensualite-due-display"
+             style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 14px;font-size:1.05rem;font-weight:700;color:#0369a1;letter-spacing:.02em;">
+          —
+        </div>
+      </div>
+
+      <!-- Montant versé -->
+      <div class="mb-2">
+        <label class="form-label fw-semibold" style="font-size:.82rem;">Montant versé (FCFA)</label>
+        <input type="number" id="pay-amount" class="form-control" min="1" step="500"
+               oninput="onAmountChange()" placeholder="Saisir le montant reçu" required>
+      </div>
+
+      <!-- Reste à payer (affiché dynamiquement) -->
+      <div id="reste-row" style="display:none;margin-bottom:12px;">
+        <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:8px 14px;font-size:.82rem;color:#92400e;display:flex;justify-content:space-between;align-items:center;">
+          <span>Reste à reporter :</span>
+          <strong id="reste-display">0 FCFA</strong>
+        </div>
+      </div>
+
+      <!-- Moratoire -->
+      <div id="moratoire-section" style="display:none;margin-bottom:12px;">
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:.8rem;font-weight:700;color:#166534;margin-bottom:8px;">
+            <i class="bi bi-calendar2-range me-1"></i>Moratoire — Reporter le reste sur :
+          </div>
+          <div class="d-flex gap-3 mb-2">
+            <label style="font-size:.82rem;cursor:pointer;display:flex;align-items:center;gap:6px;">
+              <input type="radio" name="distrib" id="distrib-1" value="1" checked onchange="updatePreview()">
+              <span>1 mois suivant <small style="color:#64748b;">(1/2)</small></span>
+            </label>
+            <label style="font-size:.82rem;cursor:pointer;display:flex;align-items:center;gap:6px;">
+              <input type="radio" name="distrib" id="distrib-2" value="2" onchange="updatePreview()">
+              <span>2 mois suivants <small style="color:#64748b;">(2/2)</small></span>
+            </label>
+          </div>
+          <!-- Aperçu de la répartition -->
+          <div id="moratoire-preview" style="font-size:.75rem;color:#166534;border-top:1px solid #bbf7d0;padding-top:8px;margin-top:4px;"></div>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label fw-semibold" style="font-size:.82rem;">Date de paiement</label>
+        <input type="date" id="pay-date" class="form-control">
+      </div>
+      <div class="mb-2">
+        <label class="form-label fw-semibold" style="font-size:.82rem;">Observations (optionnel)</label>
+        <textarea id="pay-notes" class="form-control" rows="2" style="font-size:.82rem;"></textarea>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 justify-content-end">
+      <button onclick="closePayModal()" class="btn btn-outline-secondary btn-sm">Annuler</button>
+      <button id="confirm-btn" onclick="confirmPay()" class="btn btn-success btn-sm">
+        <i class="bi bi-check-circle me-1"></i>Valider le paiement
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Modal édition du montant d'un mois ═══════════════════════════════════ -->
+<div id="amount-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;padding:28px 32px;width:380px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.25);">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+      <div>
+        <h6 class="mb-0 fw-bold">Valider le paiement du mois</h6>
+        <small class="text-muted" id="amount-modal-subtitle"></small>
+      </div>
+      <button onclick="closeAmountEditModal()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#64748b;line-height:1;">&times;</button>
+    </div>
+    <div class="mb-3">
+      <label class="form-label fw-semibold" style="font-size:.82rem;">Montant versé (FCFA)</label>
+      <input type="number" id="amount-edit-input" class="form-control" min="0" step="500" placeholder="Montant">
+    </div>
+    <div class="d-flex gap-2 justify-content-end">
+      <button onclick="closeAmountEditModal()" class="btn btn-outline-secondary btn-sm">Annuler</button>
+      <button id="amount-edit-confirm-btn" onclick="confirmAmountEdit()" class="btn btn-sm" style="background:#0891b2;color:#fff;">
+        <i class="bi bi-check-lg me-1"></i>Enregistrer
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CSRF = '{{ csrf_token }}';
+let _enrPk, _monthYear, _monthNum, _action, _instPk, _expected;
+let _amtEnrPk, _amtYear, _amtMonth;
+const MOIS_LONG = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function openPayModal(enrPk, y, m, action, expected, label, instPk, locked) {
+  _enrPk = enrPk; _monthYear = y; _monthNum = m; _action = action; _instPk = instPk;
+  _expected = expected;
+
+  document.getElementById('modal-subtitle').textContent = label;
+  const payContent   = document.getElementById('pay-content');
+  const unpayContent = document.getElementById('unpay-content');
+  const btn          = document.getElementById('confirm-btn');
+  const amtField     = document.getElementById('pay-amount');
+  const lockNotice    = document.getElementById('pay-locked-notice');
+
+  if (action === 'unpay') {
+    document.getElementById('modal-title').textContent = 'Annuler le paiement';
+    payContent.style.display   = 'none';
+    unpayContent.style.display = '';
+    btn.className = 'btn btn-danger btn-sm';
+    btn.innerHTML = '<i class="bi bi-x-circle me-1"></i>Annuler le paiement';
+  } else if (action === 'prepare') {
+    document.getElementById('modal-title').textContent = 'Préparer l\'échéance (boursier)';
+    payContent.style.display   = '';
+    unpayContent.style.display = 'none';
+    btn.className = 'btn btn-sm';
+    btn.style.background = '#7c3aed'; btn.style.color = '#fff';
+    btn.innerHTML = '<i class="bi bi-clipboard-check me-1"></i>Préparer pour la caisse';
+
+    const dueEl = document.getElementById('mensualite-due-display');
+    dueEl.textContent = expected ? `${Number(expected).toLocaleString('fr-FR')} FCFA` : 'Non défini';
+    amtField.value = expected || '';
+    amtField.readOnly = false;
+    if (lockNotice) lockNotice.style.display = 'none';
+
+    document.getElementById('pay-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('pay-notes').value = '';
+    document.getElementById('reste-row').style.display = 'none';
+    document.getElementById('moratoire-section').style.display = 'none';
+  } else {
+    document.getElementById('modal-title').textContent = locked ? 'Valider l\'encaissement (boursier)' : 'Enregistrer le paiement';
+    payContent.style.display   = '';
+    unpayContent.style.display = 'none';
+    btn.className = 'btn btn-success btn-sm';
+    btn.style.background = ''; btn.style.color = '';
+    btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Valider le paiement';
+
+    // Afficher la mensualité due
+    const dueEl = document.getElementById('mensualite-due-display');
+    dueEl.textContent = expected
+      ? `${Number(expected).toLocaleString('fr-FR')} FCFA`
+      : 'Non défini';
+
+    // Pré-remplir le montant versé avec la mensualité complète
+    amtField.value = expected || '';
+    amtField.readOnly = !!locked;
+
+    if (lockNotice) lockNotice.style.display = locked ? '' : 'none';
+
+    // Date du jour par défaut
+    const today = new Date();
+    document.getElementById('pay-date').value = today.toISOString().split('T')[0];
+    document.getElementById('pay-notes').value = '';
+
+    // Reset moratoire — pas de moratoire possible sur une échéance boursier
+    // verrouillée : le Caissier ne peut que valider le montant exact préparé.
+    document.getElementById('reste-row').style.display = 'none';
+    document.getElementById('moratoire-section').style.display = 'none';
+    document.getElementById('distrib-1').checked = true;
+    if (!locked) onAmountChange();
+  }
+
+  document.getElementById('pay-modal').style.display = 'flex';
+}
+
+function onAmountChange() {
+  const expected = parseFloat(_expected) || 0;
+  const versed   = parseFloat(document.getElementById('pay-amount').value) || 0;
+  const reste    = Math.max(0, expected - versed);
+
+  const resteRow        = document.getElementById('reste-row');
+  const moratoireSection= document.getElementById('moratoire-section');
+  const resteDisplay    = document.getElementById('reste-display');
+
+  if (reste > 0 && versed > 0) {
+    resteDisplay.textContent = `${reste.toLocaleString('fr-FR')} FCFA`;
+    resteRow.style.display        = '';
+    moratoireSection.style.display= '';
+    updatePreview();
+  } else {
+    resteRow.style.display        = 'none';
+    moratoireSection.style.display= 'none';
+  }
+}
+
+function updatePreview() {
+  const expected = parseFloat(_expected) || 0;
+  const versed   = parseFloat(document.getElementById('pay-amount').value) || 0;
+  const reste    = Math.max(0, expected - versed);
+  const distrib  = document.querySelector('input[name="distrib"]:checked')?.value || '1';
+  const preview  = document.getElementById('moratoire-preview');
+  if (!preview) return;
+
+  // Calculer les mois suivants à partir du mois courant
+  const nextMonths = _getNextMonths(parseInt(_monthYear), parseInt(_monthNum), parseInt(distrib));
+  const perMonth   = distrib === '1' ? reste : Math.ceil(reste / 2);
+
+  let html = '<i class="bi bi-arrow-return-right me-1"></i>Répartition : ';
+  nextMonths.forEach((nm, i) => {
+    const amt = (distrib === '2' && i === 1) ? (reste - perMonth) : perMonth;
+    html += `<strong>${nm.label}</strong> + ${amt.toLocaleString('fr-FR')} FCFA`;
+    if (i < nextMonths.length - 1) html += ' · ';
+  });
+  preview.innerHTML = html;
+}
+
+function _getNextMonths(year, month, count) {
+  // Construire la liste des mois suivants dans LE TABLEAU DE LA CLASSE concernée
+  // (chaque classe a désormais ses propres colonnes de mois).
+  const row = document.querySelector(`tr[data-enr="${_enrPk}"]`);
+  const table = row ? row.closest('table') : null;
+  const ths = table ? table.querySelectorAll('thead tr th[title]') : [];
+  const allMonths = []; // [(y, m, label), ...]
+  ths.forEach(th => {
+    const title = th.getAttribute('title'); // "Octobre 2025"
+    const parts = title.split(' ');
+    if (parts.length === 2) {
+      const mIdx = MOIS_LONG.indexOf(parts[0]);
+      if (mIdx > 0) allMonths.push({ y: parseInt(parts[1]), m: mIdx, label: parts[0] + ' ' + parts[1] });
+    }
+  });
+  // Trouver les mois APRÈS le mois courant
+  const currentIdx = allMonths.findIndex(nm => nm.y === year && nm.m === month);
+  return allMonths.slice(currentIdx + 1, currentIdx + 1 + count);
+}
+
+function closePayModal() {
+  document.getElementById('pay-modal').style.display = 'none';
+}
+
+function confirmPay() {
+  // Validation : montant obligatoire pour un paiement ou une préparation
+  if (_action === 'pay' || _action === 'prepare') {
+    const amtVal = parseFloat(document.getElementById('pay-amount').value);
+    if (!amtVal || amtVal <= 0) {
+      const field = document.getElementById('pay-amount');
+      field.style.borderColor = '#dc2626';
+      field.focus();
+      field.placeholder = '⚠ Montant obligatoire';
+      setTimeout(() => { field.style.borderColor = ''; field.placeholder = 'Saisir le montant reçu'; }, 2500);
+      return;
+    }
+  }
+
+  const btn = document.getElementById('confirm-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>…';
+
+  const versed  = parseFloat(document.getElementById('pay-amount').value) || 0;
+  const expected= parseFloat(_expected) || 0;
+  const reste   = Math.max(0, expected - versed);
+  const distrib = document.querySelector('input[name="distrib"]:checked')?.value || '1';
+  const hasMoret= reste > 0 && versed > 0;
+  const nextMonths = hasMoret ? _getNextMonths(parseInt(_monthYear), parseInt(_monthNum), parseInt(distrib)) : [];
+
+  const body = new URLSearchParams({
+    csrfmiddlewaretoken: CSRF,
+    action: _action,
+    month_year: _monthYear,
+    month_num: _monthNum,
+    amount: versed,
+    pay_date: document.getElementById('pay-date')?.value || '',
+    notes: document.getElementById('pay-notes')?.value || '',
+    moratoire: hasMoret ? '1' : '0',
+    moratoire_distrib: distrib,
+    moratoire_reste: reste,
+    moratoire_months: JSON.stringify(nextMonths.map(nm => ({ y: nm.y, m: nm.m }))),
+  });
+
+  fetch(`/accounting/mensualites/${_enrPk}/payer/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded'},
+    body: body.toString(),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { alert(data.error); return; }
+    closePayModal();
+    if (_action === 'prepare') {
+      // Échéance boursier préparée (toujours impayée) : on recharge pour
+      // refléter le nouvel état "en attente d'encaissement par la caisse".
+      showToastWithRecu(data.message, 'success', null);
+      setTimeout(() => location.reload(), 1200);
+      return;
+    }
+    _updateCell(_enrPk, _monthYear, _monthNum, _action, data.amount, data.date);
+    // Ajouter bouton reçu sur la cellule
+    if (_action === 'pay' && data.receipt_url) {
+      _addRecuBtn(_enrPk, _monthYear, _monthNum, data.receipt_url);
+    }
+    if (data.moratoire_applied) {
+      showToastWithRecu(data.message, 'success', _action === 'pay' ? data.receipt_url : null);
+      setTimeout(() => location.reload(), 2500);
+    } else {
+      showToastWithRecu(data.message, _action === 'pay' ? 'success' : 'warning', _action === 'pay' ? data.receipt_url : null);
+    }
+  })
+  .catch(() => alert('Erreur réseau'))
+  .finally(() => { btn.disabled = false; });
+}
+
+function _updateCell(enrPk, y, m, action, amount, dateStr) {
+  const row = document.querySelector(`tr[data-enr="${enrPk}"]`);
+  if (!row) return;
+  const table = row.closest('table');
+  if (!table) return;
+
+  // Trouver les colonnes de mois dans le thead DE CE TABLEAU (une classe = ses propres mois)
+  const thead = table.querySelector('thead tr');
+  const ths = thead.querySelectorAll('th');
+  let colIdx = -1;
+  ths.forEach((th, i) => {
+    // On cherche la colonne par titre (ex "Octobre 2025")
+    if (th.getAttribute('title') === `${MOIS_LONG[parseInt(m)]} ${y}`) colIdx = i;
+  });
+
+  if (colIdx < 0) { location.reload(); return; }
+  const td = row.querySelectorAll('td')[colIdx];
+  if (!td) { location.reload(); return; }
+
+  const div = td.querySelector('.month-cell');
+  if (!div) return;
+  const amountLabel = div.querySelector('.cell-amount')?.textContent.trim() || '';
+  const amountRaw = amountLabel.replace(/\s/g, '');
+  const label = `${MOIS_LONG[parseInt(m)]} ${y}`;
+
+  if (action === 'pay') {
+    div.className = 'month-cell cell-paid';
+    div.innerHTML = `
+      <span class="cell-icon" title="Payé : ${Number(amount).toLocaleString('fr-FR')} FCFA le ${dateStr}"
+            onclick="openPayModal(${enrPk}, ${y}, ${m}, 'unpay', '${amountRaw}', '${label}', null)">
+        <i class="bi bi-check-circle-fill" style="font-size:.8rem;"></i>
+      </span>
+      <div class="cell-amount" title="Mois déjà payé — non modifiable">${amountLabel}</div>`;
+  } else {
+    div.className = 'month-cell cell-unpaid';
+    div.innerHTML = `
+      <span class="cell-icon" title="Impayé — ${amountLabel} FCFA attendus"
+            onclick="openPayModal(${enrPk}, ${y}, ${m}, 'pay', '${amountRaw}', '${label}', null)">
+        <i class="bi bi-x-circle" style="font-size:.8rem;"></i>
+      </span>
+      <div class="cell-amount cell-amount-editable" title="Cliquer pour modifier le montant"
+           onclick="event.stopPropagation(); openAmountEdit(${enrPk}, ${y}, ${m}, '${label}', '${amountRaw}')">${amountLabel}</div>`;
+  }
+
+  // Recalculer progression
+  updateProgress(row);
+}
+
+function updateProgress(row) {
+  const cells = row.querySelectorAll('.month-cell');
+  let paid = 0, total = 0;
+  cells.forEach(c => {
+    if (!c.classList.contains('cell-none')) {
+      total++;
+      if (c.classList.contains('cell-paid')) paid++;
+    }
+  });
+  const pct = total > 0 ? Math.round(paid / total * 100) : 0;
+  const bar = row.querySelector('.prog-bar');
+  if (bar) bar.style.width = pct + '%';
+  const lbl = row.querySelector('.prog-bar-wrap + div');
+  if (lbl) lbl.textContent = `${paid}/${total}`;
+}
+
+function showToast(msg, type) {
+  showToastWithRecu(msg, type, null);
+}
+
+function showToastWithRecu(msg, type, recuUrl) {
+  const colorMap = { success:'#1a8c3e', warning:'#b45309', error:'#c0392b' };
+  const iconMap  = { success:'check-circle-fill', warning:'exclamation-triangle-fill', error:'x-circle-fill' };
+  const bg = colorMap[type] || colorMap.success;
+  const ic = iconMap[type]  || iconMap.success;
+  const d = document.createElement('div');
+  const recuBtn = recuUrl
+    ? `<a href="${recuUrl}" target="_blank"
+          style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;
+                 background:#fff;color:#166534;border-radius:7px;padding:5px 12px;
+                 font-size:.8rem;font-weight:700;text-decoration:none;
+                 box-shadow:0 1px 4px rgba(0,0,0,.15);">
+          <i class="bi bi-file-earmark-arrow-down-fill"></i>Télécharger le reçu
+       </a>`
+    : '';
+  d.innerHTML = `
+    <div style="position:fixed;top:20px;right:20px;z-index:99999;min-width:300px;max-width:360px;
+                border-radius:12px;overflow:hidden;box-shadow:0 6px 24px rgba(0,0,0,.22);">
+      <div style="background:${bg};padding:12px 16px;color:#fff;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i class="bi bi-${ic}" style="font-size:1.1rem;flex-shrink:0;"></i>
+          <span style="font-size:.84rem;line-height:1.35;">${msg}</span>
+        </div>
+        ${recuBtn}
+      </div>
+    </div>`;
+  document.body.appendChild(d);
+  setTimeout(() => d.remove(), recuUrl ? 6000 : 3500);
+}
+
+function _addRecuBtn(enrPk, y, m, recuUrl) {
+  const row = document.querySelector(`tr[data-enr="${enrPk}"]`);
+  if (!row) return;
+  const table = row.closest('table');
+  if (!table) return;
+  const thead = table.querySelector('thead tr');
+  const ths   = thead.querySelectorAll('th');
+  let colIdx  = -1;
+  ths.forEach((th, i) => {
+    if (th.getAttribute('title') === `${MOIS_LONG[parseInt(m)]} ${y}`) colIdx = i;
+  });
+  if (colIdx < 0) return;
+  const td  = row.querySelectorAll('td')[colIdx];
+  if (!td)  return;
+  // Supprimer un ancien bouton reçu s'il existe
+  const old = td.querySelector('.recu-btn');
+  if (old) old.remove();
+  const btn = document.createElement('a');
+  btn.href      = recuUrl;
+  btn.target    = '_blank';
+  btn.className = 'recu-btn';
+  btn.title     = 'Télécharger le reçu PDF';
+  btn.style.cssText = 'display:block;margin-top:3px;font-size:.65rem;color:#166534;text-decoration:none;text-align:center;';
+  btn.innerHTML = '<i class="bi bi-file-earmark-pdf-fill"></i> Reçu';
+  td.appendChild(btn);
+}
+
+// Accordéon tableau : un seul tableau ouvert à la fois, tous repliés par défaut
+const _tableOpen = {};
+const MENSUALITE_OPEN_CLASS_KEY = 'mensualite_open_class';
+
+function _setTableState(classPk, open) {
+  const body    = document.getElementById(`table-body-${classPk}`);
+  const chevron = document.getElementById(`table-chevron-${classPk}`);
+  const header  = document.getElementById(`table-toggle-header-${classPk}`);
+  if (!body) return;
+  _tableOpen[classPk] = open;
+  if (open) {
+    body.style.display    = '';
+    chevron.style.transform = 'rotate(0deg)';
+    header.style.borderBottom = '';
+    try { sessionStorage.setItem(MENSUALITE_OPEN_CLASS_KEY, String(classPk)); } catch(e) {}
+  } else {
+    body.style.display    = 'none';
+    chevron.style.transform = 'rotate(180deg)';
+  }
+}
+
+function toggleTable(classPk) {
+  const willOpen = !(_tableOpen[classPk] ?? false);
+  if (willOpen) {
+    // Replier tous les autres tableaux avant d'ouvrir celui-ci
+    document.querySelectorAll('[id^="table-body-"]').forEach(el => {
+      const pk = el.id.replace('table-body-', '');
+      if (pk !== String(classPk)) _setTableState(pk, false);
+    });
+  } else {
+    try { sessionStorage.removeItem(MENSUALITE_OPEN_CLASS_KEY); } catch(e) {}
+  }
+  _setTableState(classPk, willOpen);
+}
+
+// Rouvrir automatiquement le tableau que l'utilisateur avait déplié avant un
+// rechargement de page (ex: après « Préparer pour la caisse » d'une échéance
+// boursier) — sans ça, l'utilisateur retombait sur la page repliée par
+// défaut et devait rechercher/redéplier sa classe à chaque action.
+document.addEventListener('DOMContentLoaded', function () {
+  let savedPk = null;
+  try { savedPk = sessionStorage.getItem(MENSUALITE_OPEN_CLASS_KEY); } catch(e) {}
+  if (savedPk && document.getElementById(`table-body-${savedPk}`)) {
+    _setTableState(savedPk, true);
+  }
+});
+
+function openClassFeeModal(classPk) {
+  var modalEl = document.getElementById(`modalClassFee-${classPk}`);
+  if (modalEl) new bootstrap.Modal(modalEl).show();
+}
+
+// Frais de soutenance (normale/spéciale) — L3/M2 uniquement. Purement
+// informatif : ne modifie ni le statut de paiement ni la carte étudiant.
+function updateSoutenanceField(input) {
+  const enrPk = input.dataset.enr;
+  const field = input.dataset.field;
+  const val = input.value;
+
+  fetch(`/accounting/mensualites/${enrPk}/soutenance/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({ csrfmiddlewaretoken: CSRF, field: field, amount: val }).toString(),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { alert(data.error); return; }
+    showToast('Montant mis à jour.', 'success');
+  })
+  .catch(() => alert('Erreur réseau'));
+}
+
+// Recherche d'un étudiant (nom/prénom) dans le tableau d'une classe
+function filterClassTable(classPk, query) {
+  const body = document.getElementById(`table-body-${classPk}`);
+  if (!body) return;
+  const q = query.trim().toLowerCase();
+  body.querySelectorAll('tbody tr[data-enr]').forEach(row => {
+    const name = row.getAttribute('data-name') || '';
+    row.style.display = (!q || name.includes(q)) ? '' : 'none';
+  });
+}
+
+// ── Édition du montant attendu d'un mois (avant paiement) ──────────────────
+function openAmountEdit(enrPk, y, m, label, currentAmount) {
+  _amtEnrPk = enrPk; _amtYear = y; _amtMonth = m;
+  document.getElementById('amount-modal-subtitle').textContent = label;
+  document.getElementById('amount-edit-input').value = currentAmount || '';
+  document.getElementById('amount-edit-modal').style.display = 'flex';
+}
+
+function closeAmountEditModal() {
+  document.getElementById('amount-edit-modal').style.display = 'none';
+}
+
+function confirmAmountEdit() {
+  const input = document.getElementById('amount-edit-input');
+  const val = parseFloat(input.value);
+  if (!val || val <= 0) {
+    input.style.borderColor = '#dc2626';
+    input.focus();
+    setTimeout(() => { input.style.borderColor = ''; }, 2000);
+    return;
+  }
+
+  const btn = document.getElementById('amount-edit-confirm-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>…';
+
+  const today = new Date().toISOString().split('T')[0];
+
+  fetch(`/accounting/mensualites/${_amtEnrPk}/payer/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({
+      csrfmiddlewaretoken: CSRF,
+      action: 'pay',
+      month_year: _amtYear,
+      month_num: _amtMonth,
+      amount: val,
+      pay_date: today,
+      notes: '',
+      moratoire: '0',
+      moratoire_distrib: '1',
+      moratoire_reste: '0',
+      moratoire_months: '[]',
+    }).toString(),
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.error) { alert(data.error); return; }
+    closeAmountEditModal();
+    _updateCell(_amtEnrPk, _amtYear, _amtMonth, 'pay', data.amount, data.date);
+    if (data.receipt_url) _addRecuBtn(_amtEnrPk, _amtYear, _amtMonth, data.receipt_url);
+    showToastWithRecu(data.message, 'success', data.receipt_url);
+  })
+  .catch(() => alert('Erreur réseau'))
+  .finally(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Enregistrer';
+  });
+}
+</script>
+{% endblock %}

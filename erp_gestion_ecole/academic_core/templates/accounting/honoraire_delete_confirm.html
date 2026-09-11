@@ -1,0 +1,69 @@
+{% extends 'base/base.html' %}
+{% block title %}Supprimer l'honoraire{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Honoraires</a></li>
+<li class="breadcrumb-item active">Supprimer</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#dc2626;"><i class="bi bi-trash3-fill"></i></span>
+    Supprimer l'honoraire
+  </h1>
+</div>
+
+<div class="card-section" style="max-width:520px;">
+  <div style="padding:28px 32px;">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+      <div style="width:48px;height:48px;border-radius:12px;background:#fef2f2;
+                  display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i class="bi bi-exclamation-triangle-fill" style="font-size:1.4rem;color:#dc2626;"></i>
+      </div>
+      <div>
+        <div style="font-size:1rem;font-weight:800;color:#1e293b;">Confirmer la suppression</div>
+        <div style="font-size:.82rem;color:#64748b;">Cette action est irréversible.</div>
+      </div>
+    </div>
+
+    <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:16px 20px;margin-bottom:20px;">
+      <table style="width:100%;font-size:.83rem;border-collapse:collapse;">
+        <tr>
+          <td style="color:#64748b;padding:4px 0;">Enseignant</td>
+          <td style="font-weight:700;color:#1e293b;">{{ honoraire.teacher.full_name }}</td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;padding:4px 0;">Département</td>
+          <td style="color:#1e293b;">{{ honoraire.department.name }}</td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;padding:4px 0;">Date</td>
+          <td style="color:#1e293b;">{{ honoraire.session_date|date:"d/m/Y" }}</td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;padding:4px 0;">Durée</td>
+          <td style="color:#1e293b;">{{ honoraire.duration_hours }}h</td>
+        </tr>
+        <tr>
+          <td style="color:#64748b;padding:4px 0;">Montant</td>
+          <td style="font-weight:800;color:#dc2626;">{{ honoraire.amount|floatformat:0 }} FCFA</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="d-flex gap-3">
+      <form method="post">
+        {% csrf_token %}
+        <button type="submit"
+                style="background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;
+                       border-radius:8px;padding:10px 20px;font-size:.85rem;font-weight:700;cursor:pointer;">
+          <i class="bi bi-trash3 me-1"></i>Confirmer la suppression
+        </button>
+      </form>
+      <a href="{{ back_url }}" class="btn btn-sm btn-outline-secondary" style="padding:8px 18px;">
+        <i class="bi bi-x-lg me-1"></i>Annuler
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

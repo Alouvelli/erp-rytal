@@ -1,0 +1,479 @@
+{% extends 'base/base.html' %}
+{% block title %}Pointage à l'accueil{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Pointage à l'accueil</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-qr-code-scan"></i></span>
+    Pointage à l'accueil
+  </h1>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-lg-5 col-md-7">
+
+    <!-- Carte identité -->
+    <div style="background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.09);overflow:hidden;margin-bottom:20px;">
+      <div style="background:linear-gradient(135deg,var(--navy),#1e3a6b);padding:16px 20px;display:flex;align-items:center;gap:14px;">
+        {% if is_student and employe.student_profile.photo %}
+        <img src="{{ employe.student_profile.photo.url }}" alt="photo"
+             style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.3);flex-shrink:0;">
+        {% elif not is_student and employe.avatar %}
+        <img src="{{ employe.avatar.url }}" alt="photo"
+             style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,.3);flex-shrink:0;">
+        {% else %}
+        <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.15);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i class="bi bi-person-fill" style="font-size:1.5rem;color:rgba(255,255,255,.7);"></i>
+        </div>
+        {% endif %}
+        <div>
+          <div style="color:#fff;font-weight:700;font-size:.95rem;">{{ employe.get_full_name }}</div>
+          {% if is_student %}
+          <div style="color:rgba(255,255,255,.7);font-size:.78rem;margin-top:2px;">{{ employe.student_profile.matricule|default:"—" }}</div>
+          <div style="color:rgba(255,255,255,.55);font-size:.72rem;">Étudiant</div>
+          {% else %}
+          <div style="color:rgba(255,255,255,.7);font-size:.78rem;margin-top:2px;">{{ employe.matricule_employe|default:"—" }}</div>
+          {% if employe.role %}
+          <div style="color:rgba(255,255,255,.55);font-size:.72rem;">{{ employe.role.get_name_display }}</div>
+          {% endif %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone scanner -->
+    <div class="card-section" id="scanner-card">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#0ea5e9;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-camera"></i></span>
+          Scanner le QR Code de l'accueil
+        </h6>
+        <span id="scan-status" style="font-size:.73rem;color:#94a3b8;">En attente…</span>
+      </div>
+      <div class="p-3">
+
+        <!-- Panneau démarrage -->
+        <div id="start-panel" style="text-align:center;padding:28px 16px;">
+          <div style="font-size:3rem;margin-bottom:10px;">📷</div>
+          <div style="font-size:.9rem;color:#475569;margin-bottom:18px;">
+            Cliquez pour activer la caméra et scanner le QR Code du contrôle d'accueil.
+          </div>
+          <button id="start-btn" onclick="startCamera()"
+                  style="background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;border:none;border-radius:12px;
+                         padding:12px 28px;font-weight:700;font-size:.92rem;cursor:pointer;display:inline-flex;align-items:center;gap:8px;">
+            <i class="bi bi-camera-video-fill"></i>Activer la caméra
+          </button>
+        </div>
+
+        <!-- Vidéo caméra (cachée jusqu'au démarrage) -->
+        <div id="camera-panel" style="display:none;">
+          <div style="position:relative;background:#0d2244;border-radius:12px;overflow:hidden;aspect-ratio:1/1;">
+            <video id="qr-video" autoplay playsinline muted
+                   style="width:100%;height:100%;object-fit:cover;display:block;"></video>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+              <div id="viewfinder" style="width:60%;height:60%;border:3px solid rgba(14,165,233,.9);border-radius:14px;
+                             box-shadow:0 0 0 9999px rgba(0,0,0,.45);transition:border-color .3s;"></div>
+            </div>
+            <div id="scan-overlay" style="position:absolute;bottom:10px;left:0;right:0;text-align:center;pointer-events:none;">
+              <span style="background:rgba(0,0,0,.55);color:#fff;font-size:.72rem;border-radius:20px;padding:4px 14px;">
+                Pointez vers le QR Code de l'accueil
+              </span>
+            </div>
+            <canvas id="qr-canvas" style="display:none;"></canvas>
+          </div>
+          <div style="margin-top:8px;text-align:center;">
+            <button onclick="switchCamera()"
+                    style="background:#f1f5f9;color:#475569;border:none;border-radius:8px;padding:6px 14px;font-size:.75rem;cursor:pointer;">
+              <i class="bi bi-arrow-repeat me-1"></i>Changer de caméra
+            </button>
+          </div>
+        </div>
+
+        <!-- Erreur caméra -->
+        <div id="camera-error" style="display:none;background:#fff1f2;border:1.5px solid #fecdd3;border-radius:12px;padding:16px;margin-top:10px;">
+          <div style="font-size:.88rem;font-weight:600;color:#dc2626;margin-bottom:6px;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i><span id="camera-error-title">Erreur caméra</span>
+          </div>
+          <div style="font-size:.8rem;color:#475569;" id="camera-error-msg"></div>
+          <div id="https-hint" style="display:none;margin-top:10px;background:#eff6ff;border-radius:8px;padding:10px 12px;font-size:.8rem;color:#1d4ed8;">
+            <i class="bi bi-shield-lock-fill me-1"></i>
+            Accédez à cette page via <strong id="https-url"></strong> pour activer la caméra.
+          </div>
+          <button onclick="startCamera()" style="margin-top:10px;background:#dc2626;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:.8rem;cursor:pointer;">
+            <i class="bi bi-arrow-clockwise me-1"></i>Réessayer
+          </button>
+        </div>
+
+        <!-- Résultat du pointage -->
+        <div id="scan-result" style="margin-top:14px;"></div>
+
+        <!-- Bouton rescan -->
+        <div id="rescan-btn" style="display:none;margin-top:12px;text-align:center;">
+          <button onclick="restartScanner()"
+                  style="background:#0ea5e9;color:#fff;border:none;border-radius:10px;padding:10px 24px;font-weight:700;font-size:.88rem;cursor:pointer;">
+            <i class="bi bi-arrow-clockwise me-1"></i>Scanner à nouveau
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px 18px;margin-top:16px;font-size:.82rem;color:#166534;">
+      <i class="bi bi-info-circle-fill me-1"></i>
+      <strong>Comment ça marche :</strong>
+      <ol style="margin:8px 0 0 16px;padding:0;line-height:1.9;">
+        <li>Rendez-vous à l'accueil de l'institut.</li>
+        <li>Le QR Code du contrôle d'accueil y est affiché.</li>
+        <li>Pointez votre caméra sur ce QR Code.</li>
+        <li>Votre arrivée (ou départ) est enregistrée automatiquement.</li>
+      </ol>
+    </div>
+
+    <div style="margin-top:14px;text-align:center;">
+      <a href="{% url 'dashboard:index' %}" style="font-size:.82rem;color:#64748b;text-decoration:none;">
+        <i class="bi bi-arrow-left me-1"></i>Retour au tableau de bord
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- jsQR CDN -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+<script>
+/* ── Polyfill navigator.mediaDevices pour anciens navigateurs (webkit/moz) ── */
+(function() {
+  if (!window.navigator) return;
+  if (!navigator.mediaDevices) { navigator.mediaDevices = {}; }
+  if (!navigator.mediaDevices.getUserMedia) {
+    var legacy = navigator.webkitGetUserMedia
+               || navigator.mozGetUserMedia
+               || navigator.msGetUserMedia;
+    if (legacy) {
+      navigator.mediaDevices.getUserMedia = function(c) {
+        return new Promise(function(ok, ko) { legacy.call(navigator, c, ok, ko); });
+      };
+    }
+  }
+  if (!navigator.mediaDevices.enumerateDevices) {
+    navigator.mediaDevices.enumerateDevices = function() { return Promise.resolve([]); };
+  }
+})();
+
+const video       = document.getElementById('qr-video');
+const canvas      = document.getElementById('qr-canvas');
+const ctx         = canvas.getContext('2d');
+const statusEl    = document.getElementById('scan-status');
+const resultEl    = document.getElementById('scan-result');
+const camErrEl    = document.getElementById('camera-error');
+const camErrTitle = document.getElementById('camera-error-title');
+const camErrMsg   = document.getElementById('camera-error-msg');
+const viewfinder  = document.getElementById('viewfinder');
+const rescanBtn   = document.getElementById('rescan-btn');
+const overlay     = document.getElementById('scan-overlay');
+const startPanel  = document.getElementById('start-panel');
+const cameraPanel = document.getElementById('camera-panel');
+
+let scanning         = false;
+let processed        = false;
+let allDevices       = [];
+let currentDeviceIdx = 0;
+
+async function startCamera() {
+  startPanel.style.display  = 'none';
+  camErrEl.style.display    = 'none';
+  resultEl.innerHTML        = '';
+  rescanBtn.style.display   = 'none';
+  processed = false;
+  scanning  = false;
+
+  /* Si l'API est absente (HTTP non-localhost sur Chrome Android), proposer HTTPS */
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showHttpsHint();
+    return;
+  }
+
+  statusEl.textContent = 'Connexion à la caméra…';
+  statusEl.style.color = '#f59e0b';
+
+  stopCamera();
+
+  /* Énumération initiale (peut retourner des IDs vides avant permission sur Firefox) */
+  try {
+    var devs = await navigator.mediaDevices.enumerateDevices();
+    allDevices = devs.filter(function(d){ return d.kind === 'videoinput'; });
+  } catch(e) { allDevices = []; }
+
+  /* Construire la liste de contraintes à essayer dans l'ordre */
+  var fallbacks = [];
+
+  /* 1. Caméra sélectionnée par l'utilisateur (deviceId connu et non vide) */
+  var chosen = allDevices[currentDeviceIdx];
+  if (chosen && chosen.deviceId && chosen.deviceId !== '') {
+    fallbacks.push({ video: { deviceId: { exact: chosen.deviceId } } });
+  }
+
+  /* 2. Caméra arrière idéale (mobile) */
+  fallbacks.push({ video: { facingMode: { ideal: 'environment' } } });
+  /* 3. Caméra avant (mobile fallback) */
+  fallbacks.push({ video: { facingMode: 'user' } });
+  /* 4. N'importe quelle caméra (webcam desktop, navigateurs sans facingMode) */
+  fallbacks.push({ video: true });
+
+  var stream  = null;
+  var lastErr = null;
+
+  for (var i = 0; i < fallbacks.length; i++) {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia(fallbacks[i]);
+      break;
+    } catch(e) {
+      lastErr = e;
+    }
+  }
+
+  if (!stream) {
+    var n     = lastErr && lastErr.name;
+    var title = 'Erreur caméra';
+    var msg   = (lastErr && lastErr.message) || 'Impossible d\'accéder à la caméra.';
+    if (n === 'SecurityError') {
+      showHttpsHint();
+      return;
+    } else if (n === 'NotAllowedError' || n === 'PermissionDeniedError') {
+      title = 'Permission refusée';
+      msg   = 'Autorisez la caméra dans votre navigateur : cliquez sur l\'icône 🔒 ou 📷 dans la barre d\'adresse, puis sur Réessayer.';
+    } else if (n === 'NotFoundError' || n === 'DevicesNotFoundError') {
+      title = 'Aucune caméra';
+      msg   = 'Aucune caméra détectée. Vérifiez que votre webcam est branchée et activée.';
+    } else if (n === 'NotReadableError' || n === 'TrackStartError' || n === 'AbortError') {
+      title = 'Caméra occupée';
+      msg   = 'La caméra est utilisée par une autre application ou un autre onglet. Fermez-les et réessayez.';
+    } else if (n === 'OverconstrainedError' || n === 'ConstraintNotSatisfiedError') {
+      title = 'Caméra non compatible';
+      msg   = 'Votre caméra ne supporte pas les paramètres demandés. Cliquez sur Réessayer.';
+    }
+    showCamError(title, msg);
+    return;
+  }
+
+  /* Après permission accordée, ré-énumérer pour avoir les vrais deviceIds (Firefox) */
+  try {
+    var devs2 = await navigator.mediaDevices.enumerateDevices();
+    var vids2 = devs2.filter(function(d){ return d.kind === 'videoinput'; });
+    if (vids2.length > 0) allDevices = vids2;
+  } catch(e) {}
+
+  video.srcObject = stream;
+  cameraPanel.style.display = 'block';
+
+  /* play() retourne une Promise sur les navigateurs modernes, undefined sur les anciens */
+  var playResult = video.play();
+  if (playResult && typeof playResult.catch === 'function') {
+    playResult.catch(function(){});
+  }
+
+  statusEl.textContent = 'Caméra active — pointez vers le QR Code';
+  statusEl.style.color = '#16a34a';
+  scanning = true;
+  requestAnimationFrame(tick);
+}
+
+async function switchCamera() {
+  if (allDevices.length <= 1) {
+    statusEl.textContent = 'Une seule caméra disponible';
+    statusEl.style.color = '#94a3b8';
+    return;
+  }
+  currentDeviceIdx = (currentDeviceIdx + 1) % allDevices.length;
+  await startCamera();
+}
+
+function tick() {
+  if (!scanning || processed) return;
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    var img  = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+    if (code && code.data) {
+      handleQR(code.data);
+      return;
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+function handleQR(rawUrl) {
+  processed = true;
+  scanning  = false;
+
+  var authUrl;
+  try {
+    var url = new URL(rawUrl);
+    var m = url.pathname.match(/^\/hr\/pointer-auth\/([^/]+)\/?$/);
+    if (!m) {
+      showScanError('Ce QR Code n\'est pas un QR de contrôle accueil.');
+      return;
+    }
+    authUrl = window.location.origin + url.pathname;
+  } catch(e) {
+    showScanError('QR Code invalide ou non reconnu.');
+    return;
+  }
+
+  statusEl.textContent = 'Validation en cours…';
+  statusEl.style.color = '#f59e0b';
+  if (viewfinder) viewfinder.style.borderColor = 'rgba(245,158,11,.9)';
+
+  var csrfToken = '{{ csrf_token }}';
+
+  if (typeof fetch !== 'undefined') {
+    fetch(authUrl, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest' },
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(data) { data.ok ? showSuccess(data) : showScanError(data.error || 'Erreur de validation.'); })
+    .catch(function() { showScanError('Erreur réseau. Vérifiez votre connexion.'); });
+  } else {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', authUrl, true);
+    xhr.setRequestHeader('X-CSRFToken', csrfToken);
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+    xhr.onload = function() {
+      try {
+        var data = JSON.parse(xhr.responseText);
+        data.ok ? showSuccess(data) : showScanError(data.error || 'Erreur de validation.');
+      } catch(e) { showScanError('Réponse invalide du serveur.'); }
+    };
+    xhr.onerror = function() { showScanError('Erreur réseau. Vérifiez votre connexion.'); };
+    xhr.send();
+  }
+}
+
+function showSuccess(data) {
+  if (data.type === 'student') {
+    showStudentCard(data);
+    return;
+  }
+
+  var actionLabel = data.action === 'arrivee' ? 'Arrivée enregistrée !'
+                   : data.action === 'depart'  ? 'Départ enregistré !'
+                   : 'Déjà pointé aujourd\'hui';
+
+  statusEl.textContent = actionLabel;
+  statusEl.style.color = '#16a34a';
+  if (viewfinder) viewfinder.style.borderColor = 'rgba(22,163,74,.9)';
+  if (overlay)    overlay.style.display = 'none';
+
+  resultEl.innerHTML =
+    '<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:14px;padding:20px 18px;text-align:center;">' +
+      '<div style="font-size:2.8rem;margin-bottom:8px;">✅</div>' +
+      '<div style="font-size:1rem;font-weight:700;color:#15803d;margin-bottom:6px;">' + actionLabel + '</div>' +
+      '<div style="font-size:.78rem;color:#64748b;margin-top:8px;line-height:1.8;">' +
+        '<div><i class="bi bi-clock me-1"></i>' + data.heure + '</div>' +
+        (data.statut_label ? '<div><i class="bi bi-flag me-1"></i>' + data.statut_label + '</div>' : '') +
+      '</div>' +
+    '</div>';
+
+  rescanBtn.style.display = 'block';
+  stopCamera();
+}
+
+function showStudentCard(data) {
+  var s = data.student, p = data.paiement;
+  var isSusp  = !!s.suspendu;
+  var isValid = !isSusp && p.is_valid;
+  var bgColor = isSusp ? '#d97706' : isValid ? '#16a34a' : '#dc2626';
+  var label   = isSusp ? 'SUSPENDU POUR IMPAYÉ' : isValid ? 'PAIEMENT À JOUR' : 'PAIEMENT NON À JOUR';
+
+  statusEl.textContent = label;
+  statusEl.style.color = bgColor;
+  if (viewfinder) viewfinder.style.borderColor = bgColor;
+  if (overlay)    overlay.style.display = 'none';
+
+  var classeLabel = [s.filiere, s.classe].filter(Boolean).join(' - ');
+  var photoHtml = s.photo
+    ? '<img src="' + s.photo + '" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #fff;">'
+    : '<div style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.25);display:inline-flex;align-items:center;justify-content:center;"><i class="bi bi-person-fill" style="font-size:1.6rem;color:#fff;"></i></div>';
+
+  resultEl.innerHTML =
+    '<div style="border-radius:14px;overflow:hidden;border:1.5px solid ' + bgColor + ';">' +
+      '<div style="background:' + bgColor + ';color:#fff;padding:10px 14px;text-align:center;font-weight:700;font-size:.85rem;">' + label + '</div>' +
+      '<div style="background:#fff;padding:16px;display:flex;gap:12px;align-items:center;">' +
+        photoHtml +
+        '<div style="text-align:left;">' +
+          '<div style="font-weight:700;font-size:.92rem;color:#1e293b;">' + s.nom + '</div>' +
+          '<div style="font-size:.76rem;color:#64748b;">Matricule : ' + s.matricule + '</div>' +
+          (classeLabel ? '<div style="font-size:.76rem;color:#64748b;">' + classeLabel + (s.annee ? ' — ' + s.annee : '') + '</div>' : '') +
+        '</div>' +
+      '</div>' +
+      '<div style="background:#f8fafc;padding:10px 14px;font-size:.78rem;color:#475569;border-top:1px solid #e2e8f0;">' +
+        (p.statut_detail || '') +
+      '</div>' +
+    '</div>';
+
+  rescanBtn.style.display = 'block';
+  stopCamera();
+}
+
+function showScanError(msg) {
+  statusEl.textContent = 'Échec';
+  statusEl.style.color = '#dc2626';
+  if (viewfinder) viewfinder.style.borderColor = 'rgba(220,38,38,.9)';
+  resultEl.innerHTML =
+    '<div style="background:#fff1f2;border:1.5px solid #fecdd3;border-radius:14px;padding:18px;text-align:center;">' +
+      '<div style="font-size:2rem;margin-bottom:6px;">❌</div>' +
+      '<div style="font-size:.88rem;font-weight:600;color:#dc2626;">' + msg + '</div>' +
+    '</div>';
+  rescanBtn.style.display = 'block';
+}
+
+function showCamError(title, msg) {
+  camErrTitle.textContent   = title;
+  camErrMsg.textContent     = msg;
+  camErrEl.style.display    = 'block';
+  cameraPanel.style.display = 'none';
+  statusEl.textContent      = title;
+  statusEl.style.color      = '#dc2626';
+}
+
+function showHttpsHint() {
+  var httpsUrl = window.location.href.replace(/^http:\/\//, 'https://');
+  startPanel.style.display  = 'none';
+  cameraPanel.style.display = 'none';
+  camErrTitle.textContent   = 'HTTPS requis';
+  camErrMsg.textContent     = 'Chrome bloque la caméra sur HTTP réseau. Accédez à cette page via HTTPS :';
+  document.getElementById('https-hint').style.display = 'block';
+  document.getElementById('https-url').textContent    = httpsUrl;
+  camErrEl.style.display  = 'block';
+  statusEl.textContent    = 'HTTPS requis';
+  statusEl.style.color    = '#dc2626';
+}
+
+function stopCamera() {
+  if (video.srcObject) {
+    try { video.srcObject.getTracks().forEach(function(t){ t.stop(); }); } catch(e) {}
+    video.srcObject = null;
+  }
+}
+
+function restartScanner() {
+  processed = false;
+  scanning  = false;
+  resultEl.innerHTML        = '';
+  rescanBtn.style.display   = 'none';
+  cameraPanel.style.display = 'none';
+  camErrEl.style.display    = 'none';
+  document.getElementById('https-hint').style.display = 'none';
+  if (overlay)    overlay.style.display = 'block';
+  if (viewfinder) viewfinder.style.borderColor = 'rgba(14,165,233,.9)';
+  startCamera();
+}
+</script>
+{% endblock %}

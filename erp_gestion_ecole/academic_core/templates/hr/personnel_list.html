@@ -1,0 +1,371 @@
+{% extends "base/base.html" %}
+{% block title %}Gestion du personnel{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-statut { display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:.73rem;font-weight:600; }
+.bc-CDI          { background:#dcfce7;color:#15803d; }
+.bc-CDD          { background:#dbeafe;color:#1d4ed8; }
+.bc-STAGE        { background:#fef3c7;color:#92400e; }
+.bc-PRESTATAIRE  { background:#f3e8ff;color:#7c3aed; }
+.bc-VACATION     { background:#f1f5f9;color:#64748b; }
+.pg-accord-header { padding:12px 18px;background:#eff6ff;border:none;border-left:4px solid var(--navy,#1d4ed8);cursor:pointer;text-align:left;width:100%; }
+.pg-accord-arrow { transition:transform .2s; }
+.pg-teacher-header { padding:12px 18px;background:#f5f3ff;border:none;border-left:4px solid #7c3aed;cursor:pointer;text-align:left;width:100%; }
+.pg-dept-card { border-top:1px solid #ede9fe; }
+.pg-dept-header { padding:10px 16px 10px 30px;background:#fafafa;border:none;border-left:4px solid #a78bfa;cursor:pointer;text-align:left;width:100%; }
+.pg-dept-arrow { transition:transform .2s; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'hr:dashboard' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+      <div>
+        <h5 class="mb-0 fw-bold">Gestion du personnel</h5>
+        <small class="text-muted">Fiches employé — poste, type de contrat, date d'embauche</small>
+      </div>
+    </div>
+    <div class="d-flex gap-2 no-print">
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i>Imprimer
+      </button>
+      <a href="{% url 'hr:personnel_pdf' %}" class="btn btn-sm" style="background:#dc2626;color:#fff;">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+      </a>
+      <a href="{% url 'hr:personnel_word' %}" class="btn btn-sm" style="background:#1d4ed8;color:#fff;">
+        <i class="bi bi-file-earmark-word me-1"></i>Word
+      </a>
+    </div>
+  </div>
+
+  <form method="get" class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3 d-flex flex-wrap gap-3 align-items-end">
+      <div style="min-width:260px;">
+        <label class="form-label fw-semibold mb-1" style="font-size:.8rem;">Rechercher</label>
+        <input type="text" name="q" value="{{ q }}" class="form-control form-control-sm" placeholder="Nom, matricule, email…">
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm fw-semibold"><i class="bi bi-search me-1"></i>Rechercher</button>
+        <a href="{% url 'hr:personnel_list' %}" class="btn btn-outline-secondary btn-sm">Réinitialiser</a>
+      </div>
+    </div>
+  </form>
+
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <span class="fw-bold" style="font-size:.9rem;">{{ total_count }} employé{{ total_count|pluralize }}</span>
+  </div>
+
+  {% if groups or teacher_groups %}
+  <div id="pg-accordion">
+    {% for group in groups %}
+    <div class="card border-0 shadow-sm mb-3" style="overflow:hidden;">
+      <button type="button" class="pg-accord-header d-flex align-items-center justify-content-between" data-target="pg-body-{{ forloop.counter }}" onclick="pgToggle(this)">
+        <span class="fw-bold" style="color:var(--navy,#1d4ed8);font-size:.9rem;">
+          <i class="bi bi-building me-2"></i>{{ group.label }}
+        </span>
+        <span class="d-flex align-items-center gap-2">
+          <span style="font-size:.72rem;font-weight:700;color:var(--navy,#1d4ed8);background:#dbeafe;padding:2px 10px;border-radius:20px;">
+            {{ group.rows|length }} employé{{ group.rows|length|pluralize }}
+          </span>
+          <i class="bi bi-chevron-down pg-accord-arrow" style="color:var(--navy,#1d4ed8);"></i>
+        </span>
+      </button>
+      <div class="pg-accord-body" id="pg-body-{{ forloop.counter }}" style="display:none;">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead style="background:#f8fafc;">
+              <tr style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">
+                <th class="px-3">Employé</th>
+                <th>Matricule</th>
+                <th>Poste</th>
+                <th>Contrat</th>
+                <th>Date d'embauche</th>
+                <th class="text-end px-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in group.rows %}
+              <tr>
+                <td class="px-3">
+                  <a href="{% url 'hr:employe_fiche' pk=row.employe.pk %}" class="fw-semibold text-decoration-none text-dark" style="font-size:.87rem;">
+                    {{ row.employe.get_full_name }}
+                  </a>
+                  <div style="font-size:.73rem;color:#94a3b8;">{{ row.employe.role.get_name_display|default:'—' }}</div>
+                </td>
+                <td style="font-size:.82rem;">{{ row.employe.matricule_employe|default:'—' }}</td>
+                <td style="font-size:.83rem;">{{ row.fiche.poste|default:'—' }}</td>
+                <td>
+                  {% if row.fiche %}
+                  <span class="badge-statut bc-{{ row.fiche.type_contrat }}">{{ row.fiche.get_type_contrat_display }}</span>
+                  {% else %}
+                  <span style="font-size:.78rem;color:#94a3b8;">Non renseigné</span>
+                  {% endif %}
+                </td>
+                <td style="font-size:.82rem;">{{ row.fiche.date_embauche|date:"d/m/Y"|default:'—' }}</td>
+                <td class="text-end px-3">
+                  <div class="d-flex gap-1 justify-content-end">
+                    {% if is_manager %}
+                    <a href="{% url 'hr:personnel_fiche_edit' pk=row.employe.pk %}" class="btn btn-xs btn-outline-primary" style="padding:4px 10px;font-size:.73rem;" title="Fiche employé">
+                      <i class="bi bi-pencil-square"></i>
+                    </a>
+                    {% if row.employe != request.user %}
+                    <button type="button" class="btn btn-xs btn-outline-warning" style="padding:4px 10px;font-size:.73rem;" title="Archiver"
+                            onclick="pgConfirmArchive({{ row.employe.pk }}, '{{ row.employe.get_full_name|default:row.employe.username|escapejs }}')">
+                      <i class="bi bi-archive"></i>
+                    </button>
+                    <button type="button" class="btn btn-xs btn-outline-danger" style="padding:4px 10px;font-size:.73rem;" title="Supprimer définitivement"
+                            onclick="pgConfirmDelete({{ row.employe.pk }}, '{{ row.employe.get_full_name|default:row.employe.username|escapejs }}')">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                    {% endif %}
+                    {% else %}
+                    <a href="{% url 'hr:employe_fiche' pk=row.employe.pk %}" class="btn btn-xs btn-outline-secondary" style="padding:4px 10px;font-size:.73rem;">
+                      <i class="bi bi-eye"></i>
+                    </a>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6" class="text-center py-4 text-muted">
+                  <i class="bi bi-person-slash d-block mb-1" style="font-size:1.4rem;opacity:.3;"></i>
+                  Aucun utilisateur affecté pour le moment.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    {% if teacher_groups %}
+    <div class="card border-0 shadow-sm mb-3" style="overflow:hidden;">
+      <button type="button" class="pg-teacher-header d-flex align-items-center justify-content-between" data-target="pg-teacher-body" onclick="pgToggle(this)">
+        <span class="fw-bold" style="color:#7c3aed;font-size:.9rem;">
+          <i class="bi bi-mortarboard-fill me-2"></i>Enseignant
+        </span>
+        <span class="d-flex align-items-center gap-2">
+          <span style="font-size:.72rem;font-weight:700;color:#7c3aed;background:#ede9fe;padding:2px 10px;border-radius:20px;">
+            {{ teacher_total }} enseignant{{ teacher_total|pluralize }}
+          </span>
+          <i class="bi bi-chevron-down pg-accord-arrow" style="color:#7c3aed;"></i>
+        </span>
+      </button>
+      <div class="pg-accord-body" id="pg-teacher-body" style="display:none;">
+        <div class="p-3 border-bottom no-print">
+          <input type="text" id="teacherSearchInput" class="form-control form-control-sm" style="max-width:340px;"
+                 placeholder="Rechercher un enseignant (nom, prénom, matricule)…" oninput="pgFilterTeachers(this.value)">
+        </div>
+        {% for dg in teacher_groups %}
+        <div class="pg-dept-card" data-dept-block>
+          <button type="button" class="pg-dept-header d-flex align-items-center justify-content-between" data-target="pg-dept-body-{{ forloop.counter }}" onclick="pgToggle(this)">
+            <span class="fw-semibold" style="color:#5b21b6;font-size:.85rem;">
+              <i class="bi bi-building me-2"></i>{{ dg.label }}
+            </span>
+            <span class="d-flex align-items-center gap-2">
+              <span data-dept-count style="font-size:.7rem;font-weight:700;color:#5b21b6;background:#ede9fe;padding:2px 9px;border-radius:20px;">
+                {{ dg.rows|length }} enseignant{{ dg.rows|length|pluralize }}
+              </span>
+              <a href="{% url 'hr:personnel_enseignants_pdf' %}?department_id={{ dg.dept_id|default:'' }}" class="btn btn-xs no-print" style="padding:3px 9px;font-size:.7rem;background:#dc2626;color:#fff;" onclick="event.stopPropagation()" title="PDF">
+                <i class="bi bi-file-earmark-pdf"></i>
+              </a>
+              <a href="{% url 'hr:personnel_enseignants_word' %}?department_id={{ dg.dept_id|default:'' }}" class="btn btn-xs no-print" style="padding:3px 9px;font-size:.7rem;background:#1d4ed8;color:#fff;" onclick="event.stopPropagation()" title="Word">
+                <i class="bi bi-file-earmark-word"></i>
+              </a>
+              <i class="bi bi-chevron-down pg-dept-arrow" style="color:#5b21b6;"></i>
+            </span>
+          </button>
+          <div class="pg-accord-body" id="pg-dept-body-{{ forloop.counter }}" style="display:none;">
+            <div class="table-responsive">
+              <table class="table table-hover mb-0">
+                <thead style="background:#f8fafc;">
+                  <tr style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">
+                    <th class="px-3">Enseignant</th>
+                    <th>Matricule</th>
+                    <th>Poste</th>
+                    <th>Contrat</th>
+                    <th>Date d'embauche</th>
+                    <th class="text-end px-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in dg.rows %}
+                  <tr data-teacher-row data-search="{{ row.employe.get_full_name|lower }} {{ row.employe.matricule_employe|default:''|lower }}">
+                    <td class="px-3">
+                      <a href="{% url 'hr:employe_fiche' pk=row.employe.pk %}" class="fw-semibold text-decoration-none text-dark" style="font-size:.87rem;">
+                        {{ row.employe.get_full_name }}
+                      </a>
+                    </td>
+                    <td style="font-size:.82rem;">{{ row.employe.matricule_employe|default:'—' }}</td>
+                    <td style="font-size:.83rem;">{{ row.fiche.poste|default:'—' }}</td>
+                    <td>
+                      {% if row.fiche %}
+                      <span class="badge-statut bc-{{ row.fiche.type_contrat }}">{{ row.fiche.get_type_contrat_display }}</span>
+                      {% else %}
+                      <span style="font-size:.78rem;color:#94a3b8;">Non renseigné</span>
+                      {% endif %}
+                    </td>
+                    <td style="font-size:.82rem;">{{ row.fiche.date_embauche|date:"d/m/Y"|default:'—' }}</td>
+                    <td class="text-end px-3">
+                      <div class="d-flex gap-1 justify-content-end">
+                        {% if is_manager %}
+                        <a href="{% url 'hr:personnel_fiche_edit' pk=row.employe.pk %}" class="btn btn-xs btn-outline-primary" style="padding:4px 10px;font-size:.73rem;" title="Fiche employé">
+                          <i class="bi bi-pencil-square"></i>
+                        </a>
+                        {% if row.employe != request.user %}
+                        <button type="button" class="btn btn-xs btn-outline-warning" style="padding:4px 10px;font-size:.73rem;" title="Archiver"
+                                onclick="pgConfirmArchive({{ row.employe.pk }}, '{{ row.employe.get_full_name|default:row.employe.username|escapejs }}')">
+                          <i class="bi bi-archive"></i>
+                        </button>
+                        <button type="button" class="btn btn-xs btn-outline-danger" style="padding:4px 10px;font-size:.73rem;" title="Supprimer définitivement"
+                                onclick="pgConfirmDelete({{ row.employe.pk }}, '{{ row.employe.get_full_name|default:row.employe.username|escapejs }}')">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                        {% endif %}
+                        {% else %}
+                        <a href="{% url 'hr:employe_fiche' pk=row.employe.pk %}" class="btn btn-xs btn-outline-secondary" style="padding:4px 10px;font-size:.73rem;">
+                          <i class="bi bi-eye"></i>
+                        </a>
+                        {% endif %}
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="card border-0 shadow-sm">
+    <div class="card-body text-center py-5 text-muted">
+      <i class="bi bi-people d-block mb-2" style="font-size:2rem;opacity:.3;"></i>
+      Aucun employé trouvé.
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Modal archiver -->
+<div class="modal fade" id="pgArchiveModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#fef3c7;border-bottom:1px solid #fde68a;">
+        <h6 class="modal-title" style="color:#92400e;font-weight:700;"><i class="bi bi-archive me-2"></i>Archiver le personnel</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="font-size:.84rem;">
+        Archiver <strong id="pgArchiveName"></strong> ?
+        <div style="margin-top:8px;font-size:.78rem;color:#94a3b8;">
+          Son compte sera désactivé : il/elle n'aura plus accès à la plateforme, mais ses données restent conservées.
+          Réactivable depuis Utilisateurs.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+        <form id="pgArchiveForm" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm" style="background:#d97706;color:#fff;">
+            <i class="bi bi-archive me-1"></i>Archiver
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal supprimer -->
+<div class="modal fade" id="pgDeleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#fee2e2;border-bottom:1px solid #fecaca;">
+        <h6 class="modal-title" style="color:#991b1b;font-weight:700;"><i class="bi bi-exclamation-triangle me-2"></i>Supprimer le personnel</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" style="font-size:.84rem;">
+        Supprimer définitivement <strong id="pgDeleteName"></strong> ?
+        <div style="margin-top:8px;font-size:.78rem;color:#94a3b8;">
+          Cette action est irréversible : le compte et toutes les données qui en dépendent seront supprimés.
+          Il/elle n'aura plus aucun accès à la plateforme.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+        <form id="pgDeleteForm" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm" style="background:#dc2626;color:#fff;">
+            <i class="bi bi-trash me-1"></i>Supprimer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function pgToggle(btn) {
+  const body  = document.getElementById(btn.getAttribute('data-target'));
+  const arrow = btn.querySelector('i.bi-chevron-down');
+  const open  = body.style.display !== 'none';
+  body.style.display    = open ? 'none' : 'block';
+  if (arrow) arrow.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+/* Recherche d'un enseignant : filtre les lignes dans tous les départements,
+   déplie automatiquement les départements ayant au moins un résultat,
+   et replie tout quand le champ est vidé (tout reste plié par défaut). */
+function pgFilterTeachers(query) {
+  const q = query.trim().toLowerCase();
+  document.querySelectorAll('[data-dept-block]').forEach(function (block) {
+    const header   = block.querySelector('.pg-dept-header');
+    const body     = block.querySelector('.pg-accord-body');
+    const countEl  = block.querySelector('[data-dept-count]');
+    let visible = 0;
+    block.querySelectorAll('[data-teacher-row]').forEach(function (row) {
+      const match = !q || row.getAttribute('data-search').includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    if (countEl) countEl.textContent = visible + (visible > 1 ? ' enseignants' : ' enseignant');
+    if (body) {
+      if (q && visible > 0) {
+        body.style.display = 'block';
+        const arrow = header && header.querySelector('i.bi-chevron-down');
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
+      } else if (!q) {
+        body.style.display = 'none';
+        const arrow = header && header.querySelector('i.bi-chevron-down');
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
+      }
+    }
+    block.style.display = (q && visible === 0) ? 'none' : '';
+  });
+}
+
+function pgConfirmArchive(pk, name) {
+  document.getElementById('pgArchiveName').textContent = name;
+  document.getElementById('pgArchiveForm').action = '/hr/personnel/' + pk + '/archiver/';
+  new bootstrap.Modal(document.getElementById('pgArchiveModal')).show();
+}
+
+function pgConfirmDelete(pk, name) {
+  document.getElementById('pgDeleteName').textContent = name;
+  document.getElementById('pgDeleteForm').action = '/hr/personnel/' + pk + '/supprimer/';
+  new bootstrap.Modal(document.getElementById('pgDeleteModal')).show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'base/base.html' %}
+{% block title %}Contrats Enseignants{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Contrats Enseignants</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003D82;"><i class="bi bi-file-earmark-text-fill"></i></span>
+    Contrats Enseignants
+  </h1>
+  <a href="{% url 'teachers:contrat_modele' %}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-sliders me-1"></i>Modèle de contrat
+  </a>
+</div>
+
+{% if not by_dept %}
+<div class="card-section">
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-inbox" style="font-size:2rem;"></i>
+    <p class="mt-2 mb-0">Aucun contrat pour le moment. Les contrats se créent automatiquement dès qu'un enseignant se voit affecter un module.</p>
+  </div>
+</div>
+{% endif %}
+
+{% for dept_name, contrats in by_dept.items %}
+<div class="card-section mb-4">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#003D82;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-building"></i></span>
+      {{ dept_name }}
+    </h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Enseignant</th>
+          <th>Année académique</th>
+          <th>Dernière mise à jour</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in contrats %}
+        <tr>
+          <td>{{ c.teacher.full_name }}</td>
+          <td>{{ c.academic_year.label }}</td>
+          <td>{{ c.updated_at|date:'d/m/Y H:i' }}</td>
+          <td class="text-end">
+            <a href="{% url 'teachers:contrat_edit' c.pk %}" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-pencil-square"></i> Modifier
+            </a>
+            <a href="{% url 'teachers:contrat_pdf' c.pk %}" target="_blank" class="btn btn-sm btn-primary">
+              <i class="bi bi-file-earmark-pdf"></i> PDF
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+{% endblock %}

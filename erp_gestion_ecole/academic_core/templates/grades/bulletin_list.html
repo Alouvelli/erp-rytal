@@ -1,0 +1,504 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if semester.session_rattrapage_active %}Bulletins Rattrapage — {{ class_group.name }} S{{ semester.number }}{% else %}Bulletins — {{ class_group.name }} S{{ semester.number }}{% endif %}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'grades:bulletin_class_list' %}">Bulletins</a></li>
+<li class="breadcrumb-item active">
+  {{ class_group.name }} — S{{ semester.number }}
+  {% if semester.session_rattrapage_active %}
+  <span style="background:#fef3c7;color:#b45309;border-radius:10px;padding:1px 8px;font-size:.72rem;font-weight:700;margin-left:6px;">
+    <i class="bi bi-arrow-repeat me-1"></i>Session Rattrapage
+  </span>
+  {% endif %}
+</li>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+/* ── Tableau principal ── */
+.bl-table { width:100%; border-collapse:collapse; font-size:.83rem; }
+.bl-table th { padding:9px 14px; font-size:.73rem; font-weight:700; color:#64748b;
+               border-bottom:2px solid #e2e8f0; background:#fafafa; }
+.bl-table td { padding:9px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+.bl-table tr.student-row:hover td { background:#f8fafc; cursor:pointer; }
+.bl-table tr.inactive-row > td { opacity:.55; }
+
+/* ── Ligne de détail UE/EC ── */
+.detail-row > td { padding:0; background:#f8fafc !important; }
+.detail-inner { padding:14px 20px 16px 36px; }
+
+/* ── Blocs UE ── */
+.ue-block { border-radius:10px; overflow:hidden; border:1px solid #e2e8f0;
+            margin-bottom:10px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+.ue-header { display:flex; align-items:center; gap:10px; padding:9px 16px; border-left:4px solid; flex-wrap:wrap; }
+.ue-ok-hdr  { background:#f0fdf4; border-color:#16a34a; }
+.ue-ko-hdr  { background:#fff7ed; border-color:#ea580c; }
+.ue-none-hdr{ background:#f8fafc; border-color:#94a3b8; }
+.ec-table { width:100%; border-collapse:collapse; font-size:.78rem; }
+.ec-table th { padding:6px 12px; font-size:.7rem; color:#64748b; font-weight:700;
+               background:#f8fafc; border-top:1px solid #e2e8f0; }
+.ec-table td { padding:5px 12px; border-top:1px solid #f1f5f9; }
+
+/* ── Toggle chevron ── */
+.toggle-btn { background:none; border:none; cursor:pointer; color:#94a3b8;
+              font-size:.85rem; padding:2px 6px; transition:transform .2s; }
+.toggle-btn.open { transform:rotate(180deg); color:var(--navy,#1e3a5f); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-3">
+  <h1 class="page-title">
+    <span class="icon" style="background:{% if semester.session_rattrapage_active %}#b45309{% else %}#1e3a5f{% endif %};">
+      <i class="bi bi-{% if semester.session_rattrapage_active %}arrow-repeat{% else %}journal-text{% endif %}"></i>
+    </span>
+    {% if semester.session_rattrapage_active %}
+      Bulletins de Rattrapage — {{ class_group.name }} | {{ semester.label }}
+    {% else %}
+      Bulletins — {{ class_group.name }} | {{ semester.label }}
+    {% endif %}
+  </h1>
+  {% if semester.session_rattrapage_active %}
+  <div style="width:100%;margin-top:8px;padding:10px 16px;background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;
+              display:flex;align-items:center;gap:10px;font-size:.83rem;font-weight:600;color:#92400e;">
+    <i class="bi bi-arrow-repeat" style="font-size:1.1rem;"></i>
+    <span>SESSION DE RATTRAPAGE ACTIVE — Les notes de rattrapage sont en cours de saisie pour ce semestre.</span>
+  </div>
+  {% endif %}
+  <div class="d-flex gap-2 flex-wrap">
+    <form method="post" action="{% url 'grades:bulletin_generate_class' class_group.pk semester.pk %}"
+          onsubmit="return confirm('Générer/recalculer tous les bulletins pour cette classe ?');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;padding:8px 18px;">
+        <i class="bi bi-arrow-repeat me-1"></i>Générer tous les bulletins
+      </button>
+    </form>
+    <a href="{% url 'grades:export_grades_excel' class_group.pk semester.pk %}"
+       class="btn btn-sm" style="background:#15803d;color:#fff;border:none;padding:8px 18px;">
+      <i class="bi bi-file-earmark-spreadsheet me-1"></i>Exporter notes (Excel)
+    </a>
+    <a href="{% url 'grades:archive_bulletins_zip' class_group.pk semester.pk %}"
+       class="btn btn-sm" style="background:#dc2626;color:#fff;border:none;padding:8px 18px;"
+       onclick="return confirm('Générer les bulletins PDF de tous les étudiants dans un ZIP ?')">
+      <i class="bi bi-file-zip me-1"></i>Archiver bulletins (ZIP)
+    </a>
+    <a href="{% url 'students:abandon_list' %}?class_id={{ class_group.pk }}{% if semester.academic_year %}&year_id={{ semester.academic_year.pk }}{% endif %}"
+       class="btn btn-sm" style="background:#fff7ed;color:#c2410c;border:1px solid #fdba74;padding:8px 18px;"
+       title="Voir et réactiver les étudiants désactivés (abandons) de cette classe">
+      <i class="bi bi-person-x-fill me-1"></i>Abandons de la classe
+    </a>
+  </div>
+</div>
+
+<!-- Sélecteur semestre -->
+<div class="d-flex gap-2 mb-4 flex-wrap">
+  {% for s in semesters %}
+  <a href="{% url 'grades:bulletin_list' class_group.pk s.pk %}"
+     class="btn btn-sm {% if s.pk == semester.pk %}{% if s.session_rattrapage_active %}btn-warning{% else %}btn-primary{% endif %}{% else %}btn-outline-secondary{% endif %}"
+     style="font-size:.8rem;">
+    {{ s.label }}
+    {% if s.session_rattrapage_active %}
+    <span style="font-size:.65rem;font-weight:700;margin-left:3px;opacity:.85;">· RATT.</span>
+    {% endif %}
+  </a>
+  {% endfor %}
+</div>
+
+<div class="card-section">
+  <div class="card-section-header" style="flex-wrap:wrap;gap:8px;cursor:pointer;" onclick="toggleStudentList()">
+    <h6 class="card-section-title">
+      <button type="button" class="toggle-btn open" id="bl-list-toggle-btn"
+              onclick="event.stopPropagation();toggleStudentList();" style="margin-right:2px;">
+        <i class="bi bi-chevron-down"></i>
+      </button>
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;
+                   align-items:center;justify-content:center;font-size:.8rem;color:#fff;">
+        <i class="bi bi-list-ol"></i></span>
+      Liste des étudiants
+      <span style="font-size:.75rem;font-weight:400;color:#64748b;margin-left:8px;" id="bl-count">
+        ({{ student_rows|length }} étudiant(s))
+      </span>
+    </h6>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;" onclick="event.stopPropagation();">
+      <div style="position:relative;min-width:220px;">
+        <i class="bi bi-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:.8rem;"></i>
+        <input type="text" id="bl-search-input" placeholder="Rechercher un étudiant..."
+               class="form-control form-control-sm" style="padding-left:30px;font-size:.82rem;">
+      </div>
+      <div style="font-size:.74rem;color:#94a3b8;">
+        <i class="bi bi-chevron-expand me-1"></i>Cliquez sur une ligne pour voir le détail UE/EC
+      </div>
+    </div>
+  </div>
+
+  <div id="bl-list-body">
+  {% if student_rows %}
+  <div style="overflow-x:auto;padding:0;">
+    <table class="bl-table" id="bl-table">
+      <thead>
+        <tr>
+          <th style="width:32px;"></th>
+          <th>Étudiant</th>
+          <th>Matricule</th>
+          <th class="text-center">Moy. semestrielle</th>
+          <th class="text-center">Mention</th>
+          <th class="text-center">Crédits obt.</th>
+          <th class="text-center">Décision</th>
+          <th class="text-center">Inscription</th>
+          <th class="text-center">Statut</th>
+          <th class="text-center" title="Statut des paiements de scolarité">Scolarité</th>
+          <th class="text-center">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in student_rows %}
+        {% with rid=forloop.counter %}
+
+        <!-- ── Ligne principale ── -->
+        <tr class="student-row {% if not row.is_active %}inactive-row{% endif %}"
+            onclick="toggleDetail({{ rid }})" title="Voir les UEs et notes"
+            data-search="{{ row.student.user.get_full_name|lower }} {{ row.student.matricule|lower }}">
+          <td>
+            <button class="toggle-btn" id="tbtn-{{ rid }}"
+                    onclick="event.stopPropagation();toggleDetail({{ rid }})">
+              <i class="bi bi-chevron-down"></i>
+            </button>
+          </td>
+          <td>
+            <div style="font-weight:600;display:flex;align-items:center;gap:8px;">
+              {% if not row.is_active %}
+              <span style="font-size:.65rem;background:#e2e8f0;color:#64748b;
+                           padding:1px 7px;border-radius:10px;font-weight:600;">INACTIF</span>
+              {% endif %}
+              {{ row.student.user.get_full_name }}
+            </div>
+          </td>
+          <td style="font-size:.78rem;color:#64748b;">{{ row.student.matricule }}</td>
+          <td class="text-center">
+            {% if row.data.semester_average %}
+              <span style="font-weight:700;font-size:.95rem;
+                           color:{% if row.data.semester_average >= 10 %}#16a34a{% else %}#dc2626{% endif %};">
+                {{ row.data.semester_average|floatformat:2 }}
+              </span>
+            {% else %}
+              <span style="color:#94a3b8;">—</span>
+            {% endif %}
+          </td>
+          <td class="text-center">
+            {% if row.data.mention %}
+              <span style="font-size:.75rem;color:#1e3a5f;font-weight:600;">{{ row.data.mention }}</span>
+            {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+          </td>
+          <td class="text-center">
+            {% if row.data.total_credits_obtained is not None %}
+              <span style="font-weight:600;">{{ row.data.total_credits_obtained }}</span>
+              <span style="color:#94a3b8;font-size:.78rem;">/ {{ row.data.total_credits_possible }}</span>
+            {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+          </td>
+          <!-- Décision UE -->
+          <td class="text-center">
+            {% if row.all_ues_validated %}
+              <span style="background:#dcfce7;color:#166534;border-radius:20px;padding:3px 10px;
+                           font-size:.72rem;font-weight:600;">
+                <i class="bi bi-patch-check-fill me-1"></i>Validé
+              </span>
+            {% else %}
+              <span style="background:#ffedd5;color:#c2410c;border-radius:20px;padding:3px 10px;
+                           font-size:.72rem;font-weight:600;">
+                <i class="bi bi-arrow-repeat me-1"></i>Rattrapage
+              </span>
+            {% endif %}
+          </td>
+          <!-- Inscription -->
+          <td class="text-center">
+            {% if row.payment_validated %}
+              <span style="background:#dcfce7;color:#166534;border-radius:20px;padding:3px 10px;
+                           font-size:.72rem;font-weight:600;">Validée</span>
+            {% else %}
+              <span style="background:#fee2e2;color:#991b1b;border-radius:20px;padding:3px 10px;
+                           font-size:.72rem;font-weight:600;">Non validée</span>
+            {% endif %}
+          </td>
+          <!-- Statut actif -->
+          <td class="text-center">
+            {% if row.is_active %}
+              <span style="background:#dbeafe;color:#1e40af;border-radius:20px;padding:3px 10px;
+                           font-size:.72rem;font-weight:600;">
+                <i class="bi bi-circle-fill me-1" style="font-size:.5rem;"></i>Actif
+              </span>
+            {% else %}
+              <span style="background:#f1f5f9;color:#64748b;border-radius:20px;padding:3px 10px;
+                           font-size:.72rem;font-weight:600;">
+                <i class="bi bi-circle me-1" style="font-size:.5rem;"></i>Inactif
+              </span>
+            {% endif %}
+          </td>
+          <!-- Scolarité (paiements mensualités) -->
+          <td class="text-center">
+            {% if row.pay_status.frais_mensuel <= 0 %}
+              <span style="background:#f1f5f9;color:#64748b;border-radius:20px;padding:3px 10px;
+                           font-size:.72rem;font-weight:600;" title="Aucune mensualité configurée">
+                <i class="bi bi-dash-circle"></i> N/A
+              </span>
+            {% elif row.pay_status.is_cleared %}
+              <span style="background:#dcfce7;color:#166534;border-radius:20px;padding:3px 10px;
+                           font-size:.72rem;font-weight:600;" title="Tous les mois sont payés">
+                <i class="bi bi-check-circle-fill me-1"></i>À jour
+              </span>
+            {% else %}
+              <span style="background:#fee2e2;color:#991b1b;border-radius:20px;padding:3px 10px;
+                           font-size:.72rem;font-weight:600;cursor:default;"
+                    title="Mois impayés : {{ row.pay_status.unpaid_month_labels|join:', ' }} — {{ row.pay_status.total_due|floatformat:0 }} FCFA">
+                <i class="bi bi-exclamation-circle-fill me-1"></i>Impayé
+                <span style="font-size:.65rem;display:block;margin-top:1px;">
+                  {{ row.pay_status.unpaid_months|length }} mois dû{{ row.pay_status.unpaid_months|length|pluralize }}
+                </span>
+              </span>
+            {% endif %}
+          </td>
+          <!-- Actions -->
+          <td class="text-center" onclick="event.stopPropagation()">
+            <div class="d-flex gap-1 justify-content-center flex-wrap">
+              {% if row.pay_status.is_cleared or row.pay_status.frais_mensuel <= 0 %}
+              <a href="{% url 'grades:bulletin_preview' class_group.pk semester.pk row.student.pk %}"
+                 class="btn btn-sm" style="background:#eff6ff;color:#1e3a5f;border:1px solid #bfdbfe;
+                 font-size:.73rem;padding:3px 9px;" title="Aperçu bulletin">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'grades:bulletin_pdf' class_group.pk semester.pk row.student.pk %}"
+                 class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;
+                 font-size:.73rem;padding:3px 9px;" title="PDF bulletin">
+                <i class="bi bi-file-earmark-pdf"></i>
+              </a>
+              {% else %}
+              <button class="btn btn-sm" disabled
+                      style="background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;
+                             font-size:.73rem;padding:3px 9px;cursor:not-allowed;"
+                      title="Aperçu bloqué — Mois impayés : {{ row.pay_status.unpaid_month_labels|join:', ' }}">
+                <i class="bi bi-eye-slash"></i>
+              </button>
+              <button class="btn btn-sm" disabled
+                      style="background:#fef2f2;color:#fca5a5;border:1px solid #fecaca;
+                             font-size:.73rem;padding:3px 9px;cursor:not-allowed;"
+                      title="Impression bloquée — {{ row.pay_status.total_due|floatformat:0 }} FCFA impayés">
+                <i class="bi bi-file-earmark-pdf"></i>
+              </button>
+              {% endif %}
+              {% if row.bulletin %}
+              <a href="{% url 'grades:bulletin_detail' row.bulletin.pk %}"
+                 class="btn btn-sm" style="background:#f0fdf4;color:#166534;border:1px solid #86efac;
+                 font-size:.73rem;padding:3px 9px;" title="Détail bulletin">
+                <i class="bi bi-card-list"></i>
+              </a>
+              {% endif %}
+              <!-- Activer / Désactiver -->
+              {% if row.enrollment %}
+              <form method="post"
+                    action="{% url 'grades:enrollment_toggle_active' class_group.pk semester.pk row.enrollment.pk %}"
+                    style="display:inline;"
+                    onsubmit="return confirm('{% if row.is_active %}Désactiver cet étudiant ? Il sera inscrit sur la liste des abandons, son compte sera désactivé et il disparaîtra de cette liste (réintégrable depuis Abandons).{% else %}Réactiver cet étudiant ?{% endif %}')">
+                {% csrf_token %}
+                {% if row.is_active %}
+                <button type="submit" class="btn btn-sm"
+                        style="background:#fff7ed;color:#c2410c;border:1px solid #fdba74;
+                               font-size:.73rem;padding:3px 9px;"
+                        title="Désactiver l'étudiant (marqué comme abandon, exclu de la délibération)">
+                  <i class="bi bi-person-dash"></i>
+                </button>
+                {% else %}
+                <button type="submit" class="btn btn-sm"
+                        style="background:#f0fdf4;color:#166534;border:1px solid #86efac;
+                               font-size:.73rem;padding:3px 9px;"
+                        title="Réactiver l'étudiant">
+                  <i class="bi bi-person-check"></i>
+                </button>
+                {% endif %}
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+
+        <!-- ── Ligne de détail UE/EC ── -->
+        <tr class="detail-row" id="detail-{{ rid }}" style="display:none;">
+          <td colspan="10">
+            <div class="detail-inner">
+              {% if row.ue_data_list %}
+                {% for ud in row.ue_data_list %}
+                <div class="ue-block">
+                  <div class="ue-header {% if ud.is_validated %}ue-ok-hdr{% elif ud.average is not None %}ue-ko-hdr{% else %}ue-none-hdr{% endif %}">
+                    <span style="font-weight:700;font-size:.82rem;min-width:100px;">{{ ud.ue.code }}</span>
+                    <span style="font-size:.82rem;color:#374151;flex:1;font-weight:600;">{{ ud.ue.title }}</span>
+                    <!-- Moy UE -->
+                    {% if ud.average is not None %}
+                      <span style="font-weight:800;font-size:.9rem;
+                                   color:{% if ud.is_validated %}#166534{% else %}#dc2626{% endif %};">
+                        Moy : {{ ud.average|floatformat:2 }}
+                      </span>
+                    {% else %}
+                      <span style="color:#94a3b8;font-size:.82rem;">Pas de notes</span>
+                    {% endif %}
+                    <!-- Badge UE -->
+                    {% if ud.is_validated %}
+                      <span style="background:#dcfce7;color:#166534;border-radius:14px;padding:2px 9px;
+                                   font-size:.7rem;font-weight:700;">
+                        <i class="bi bi-check-circle-fill me-1"></i>Validée
+                        · {{ ud.credits_obtained }}/{{ ud.credits_possible }} crédits
+                      </span>
+                    {% elif ud.average is not None %}
+                      <span style="background:#ffedd5;color:#c2410c;border-radius:14px;padding:2px 9px;
+                                   font-size:.7rem;font-weight:700;">
+                        <i class="bi bi-x-circle-fill me-1"></i>Non validée · 0/{{ ud.credits_possible }} crédits
+                      </span>
+                    {% else %}
+                      <span style="background:#f1f5f9;color:#64748b;border-radius:14px;padding:2px 9px;
+                                   font-size:.7rem;font-weight:600;">
+                        <i class="bi bi-dash-circle me-1"></i>À composer
+                      </span>
+                    {% endif %}
+                  </div>
+                  <table class="ec-table">
+                    <thead>
+                      <tr>
+                        <th>Code EC</th>
+                        <th>Intitulé</th>
+                        <th class="text-center">Coef.</th>
+                        <th class="text-center">CC (D1+D2)</th>
+                        <th class="text-center">EXAM</th>
+                        <th class="text-center">RATT.</th>
+                        <th class="text-center">Moy. EC</th>
+                        <th class="text-center">Appréciation</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for ec in ud.ec_list %}
+                      <tr>
+                        <td style="font-weight:700;color:#7c3aed;font-size:.76rem;">{{ ec.subject.code }}</td>
+                        <td style="font-size:.78rem;">{{ ec.subject.title }}</td>
+                        <td class="text-center" style="font-size:.76rem;color:#64748b;">{{ ec.subject.coefficient }}</td>
+                        <!-- CC -->
+                        <td class="text-center">
+                          {% if ec.cc_average is not None %}
+                            <span style="font-weight:600;">{{ ec.cc_average|floatformat:2 }}</span>
+                            {% if ec.d1_score is not None or ec.d2_score is not None %}
+                            <div style="font-size:.65rem;color:#94a3b8;">
+                              {% if ec.d1_score is not None %}D1:{{ ec.d1_score|floatformat:2 }}{% endif %}
+                              {% if ec.d2_score is not None %} / D2:{{ ec.d2_score|floatformat:2 }}{% endif %}
+                            </div>
+                            {% endif %}
+                          {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+                        </td>
+                        <!-- EXAM -->
+                        <td class="text-center">
+                          {% if ec.exam_score is not None %}
+                            <span style="font-weight:600;
+                                         color:{% if ec.exam_score >= 10 %}#166534{% else %}#dc2626{% endif %};">
+                              {{ ec.exam_score|floatformat:2 }}
+                            </span>
+                          {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+                        </td>
+                        <!-- RATT -->
+                        <td class="text-center">
+                          {% if ec.rattrapage_score is not None %}
+                            <span style="font-weight:600;color:#c2410c;">
+                              {{ ec.rattrapage_score|floatformat:2 }}
+                            </span>
+                          {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+                        </td>
+                        <!-- Moy EC -->
+                        <td class="text-center">
+                          {% if ec.final_average is not None %}
+                            <span style="font-weight:800;font-size:.88rem;
+                                         color:{% if ec.final_average >= 10 %}#166534{% else %}#dc2626{% endif %};">
+                              {{ ec.final_average|floatformat:2 }}
+                            </span>
+                          {% else %}<span style="color:#94a3b8;">—</span>{% endif %}
+                        </td>
+                        <!-- Appréciation -->
+                        <td class="text-center">
+                          {% if ec.appreciation == 'Validé' %}
+                            <span style="background:#dcfce7;color:#166534;border-radius:10px;
+                                         padding:2px 8px;font-size:.69rem;font-weight:600;">
+                              <i class="bi bi-check-circle-fill me-1"></i>Validé
+                            </span>
+                          {% elif ec.appreciation == 'Non Validé' %}
+                            <span style="background:#fee2e2;color:#dc2626;border-radius:10px;
+                                         padding:2px 8px;font-size:.69rem;font-weight:600;">
+                              <i class="bi bi-x-circle-fill me-1"></i>Non validé
+                            </span>
+                          {% else %}
+                            <span style="background:#f1f5f9;color:#64748b;border-radius:10px;
+                                         padding:2px 8px;font-size:.69rem;font-weight:600;">
+                              {{ ec.appreciation }}
+                            </span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+                {% endfor %}
+              {% else %}
+                <div style="color:#94a3b8;font-size:.82rem;padding:10px 0;">
+                  <i class="bi bi-info-circle me-1"></i>Aucune donnée UE/EC pour ce semestre.
+                </div>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+    <i class="bi bi-people d-block mb-3" style="font-size:2.5rem;color:#cbd5e1;"></i>
+    <div style="font-size:.9rem;font-weight:600;">Aucun étudiant inscrit</div>
+  </div>
+  {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleStudentList() {
+  const body = document.getElementById('bl-list-body');
+  const btn  = document.getElementById('bl-list-toggle-btn');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : '';
+  btn.classList.toggle('open', !open);
+}
+
+function toggleDetail(rid) {
+  const row = document.getElementById('detail-' + rid);
+  const btn = document.getElementById('tbtn-' + rid);
+  const open = row.style.display !== 'none';
+  row.style.display = open ? 'none' : 'table-row';
+  btn.classList.toggle('open', !open);
+}
+
+document.getElementById('bl-search-input')?.addEventListener('input', function(e) {
+  const term = e.target.value.trim().toLowerCase();
+  const rows = document.querySelectorAll('#bl-table tr.student-row');
+  let visibleCount = 0;
+  rows.forEach(function(row) {
+    const match = row.dataset.search.indexOf(term) !== -1;
+    row.style.display = match ? '' : 'none';
+    if (!match) {
+      // Cacher aussi le detail UE/EC ouvert de cette ligne
+      const rid = row.getAttribute('onclick').match(/\d+/)[0];
+      const detail = document.getElementById('detail-' + rid);
+      if (detail) detail.style.display = 'none';
+      const btn = document.getElementById('tbtn-' + rid);
+      if (btn) btn.classList.remove('open');
+    }
+    if (match) visibleCount++;
+  });
+  const countEl = document.getElementById('bl-count');
+  if (countEl) countEl.textContent = '(' + visibleCount + ' étudiant' + (visibleCount !== 1 ? 's' : '') + ')';
+});
+</script>
+{% endblock %}

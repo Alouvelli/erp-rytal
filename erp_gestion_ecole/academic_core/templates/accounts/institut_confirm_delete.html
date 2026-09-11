@@ -1,0 +1,76 @@
+{% extends 'base/base.html' %}
+{% block title %}Supprimer l'institut{% endblock %}
+{% block content %}
+<div class="container-fluid py-4" style="max-width:540px;">
+  <div class="card border-danger" style="border-radius:14px;overflow:hidden;">
+    <div class="card-header bg-danger text-white py-3">
+      <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmer la suppression de l'institut</h5>
+    </div>
+    <div class="card-body p-4">
+      <p class="mb-2">Vous êtes sur le point de supprimer l'institut :</p>
+      <div class="my-3 p-3" style="background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">
+        {% if inst.logo %}
+          <img src="{{ inst.logo.url }}" style="height:40px;object-fit:contain;margin-bottom:8px;" alt="Logo">
+        {% endif %}
+        <div style="font-size:1rem;font-weight:700;color:#1e293b;">{{ inst.nom }}</div>
+        {% if inst.sigle %}<div style="font-size:.82rem;color:#64748b;">{{ inst.sigle }}</div>{% endif %}
+      </div>
+
+      {% if admins %}
+      <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.84rem;">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <strong>{{ admins|length }} administrateur(s) rattaché(s)</strong> à cet institut :
+        <ul class="mb-0 mt-1">
+          {% for a in admins %}
+          <li>{{ a.get_full_name }} — {{ a.email }}</li>
+          {% endfor %}
+        </ul>
+        <div class="mt-2">La suppression est <strong>bloquée</strong> tant que ces administrateurs existent. Supprimez-les d'abord.</div>
+      </div>
+      <a href="{% url 'accounts:inst_admin_list' %}" class="btn btn-outline-secondary">Retour</a>
+      {% else %}
+      <p class="text-danger mb-3" style="font-size:.88rem;">
+        <i class="bi bi-exclamation-circle me-1"></i>La configuration de l'institut sera
+        définitivement effacée. Confirmez les deux points suivants pour continuer :
+      </p>
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-check mb-2 p-3" style="background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">
+          <input class="form-check-input" type="checkbox" name="confirm_archive" id="confirm_archive" required>
+          <label class="form-check-label" for="confirm_archive" style="font-size:.85rem;">
+            J'ai bien noté que la base de données de cet institut sera <strong>archivée</strong>
+            (déplacée, jamais supprimée) et pourra être restaurée si le même institut
+            (même code) est recréé plus tard.
+          </label>
+        </div>
+        <div class="form-check mb-3 p-3" style="background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;">
+          <input class="form-check-input" type="checkbox" name="confirm_unlink" id="confirm_unlink" required>
+          <label class="form-check-label" for="confirm_unlink" style="font-size:.85rem;">
+            Je confirme la suppression de <strong>tous les liens actifs</strong> entre cette base
+            et l'application — l'institut ne sera plus accessible tant que sa base
+            n'aura pas été restaurée.
+          </label>
+        </div>
+        <div class="d-flex gap-3">
+          <button type="submit" id="btn-confirm-delete" class="btn btn-danger fw-bold px-4" disabled>
+            <i class="bi bi-trash3 me-1"></i>Supprimer définitivement
+          </button>
+          <a href="{% url 'accounts:inst_admin_list' %}" class="btn btn-outline-secondary">Annuler</a>
+        </div>
+      </form>
+      <script>
+        (function() {
+          var a = document.getElementById('confirm_archive');
+          var u = document.getElementById('confirm_unlink');
+          var btn = document.getElementById('btn-confirm-delete');
+          function sync() { btn.disabled = !(a.checked && u.checked); }
+          a.addEventListener('change', sync);
+          u.addEventListener('change', sync);
+        })();
+      </script>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

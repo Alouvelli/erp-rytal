@@ -1,0 +1,64 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ partnership.intitule }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:partnership_list' %}">Conventions</a></li>
+<li class="breadcrumb-item active">{{ partnership.intitule }}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-file-earmark-text-fill"></i></span>
+    {{ partnership.intitule }}
+  </h1>
+  <a href="{% url 'coip:partnership_edit' partnership.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i>Modifier</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title">Informations</h6></div>
+      <div class="p-3" style="font-size:.85rem;">
+        <div class="mb-2"><strong>Partenaire :</strong> <a href="{% url 'coip:partner_detail' partnership.partner_id %}">{{ partnership.partner.raison_sociale }}</a></div>
+        <div class="mb-2"><strong>Statut :</strong> <span class="badge bg-{{ partnership.statut_color }}">{{ partnership.get_status_display }}</span></div>
+        <div class="mb-2"><strong>Signature :</strong> {{ partnership.date_signature|date:"d/m/Y" }}</div>
+        <div class="mb-2"><strong>Expiration :</strong> {{ partnership.date_expiration|date:"d/m/Y"|default:"—" }}
+          {% if partnership.is_expired %}<span class="badge bg-danger ms-1">Expirée</span>{% endif %}
+        </div>
+        <div class="mb-2"><strong>Responsable :</strong> {{ partnership.responsable.get_full_name|default:"—" }}</div>
+        {% if partnership.document %}<div class="mb-2"><a href="{{ partnership.document.url }}" target="_blank"><i class="bi bi-file-earmark-arrow-down me-1"></i>Document</a></div>{% endif %}
+        {% if partnership.description %}<hr><div>{{ partnership.description|linebreaksbr }}</div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header"><h6 class="card-section-title">Historique de collaboration</h6></div>
+      <div class="p-3">
+        <table class="table table-sm mb-3">
+          <thead><tr><th>Date</th><th>Type</th><th>Description</th></tr></thead>
+          <tbody>
+            {% for h in history %}
+            <tr>
+              <td style="font-size:.82rem;">{{ h.date|date:"d/m/Y" }}</td>
+              <td style="font-size:.82rem;">{{ h.type_collaboration }}</td>
+              <td style="font-size:.82rem;">{{ h.description|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3" class="text-center text-muted py-3">Aucun historique enregistré.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <form method="post" action="{% url 'coip:partnership_history_add' partnership.pk %}" class="row g-2 border-top pt-3">
+          {% csrf_token %}
+          <div class="col-md-3">{{ history_form.date }}</div>
+          <div class="col-md-4">{{ history_form.type_collaboration }}</div>
+          <div class="col-md-4">{{ history_form.description }}</div>
+          <div class="col-md-1"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="bi bi-plus-lg"></i></button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

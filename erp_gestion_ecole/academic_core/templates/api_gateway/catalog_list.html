@@ -1,0 +1,120 @@
+{% extends 'base/base.html' %}
+{% block title %}API de Consommation — Catalogue{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">API de Consommation</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0f172a;"><i class="bi bi-hdd-network-fill"></i></span>
+    API de Consommation
+  </h1>
+  {% if can_manage %}
+  <div class="d-flex gap-2">
+    <a href="{% url 'api_gateway:access_requests_list' %}" class="btn btn-outline-primary btn-sm">
+      <i class="bi bi-inbox me-1"></i>Demandes d'accès
+    </a>
+    <a href="{% url 'api_gateway:grants_list' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-key me-1"></i>Accès accordés
+    </a>
+  </div>
+  {% else %}
+  <a href="{% url 'api_gateway:my_access_requests' %}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-clock-history me-1"></i>Mes demandes d'accès
+  </a>
+  {% endif %}
+</div>
+
+{% if can_manage %}
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:.82rem;color:#1e40af;">
+  <i class="bi bi-info-circle-fill me-2"></i>
+  Catalogue des ressources d'API de votre institut, regroupées par fonctionnalité. Accordez un accès à un
+  utilisateur pour générer un lien (avec clé) qu'il pourra utiliser pour consommer cette ressource — en
+  lecture seule, révocable à tout moment. Les accès peuvent aussi être générés depuis une
+  <a href="{% url 'api_gateway:access_requests_list' %}">demande d'accès</a> soumise par un utilisateur.
+</div>
+{% else %}
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:.82rem;color:#1e40af;">
+  <i class="bi bi-info-circle-fill me-2"></i>
+  Catalogue des ressources d'API de votre institut. Pour obtenir un accès (lien + clé) sur l'une de ces
+  ressources, faites une demande — elle sera transmise à l'administrateur de l'institut ou au contrôleur
+  interne pour approbation.
+</div>
+{% endif %}
+
+{% for functionality, resources in grouped_resources.items %}
+<div class="card-section mb-3">
+  <div class="card-section-header">
+    <h6 class="card-section-title"><i class="bi bi-folder2-open me-2" style="color:var(--navy);"></i>{{ functionality }}</h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover" style="margin:0;">
+      <thead style="background:#f8fafc;">
+        <tr>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;padding:10px 16px;">Ressource</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;">Chemin</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;">Description</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;text-align:center;width:160px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for resource in resources %}
+        <tr>
+          <td style="padding:10px 16px;font-size:.85rem;font-weight:700;color:#1e293b;">{{ resource.name }}</td>
+          <td style="font-size:.8rem;"><code>{{ resource.endpoint_path }}</code></td>
+          <td style="font-size:.8rem;color:#64748b;max-width:340px;">{{ resource.description|truncatewords:22 }}</td>
+          <td style="text-align:center;">
+            {% if can_manage %}
+            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#grantModal{{ resource.pk }}">
+              <i class="bi bi-key-fill me-1"></i>Accorder un accès
+            </button>
+            {% else %}
+            <a href="{% url 'api_gateway:my_access_request_create' %}?resource={{ resource.pk }}" class="btn btn-outline-primary btn-sm">
+              <i class="bi bi-send me-1"></i>Demander l'accès
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if can_manage %}
+{% for resource in resources %}
+<div class="modal fade" id="grantModal{{ resource.pk }}" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'api_gateway:grant_create' resource.pk %}">
+        {% csrf_token %}
+        <div class="modal-header" style="background:var(--navy);color:#fff;">
+          <h6 class="modal-title">Accorder un accès — {{ resource.name }}</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label class="form-label" style="font-size:.82rem;font-weight:600;">Utilisateur <span style="color:#ef4444;">*</span></label>
+          <select name="user_id" class="form-select form-select-sm" required>
+            <option value="">— Choisir —</option>
+            {% for u in users %}
+            <option value="{{ u.pk }}">{{ u.get_full_name }} ({{ u.email }})</option>
+            {% endfor %}
+          </select>
+          <label class="form-label mt-3" style="font-size:.82rem;font-weight:600;">Expiration (optionnel)</label>
+          <input type="date" name="expires_at" class="form-control form-control-sm">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm">Générer l'accès</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endfor %}
+{% endif %}
+{% empty %}
+<div class="card-section p-5 text-center" style="color:#94a3b8;">Aucune ressource dans le catalogue.</div>
+{% endfor %}
+{% endblock %}

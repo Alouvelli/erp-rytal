@@ -1,0 +1,51 @@
+{% extends 'base/base.html' %}
+{% block title %}{{ opp.titre }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'coip:index' %}">COIP</a></li>
+<li class="breadcrumb-item"><a href="{% url 'coip:opportunity_list' %}">Opportunités</a></li>
+<li class="breadcrumb-item active">{{ opp.titre }}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#6d28d9;"><i class="bi bi-megaphone-fill"></i></span>
+    {{ opp.titre }}
+  </h1>
+  <a href="{% url 'coip:opportunity_edit' opp.pk %}" class="btn btn-outline-primary btn-sm"><i class="bi bi-pencil me-1"></i>Modifier</a>
+</div>
+
+<div class="card-section">
+  <div class="card-section-header"><h6 class="card-section-title">Candidatures ({{ applications.count }})</h6></div>
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead><tr><th>Étudiant</th><th>Statut</th><th>Date</th><th>Documents</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for a in applications %}
+        <tr>
+          <td style="font-size:.85rem;font-weight:600;">{{ a.student }}</td>
+          <td><span class="badge bg-{{ a.statut_color }}">{{ a.get_status_display }}</span></td>
+          <td style="font-size:.82rem;">{{ a.submitted_at|date:"d/m/Y" }}</td>
+          <td style="font-size:.82rem;">
+            {% if a.cv %}<a href="{{ a.cv.url }}" target="_blank" class="me-2"><i class="bi bi-file-earmark-text"></i> CV</a>{% endif %}
+            {% if a.lettre_motivation %}<a href="{{ a.lettre_motivation.url }}" target="_blank"><i class="bi bi-file-earmark-text"></i> Lettre</a>{% endif %}
+          </td>
+          <td>
+            <form method="post" action="{% url 'coip:job_application_update_status' a.pk %}" class="d-flex gap-1 align-items-center">
+              {% csrf_token %}
+              <select name="status" class="form-select form-select-sm" style="width:auto;">
+                {% for code, label in a.STATUT_CHOICES %}
+                <option value="{{ code }}" {% if a.status == code %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn btn-outline-primary btn-sm"><i class="bi bi-check"></i></button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">Aucune candidature reçue.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

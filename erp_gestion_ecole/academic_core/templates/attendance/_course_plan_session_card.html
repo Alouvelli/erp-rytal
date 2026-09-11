@@ -1,0 +1,40 @@
+<div class="session-card" style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px 22px;margin-bottom:16px;box-shadow:0 1px 2px rgba(15,23,42,.04);">
+  {{ form.id }}
+  <div class="d-flex align-items-end gap-3 flex-wrap mb-3">
+    <div style="width:76px;">
+      <label class="form-label" style="font-size:.7rem;color:#94a3b8;font-weight:800;letter-spacing:.03em;">N° SÉANCE</label>
+      {{ form.numero }}
+    </div>
+    <div style="flex:1;min-width:260px;">
+      <label class="form-label" style="font-size:.7rem;color:#94a3b8;font-weight:800;letter-spacing:.03em;">TITRE DE LA SÉANCE</label>
+      {{ form.titre }}
+    </div>
+    <div style="width:120px;">
+      <label class="form-label" style="font-size:.7rem;color:#94a3b8;font-weight:800;letter-spacing:.03em;">DURÉE (H)</label>
+      <div class="form-control" style="background:#f8fafc;color:#64748b;font-weight:700;text-align:center;" title="Durée fixée automatiquement d'après l'emploi du temps de ce module — non modifiable.">
+        {{ session_duration }} h
+      </div>
+    </div>
+    {% if form.DELETE %}
+    <div class="form-check pb-2" style="width:110px;">
+      {{ form.DELETE }}
+      <label class="form-check-label" style="font-size:.75rem;color:#dc2626;font-weight:600;">Supprimer</label>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label" style="font-size:.7rem;color:#94a3b8;font-weight:800;letter-spacing:.03em;">
+        <i class="bi bi-bullseye me-1" style="color:#7c3aed;"></i>OBJECTIF DE LA SÉANCE
+      </label>
+      {{ form.objectif }}
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" style="font-size:.7rem;color:#94a3b8;font-weight:800;letter-spacing:.03em;">
+        <i class="bi bi-card-text me-1" style="color:#0891b2;"></i>CONTENU PRÉVU
+      </label>
+      {{ form.contenu_prevu }}
+    </div>
+  </div>
+</div>

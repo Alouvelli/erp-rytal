@@ -1,0 +1,63 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Créer un compte — {{ config.nom|default:config.sigle }}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <style>
+    body { background: linear-gradient(135deg, #003d82, #0066cc); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; font-family: 'Segoe UI', system-ui, sans-serif; }
+    .signup-card { border: none; border-radius: 14px; box-shadow: 0 16px 48px rgba(0,0,0,.3); }
+    .signup-header { background: linear-gradient(135deg, #003d82, #0066cc); color: #fff; padding: 1.5rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container" style="max-width: 480px;">
+    <div style="background:#fff;border-radius:14px;padding:16px 20px 2px;margin-bottom:16px;">
+      {% include 'admissions/_stepper.html' with current_step=current_step|default:1 %}
+    </div>
+    <div class="card signup-card">
+      <div class="signup-header">
+        <h1 class="h5 fw-bold mb-0">Créer votre compte candidat</h1>
+        <p class="small mb-0">{{ config.nom|default:config.sigle }}</p>
+      </div>
+      <div class="card-body p-4">
+        {% if messages %}
+          {% for m in messages %}<div class="alert alert-{{ m.tags }}">{{ m }}</div>{% endfor %}
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          {% if preselected_program %}
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Filière</label>
+            <input type="text" class="form-control" value="{{ preselected_program.name }}" readonly disabled>
+            <input type="hidden" name="program_code" value="{{ preselected_program.code }}">
+            <div class="text-muted small mt-1">Filière choisie depuis le portail — votre candidature sera automatiquement soumise pour celle-ci.</div>
+          </div>
+          {% endif %}
+          {% for field in form %}
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}<div class="text-danger small mt-1">{{ field.errors|striptags }}</div>{% endif %}
+            {% if field.help_text %}<div class="text-muted small mt-1">{{ field.help_text }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          <button type="submit" class="btn btn-primary w-100 fw-bold">Créer mon compte</button>
+        </form>
+        <p class="text-center small text-muted mt-3">
+          Déjà un compte ? <a href="{% url 'accounts:login' %}">Connectez-vous</a>
+        </p>
+        <p class="text-center small">
+          <a href="{% url 'admission_portal:portail' institut_code %}">&larr; Retour au portail</a>
+        </p>
+      </div>
+    </div>
+  </div>
+  <script>
+    document.querySelectorAll('input, select, textarea').forEach(el => el.classList.add('form-control'));
+  </script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+{% extends "base/base.html" %}
+{% block title %}Discipline{% endblock %}
+
+{% block extra_head %}
+<style>
+.badge-statut { display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:.73rem;font-weight:600; }
+.bd-DEMANDE_EXPLICATION { background:#fef3c7;color:#92400e; }
+.bd-REPONSE_RECUE       { background:#e0f2fe;color:#0369a1; }
+.bd-CONSEIL             { background:#ede9fe;color:#5b21b6; }
+.bd-SANCTION            { background:#fee2e2;color:#b91c1c; }
+.bd-CLASSE              { background:#f1f5f9;color:#475569; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'hr:dashboard' %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i></a>
+      <div>
+        <h5 class="mb-0 fw-bold">Discipline</h5>
+        <small class="text-muted">Dossiers disciplinaires du personnel</small>
+      </div>
+    </div>
+    {% if is_manager %}
+    <div class="d-flex gap-2 no-print flex-wrap">
+      <button class="btn btn-primary btn-sm fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#form-discipline">
+        <i class="bi bi-plus-lg me-1"></i>Ouvrir un dossier
+      </button>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if is_manager %}
+  <div class="collapse mb-4" id="form-discipline">
+    <form method="post" action="{% url 'hr:discipline_create' %}" class="card border-0 shadow-sm p-3">
+      {% csrf_token %}
+      <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold mb-1" style="font-size:.8rem;">Employé</label>
+          <select name="user" class="form-select form-select-sm" required>
+            <option value="">— Choisir —</option>
+            {% for emp in staff %}<option value="{{ emp.pk }}">{{ emp.get_full_name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold mb-1" style="font-size:.8rem;">Motif</label>
+          <input type="text" name="motif" class="form-control form-control-sm" required>
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-primary btn-sm w-100 fw-semibold">Ouvrir</button>
+        </div>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-3">
+      <span class="fw-bold">{{ cases|length }} dossier{{ cases|length|pluralize }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead style="background:#f8fafc;">
+            <tr style="font-size:.78rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;">
+              <th class="px-3">Employé</th>
+              <th>Motif</th>
+              <th>Statut</th>
+              <th>Ouvert le</th>
+              <th class="text-end px-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in cases %}
+            <tr>
+              <td class="px-3">
+                <span class="fw-semibold" style="font-size:.87rem;">{{ c.user.get_full_name }}</span>
+                <div style="font-size:.73rem;color:#94a3b8;">{{ c.user.role.get_name_display|default:'' }}</div>
+              </td>
+              <td style="font-size:.82rem;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ c.motif }}">{{ c.motif|truncatechars:50 }}</td>
+              <td><span class="badge-statut bd-{{ c.statut }}">{{ c.get_statut_display }}</span></td>
+              <td style="font-size:.75rem;color:#94a3b8;white-space:nowrap;">{{ c.created_at|date:"d/m/Y" }}</td>
+              <td class="text-end px-3">
+                <a href="{% url 'hr:discipline_detail' pk=c.pk %}" class="btn btn-xs btn-outline-secondary" style="padding:4px 10px;font-size:.73rem;">
+                  <i class="bi bi-eye"></i> Voir
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-5 text-muted">
+                <i class="bi bi-shield-check" style="font-size:2rem;opacity:.3;display:block;"></i>
+                <span class="mt-2 d-block">Aucun dossier disciplinaire.</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

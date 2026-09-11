@@ -1,0 +1,123 @@
+{% extends 'base/base.html' %}
+{% block title %}Départements{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'academic_structure:index' %}">Structure</a></li>
+<li class="breadcrumb-item active">Départements</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:#16a34a;"><i class="bi bi-diagram-3"></i></span>Départements</h1>
+  {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+  <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalDept"><i class="bi bi-plus-lg"></i> Nouveau département</button>
+  {% endif %}
+</div>
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-ul"></i></span>Liste des départements</h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table" id="tbl-depts">
+      <thead><tr><th>Code</th><th>Nom</th><th>Institut</th><th>Filières</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for dept in departments %}
+        <tr>
+          <td><span style="font-weight:700;font-size:.8rem;background:#f0fdf4;color:#16a34a;padding:3px 8px;border-radius:5px;">{{ dept.code }}</span></td>
+          <td style="font-weight:600;font-size:.85rem;">{{ dept.name }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ dept.faculty.name|default:"—" }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ dept.program_count|default:"0" }}</td>
+          <td>
+            {% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+            <div class="d-flex gap-1">
+              <button class="btn-action edit" title="Modifier"
+                onclick="openEditDept({{ dept.pk }},'{{ dept.code|escapejs }}','{{ dept.name|escapejs }}',{{ dept.faculty_id|default:'null' }})">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <form method="post" style="display:inline;" onsubmit="return confirm('Supprimer ce département ?');">
+                {% csrf_token %}<input type="hidden" name="action" value="delete"><input type="hidden" name="pk" value="{{ dept.pk }}">
+                <button type="submit" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if user.is_admin or user.is_inst_admin or user.is_responsable %}
+<!-- Modal création -->
+<div class="modal fade" id="modalDept" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:#16a34a;color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-plus-circle me-2"></i>Nouveau département</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'academic_structure:department_create' %}">
+        {% csrf_token %}<input type="hidden" name="action" value="create">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label">Code <span class="text-danger">*</span></label><input type="text" name="code" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label">Nom <span class="text-danger">*</span></label><input type="text" name="name" class="form-control" required></div>
+          <div class="mb-3">
+            <label class="form-label">Institut</label>
+            <select name="faculty" class="form-select">
+              <option value="">— Aucune —</option>
+              {% for fac in faculties %}<option value="{{ fac.pk }}">{{ fac.name }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal édition -->
+<div class="modal fade" id="modalEditDept" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:#16a34a;color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-pencil me-2"></i>Modifier le département</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post">
+        {% csrf_token %}<input type="hidden" name="action" value="edit"><input type="hidden" name="pk" id="edPk">
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label">Code <span class="text-danger">*</span></label><input type="text" name="code" id="edCode" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label">Nom <span class="text-danger">*</span></label><input type="text" name="name" id="edName" class="form-control" required></div>
+          <div class="mb-3">
+            <label class="form-label">Institut</label>
+            <select name="faculty" id="edFaculty" class="form-select">
+              <option value="">— Aucune —</option>
+              {% for fac in faculties %}<option value="{{ fac.pk }}">{{ fac.name }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script>
+$(document).ready(function(){ $('#tbl-depts').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}}); });
+function openEditDept(pk, code, name, facultyId) {
+  document.getElementById('edPk').value = pk;
+  document.getElementById('edCode').value = code;
+  document.getElementById('edName').value = name;
+  var sel = document.getElementById('edFaculty');
+  sel.value = facultyId ? String(facultyId) : '';
+  new bootstrap.Modal(document.getElementById('modalEditDept')).show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,153 @@
+{% extends 'base/base.html' %}
+{% block title %}Cahier de Texte Numérique{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Cahier de Texte</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-journal-richtext"></i></span>
+    Cahier de Texte Numérique
+  </h1>
+  <!-- Accès rapide par sélection -->
+  <button class="btn btn-outline-primary btn-sm" onclick="document.getElementById('quick-select').classList.toggle('d-none')">
+    <i class="bi bi-funnel me-1"></i>Accès rapide classe/semestre
+  </button>
+</div>
+
+<!-- Filtre Année académique -->
+<div class="card-section mb-3">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label fw-semibold" style="font-size:.8rem;">Année académique</label>
+        <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for y in academic_years %}
+          <option value="{{ y.pk }}" {% if selected_year_param == y.pk|stringformat:"s" or not selected_year_param and y.is_current %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+          {% endfor %}
+          <option value="all" {% if selected_year_param == 'all' %}selected{% endif %}>Toutes les années</option>
+        </select>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Formulaire accès rapide -->
+<div id="quick-select" class="d-none card-section mb-3" style="padding:16px 20px;">
+  <form method="get" class="row g-2 align-items-end">
+    <div class="col-md-4">
+      <label class="form-label fw-semibold" style="font-size:.8rem;">Classe</label>
+      <select name="class_id" class="form-select form-select-sm" required>
+        <option value="">— Choisir —</option>
+        {% for c in classes %}
+        <option value="{{ c.pk }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label fw-semibold" style="font-size:.8rem;">Semestre</label>
+      <select name="semester_id" class="form-select form-select-sm" required>
+        <option value="">— Choisir —</option>
+        {% for s in semesters %}
+        <option value="{{ s.pk }}">{{ s.name }} — {{ s.academic_year }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <button type="submit" class="btn btn-primary btn-sm w-100">
+        <i class="bi bi-arrow-right-circle me-1"></i>Afficher
+      </button>
+    </div>
+  </form>
+</div>
+
+{% if tree %}
+{% for sem_group in tree %}
+{% with sid=forloop.counter %}
+<!-- ── Semestre ── -->
+<div class="card-section mb-3" style="overflow:hidden;">
+  <div onclick="toggleSem({{ sid }})"
+       style="display:flex;align-items:center;gap:12px;padding:14px 20px;
+              background:linear-gradient(135deg,#1e3a5f,#2d4e8a);
+              cursor:pointer;user-select:none;">
+    <div style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.15);
+                display:flex;align-items:center;justify-content:center;color:#fff;font-size:1rem;flex-shrink:0;">
+      <i class="bi bi-calendar3"></i>
+    </div>
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:800;color:#fff;font-size:.95rem;">
+        {{ sem_group.semester.label }}
+      </div>
+      <div style="font-size:.72rem;color:rgba(255,255,255,.7);">
+        {{ sem_group.semester.academic_year }} &nbsp;·&nbsp; {{ sem_group.classes|length }} classe{{ sem_group.classes|length|pluralize }}
+      </div>
+    </div>
+    <i id="sem-arrow-{{ sid }}" class="bi bi-chevron-right" style="color:rgba(255,255,255,.7);transition:transform .25s;font-size:1rem;"></i>
+  </div>
+
+  <div id="sem-body-{{ sid }}" style="display:none;padding:12px 16px;display:flex;flex-wrap:wrap;gap:12px;">
+    {% for cls in sem_group.classes %}
+    <!-- Carte classe -->
+    <a href="{% url 'timetable:cahier_texte_view' cls.class_group.pk sem_group.semester.pk %}"
+       style="text-decoration:none;flex:0 0 calc(33% - 8px);min-width:220px;">
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;
+                  transition:box-shadow .15s,transform .1s;cursor:pointer;"
+           onmouseover="this.style.boxShadow='0 4px 16px rgba(124,58,237,.15)';this.style.transform='translateY(-2px)'"
+           onmouseout="this.style.boxShadow='';this.style.transform=''">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <div style="width:34px;height:34px;border-radius:8px;background:#ede9fe;
+                      display:flex;align-items:center;justify-content:center;color:#7c3aed;font-size:.9rem;flex-shrink:0;">
+            <i class="bi bi-people-fill"></i>
+          </div>
+          <div>
+            <div style="font-weight:800;color:#1e3a5f;font-size:.88rem;">{{ cls.class_group.name }}</div>
+            {% if cls.class_group.level %}
+            <div style="font-size:.68rem;color:#7c3aed;font-weight:600;">{{ cls.class_group.level }}</div>
+            {% endif %}
+          </div>
+        </div>
+        <!-- Modules (EC) -->
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:.72rem;color:#64748b;">
+            <i class="bi bi-book me-1" style="color:#7c3aed;"></i>
+            {{ cls.subject_count }} module{{ cls.subject_count|pluralize }} (EC)
+          </span>
+          <span style="font-size:.7rem;background:#ede9fe;color:#7c3aed;border-radius:20px;padding:2px 9px;font-weight:700;">
+            Voir <i class="bi bi-arrow-right ms-1"></i>
+          </span>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endwith %}
+{% endfor %}
+
+{% else %}
+<div class="card-section" style="padding:48px;text-align:center;color:#94a3b8;">
+  <i class="bi bi-journal-x" style="font-size:3rem;color:#e2e8f0;display:block;margin-bottom:12px;"></i>
+  <div style="font-size:.9rem;font-weight:600;color:#64748b;">Aucun créneau trouvé</div>
+  <div style="font-size:.8rem;margin-top:6px;">Aucun emploi du temps n'est enregistré pour les classes de ce département.</div>
+</div>
+{% endif %}
+
+<script>
+function toggleSem(id) {
+  const body  = document.getElementById('sem-body-' + id);
+  const arrow = document.getElementById('sem-arrow-' + id);
+  const open  = body.style.display === 'flex';
+  body.style.display    = open ? 'none' : 'flex';
+  arrow.style.transform = open ? '' : 'rotate(90deg)';
+}
+// Ouvrir automatiquement le premier semestre
+document.addEventListener('DOMContentLoaded', function() {
+  const first = document.getElementById('sem-body-1');
+  const arrow = document.getElementById('sem-arrow-1');
+  if (first) { first.style.display = 'flex'; }
+  if (arrow) { arrow.style.transform = 'rotate(90deg)'; }
+});
+</script>
+{% endblock %}

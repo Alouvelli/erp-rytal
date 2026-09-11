@@ -1,0 +1,108 @@
+{% extends 'base/base.html' %}
+{% block title %}Enseignants{% endblock %}
+{% block breadcrumb %}<li class="breadcrumb-item active">Enseignants</li>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:var(--navy);"><i class="bi bi-person-badge-fill"></i></span>Enseignants</h1>
+  <div class="d-flex gap-2">
+    <form method="post" action="{% url 'teachers:regenerate_matricules' %}"
+          onsubmit="return confirm('Régénérer le matricule (nouveau format Ens_AA_NNNN/SIGLE) de tous les enseignants qui n\'en ont pas encore un dans ce format ?');">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-secondary btn-sm" title="Générer le nouveau format de matricule pour les enseignants qui ne l'ont pas encore">
+        <i class="bi bi-shuffle me-1"></i>Générer les matricules
+      </button>
+    </form>
+    <a href="{% url 'teachers:grades' %}" class="btn btn-sm" style="background:#7c3aed;color:#fff;border:none;"><i class="bi bi-award me-1"></i>Grades</a>
+    <a href="{% url 'teachers:create' %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Nouvel enseignant</a>
+  </div>
+</div>
+{% if dept_required %}
+<div class="alert alert-warning d-flex align-items-center gap-3" style="border-radius:12px;">
+  <i class="bi bi-diagram-3-fill" style="font-size:1.5rem;color:#ca8a04;flex-shrink:0;"></i>
+  <div>
+    <div class="fw-bold">Sélectionnez un département</div>
+    <div style="font-size:.85rem;">La liste des enseignants s'affiche par département. Choisissez un département dans le sélecteur en haut de page.</div>
+  </div>
+</div>
+{% else %}
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-people"></i></span>Liste des enseignants</h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table" id="tbl-teachers">
+      <thead><tr><th>Nom complet</th><th>Grade</th><th>Spécialité</th><th>Email</th><th>Heures contract.</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for t in teachers %}
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div style="width:32px;height:32px;border-radius:50%;background:var(--navy);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.72rem;font-weight:700;flex-shrink:0;">{{ t.full_name|slice:":1"|upper }}</div>
+              <span style="font-weight:600;font-size:.85rem;">{{ t.full_name }}</span>
+              {% if t.user.role.name == 'RESPONSABLE' %}
+              <span class="badge" style="background:#7c3aed;font-size:.65rem;" title="Chef de département">
+                <i class="bi bi-award-fill me-1"></i>Chef de dépt.
+              </span>
+              {% endif %}
+            </div>
+          </td>
+          <td style="font-size:.83rem;">{{ t.grade|default:"—" }}</td>
+          <td style="font-size:.83rem;color:#64748b;">{{ t.specialty|default:"—" }}</td>
+          <td style="font-size:.82rem;color:#64748b;">{{ t.user.email|default:"—" }}</td>
+          <td style="font-size:.83rem;">{{ t.contractual_hours }}h</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'teachers:detail' t.pk %}" class="btn-action view" title="Voir"><i class="bi bi-eye"></i></a>
+              <a href="{% url 'teachers:edit' t.pk %}" class="btn-action edit" title="Modifier"><i class="bi bi-pencil"></i></a>
+              <button type="button" class="btn-action" style="background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;"
+                      title="Nommer chef de département" data-bs-toggle="modal" data-bs-target="#modal-promote-{{ t.pk }}">
+                <i class="bi bi-award"></i>
+              </button>
+              <a href="{% url 'teachers:delete' t.pk %}" class="btn-action delete" title="Supprimer"><i class="bi bi-trash"></i></a>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Modal Nommer chef de département -->
+        <div class="modal fade" id="modal-promote-{{ t.pk }}" tabindex="-1">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border:none;border-radius:14px;">
+              <div class="modal-header" style="background:#7c3aed;color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+                <h6 class="modal-title mb-0"><i class="bi bi-award me-2"></i>Nommer chef de département</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+              </div>
+              <form method="post" action="{% url 'teachers:assign_department_head' t.pk %}">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                  <p style="font-size:.84rem;color:#64748b;">
+                    <strong>{{ t.full_name }}</strong> deviendra Chef de Département (rôle Responsable)
+                    du département sélectionné. Un éventuel chef de département déjà en place sur ce
+                    département sera automatiquement retiré (il conserve son rôle, mais perd son
+                    rattachement à ce département).
+                  </p>
+                  <label class="form-label">Département</label>
+                  <select name="department_id" class="form-select" required>
+                    <option value="">— Sélectionner —</option>
+                    {% for d in dept_qs %}
+                    <option value="{{ d.pk }}" {% if t.user.department_id == d.pk %}selected{% endif %}>{{ d.name }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                  <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+                  <button type="submit" class="btn btn-sm" style="background:#7c3aed;color:#fff;border:none;">
+                    <i class="bi bi-check-lg me-1"></i>Nommer
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+{% block extra_js %}<script>$(document).ready(function(){ $('#tbl-teachers').DataTable({language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fr-FR.json'}}); });</script>{% endblock %}

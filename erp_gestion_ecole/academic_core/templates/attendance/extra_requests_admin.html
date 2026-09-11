@@ -1,0 +1,161 @@
+{% extends 'base/base.html' %}
+{% block title %}Demandes de séances supplémentaires{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Demandes séances supplémentaires</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#1e3a5f;"><i class="bi bi-clock-history"></i></span>
+    Demandes de séances supplémentaires
+  </h1>
+</div>
+
+{% with pending=extra_requests|length %}
+<!-- KPI -->
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card-section">
+      <div class="p-4 text-center">
+        <div style="font-size:2rem;font-weight:800;color:#b45309;">
+          {% for r in extra_requests %}{% if r.status == 'PENDING' %}{% with x=forloop.counter %}{% endwith %}{% endif %}{% endfor %}
+          {{ extra_requests|length }}
+        </div>
+        <div style="font-size:.82rem;color:#64748b;">demande(s) au total</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card-section">
+      <div class="p-4 text-center">
+        <div style="font-size:2rem;font-weight:800;color:#92400e;">
+          {% for r in extra_requests %}{% if r.status == 'PENDING' %}⬤{% endif %}{% endfor %}
+        </div>
+        <div style="font-size:.82rem;color:#64748b;">en attente de traitement</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endwith %}
+
+<div class="card-section mb-3">
+  <div class="p-3">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Année académique</label>
+        <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+          {% for y in academic_years %}
+          <option value="{{ y.pk }}" {% if selected_year_param == y.pk|stringformat:"s" or not selected_year_param and y.is_current %}selected{% endif %}>{{ y.label }}{% if y.is_current %} (en cours){% endif %}</option>
+          {% endfor %}
+          <option value="all" {% if selected_year_param == 'all' %}selected{% endif %}>Toutes les années</option>
+        </select>
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Classe</label>
+        <select name="class_id" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Toutes les classes</option>
+          {% for cls in filter_classes %}
+          <option value="{{ cls.pk }}" {% if selected_class_id == cls.pk|stringformat:"s" %}selected{% endif %}>{{ cls.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">Semestre</label>
+        <select name="semester_id" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Tous les semestres</option>
+          {% for sem in filter_semesters %}
+          <option value="{{ sem.pk }}" {% if selected_semester_id == sem.pk|stringformat:"s" %}selected{% endif %}>{{ sem.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-6 col-md-3">
+        <label class="form-label" style="font-size:.75rem;font-weight:600;color:#475569;margin-bottom:4px;">EC (module)</label>
+        <select name="subject_id" class="form-select form-select-sm" onchange="this.form.submit()">
+          <option value="">Tous les modules</option>
+          {% for subj in filter_subjects %}
+          <option value="{{ subj.pk }}" {% if selected_subject_id == subj.pk|stringformat:"s" %}selected{% endif %}>{{ subj.code }} — {{ subj.title }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card-section">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-list-check"></i></span>
+      Toutes les demandes
+    </h6>
+  </div>
+  {% if extra_requests %}
+  <div class="table-responsive">
+    <table class="table" style="font-size:.84rem;">
+      <thead>
+        <tr>
+          <th>Enseignant</th>
+          <th>Module (EC)</th>
+          <th>Classe</th>
+          <th class="text-center">Demandé</th>
+          <th class="text-center">Accordé</th>
+          <th class="text-center">Statut</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in extra_requests %}
+        <tr>
+          <td>
+            <div style="font-weight:600;">{{ r.teacher.user.get_full_name }}</div>
+            <div style="font-size:.72rem;color:#94a3b8;">{{ r.teacher.matricule }}</div>
+          </td>
+          <td style="font-weight:600;color:#1e293b;">{{ r.subject.title }}</td>
+          <td>{{ r.class_group.name }}</td>
+          <td class="text-center" style="font-weight:700;color:#b45309;">{{ r.extra_hours_requested }}h</td>
+          <td class="text-center">
+            {% if r.extra_hours_approved %}
+              <span style="font-weight:700;color:#16a34a;">{{ r.extra_hours_approved }}h</span>
+            {% else %}—{% endif %}
+          </td>
+          <td class="text-center">
+            {% if r.status == 'PENDING' %}
+              <span style="background:#fef3c7;color:#92400e;border-radius:20px;padding:3px 10px;font-size:.75rem;font-weight:600;">
+                <i class="bi bi-hourglass-split me-1"></i>En attente
+              </span>
+            {% elif r.status == 'APPROVED' %}
+              <span style="background:#dcfce7;color:#166534;border-radius:20px;padding:3px 10px;font-size:.75rem;font-weight:600;">
+                <i class="bi bi-check-circle me-1"></i>Approuvée
+              </span>
+            {% else %}
+              <span style="background:#fee2e2;color:#991b1b;border-radius:20px;padding:3px 10px;font-size:.75rem;font-weight:600;">
+                <i class="bi bi-x-circle me-1"></i>Rejetée
+              </span>
+            {% endif %}
+          </td>
+          <td style="font-size:.78rem;color:#94a3b8;white-space:nowrap;">{{ r.created_at|date:"d/m/Y" }}</td>
+          <td>
+            {% if r.status == 'PENDING' %}
+            <a href="{% url 'attendance:extra_request_review' r.pk %}"
+               class="btn btn-sm" style="background:var(--navy);color:#fff;border:none;font-size:.75rem;padding:4px 10px;">
+              <i class="bi bi-pencil me-1"></i>Traiter
+            </a>
+            {% else %}
+            <span style="font-size:.75rem;color:#94a3b8;">Traité par {{ r.reviewed_by.get_full_name|default:"-" }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:60px 20px;color:#94a3b8;">
+    <i class="bi bi-inbox d-block mb-3" style="font-size:2.5rem;color:#cbd5e1;"></i>
+    <div style="font-size:.9rem;font-weight:600;">Aucune demande</div>
+    <div style="font-size:.8rem;margin-top:4px;">Aucune demande de séances supplémentaires reçue.</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

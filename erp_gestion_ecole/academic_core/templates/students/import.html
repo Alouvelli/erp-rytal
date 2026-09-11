@@ -1,0 +1,100 @@
+{% extends 'base/base.html' %}
+{% block title %}Importer des étudiants{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'students:list' %}">Étudiants</a></li>
+<li class="breadcrumb-item active">Importer CSV</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#16a34a;"><i class="bi bi-file-earmark-arrow-up"></i></span>
+    Importer des étudiants (CSV)
+  </h1>
+  <a href="{% url 'students:create' %}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i>Retour création manuelle
+  </a>
+</div>
+
+<div class="row g-3">
+  <!-- Formulaire d'import -->
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#16a34a;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-upload"></i></span>
+          Fichier CSV
+        </h6>
+      </div>
+      <div class="p-4">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="mb-4">
+            <label class="form-label">Sélectionner le fichier CSV <span class="text-danger">*</span></label>
+            {{ form.csv_file }}
+            {% if form.csv_file.errors %}
+            <div class="text-danger mt-1" style="font-size:.75rem;">{{ form.csv_file.errors.0 }}</div>
+            {% endif %}
+            <div style="font-size:.75rem;color:#64748b;margin-top:6px;">
+              <i class="bi bi-info-circle me-1"></i>Encodage UTF-8 recommandé. Taille max : 5 Mo.
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary btn-sm">
+              <i class="bi bi-cloud-upload me-1"></i>Importer
+            </button>
+            <a href="{% url 'students:import' %}?download=1" class="btn btn-sm" style="background:#16a34a;color:#fff;border:none;">
+              <i class="bi bi-file-earmark-excel me-1"></i>Télécharger le modèle Excel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notice format -->
+  <div class="col-lg-6">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title">
+          <span style="width:26px;height:26px;border-radius:6px;background:#d97706;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-question-circle"></i></span>
+          Format attendu du fichier CSV
+        </h6>
+      </div>
+      <div class="p-4">
+        <p style="font-size:.82rem;color:#64748b;margin-bottom:12px;">
+          La première ligne doit contenir les entêtes. Les colonnes obligatoires sont marquées <span class="text-danger">*</span>.
+        </p>
+        <div class="table-responsive">
+          <table style="width:100%;font-size:.78rem;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#f8fafc;border-bottom:2px solid var(--border);">
+                <th style="padding:6px 10px;text-align:left;font-weight:700;">Colonne</th>
+                <th style="padding:6px 10px;text-align:left;font-weight:700;">Exemple</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for col, ex, req in columns %}
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:5px 10px;">
+                  <code style="font-size:.77rem;background:#f1f5f9;padding:1px 5px;border-radius:4px;">{{ col }}</code>
+                  {% if req %}<span class="text-danger ms-1">*</span>{% endif %}
+                </td>
+                <td style="padding:5px 10px;color:#64748b;">{{ ex }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-3 p-3" style="background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0;">
+          <div style="font-size:.78rem;color:#16a34a;font-weight:600;"><i class="bi bi-lightbulb me-1"></i>Astuce</div>
+          <div style="font-size:.77rem;color:#15803d;margin-top:4px;">
+            Pour le champ <code>genre</code>, utilisez <strong>M</strong> (Masculin) ou <strong>F</strong> (Féminin).<br>
+            Pour <code>date_naissance</code>, utilisez le format <strong>AAAA-MM-JJ</strong> (ex: 2002-03-15).<br>
+            La <code>classe</code> doit correspondre exactement au nom d'une classe existante.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

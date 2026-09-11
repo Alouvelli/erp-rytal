@@ -1,0 +1,83 @@
+{% extends 'base/base.html' %}
+{% block title %}Demande de séances supplémentaires{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'attendance:sheet_list' %}">Émargements</a></li>
+<li class="breadcrumb-item active">Demande de séances supplémentaires</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#b45309;"><i class="bi bi-clock-history"></i></span>
+    Demande de séances supplémentaires
+  </h1>
+</div>
+
+<div class="card-section" style="max-width:680px;">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:#b45309;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-send"></i></span>
+      Formulaire de demande
+    </h6>
+  </div>
+  <div class="p-4">
+    <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:14px 18px;margin-bottom:20px;font-size:.84rem;color:#92400e;">
+      <i class="bi bi-info-circle me-2"></i>
+      Le volume horaire de ce module (EC) est atteint. Soumettez une demande à l'administrateur du département pour obtenir des séances supplémentaires.
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label fw-semibold" style="font-size:.85rem;">Module (EC) *</label>
+        <select name="subject" class="form-select form-select-sm" required>
+          <option value="">— Sélectionner un module (EC)</option>
+          {% for s in subjects %}
+          <option value="{{ s.pk }}" {% if sel_subject == s.pk|stringformat:"s" %}selected{% endif %}>
+            {{ s.title }} ({{ s.volume_hours }}h)
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold" style="font-size:.85rem;">Classe *</label>
+        <select name="class_group" class="form-select form-select-sm" required>
+          <option value="">— Sélectionner une classe</option>
+          {% for c in classes %}
+          <option value="{{ c.pk }}" {% if sel_class == c.pk|stringformat:"s" %}selected{% endif %}>
+            {{ c.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold" style="font-size:.85rem;">Année académique *</label>
+        <select name="academic_year" class="form-select form-select-sm" required>
+          <option value="">— Sélectionner une année</option>
+          {% for y in years %}
+          <option value="{{ y.pk }}" {% if sel_year == y.pk|stringformat:"s" %}selected{% endif %}>
+            {{ y }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label fw-semibold" style="font-size:.85rem;">Nombre d'heures demandées *</label>
+        <input type="number" name="extra_hours_requested" class="form-control form-control-sm"
+               min="1" max="50" step="0.5" required placeholder="Ex: 4">
+      </div>
+      <div class="mb-4">
+        <label class="form-label fw-semibold" style="font-size:.85rem;">Motif de la demande *</label>
+        <textarea name="reason" class="form-control form-control-sm" rows="4" required
+                  placeholder="Expliquez pourquoi des séances supplémentaires sont nécessaires..."></textarea>
+      </div>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="bi bi-send me-1"></i>Envoyer la demande
+        </button>
+        <a href="{% url 'attendance:sheet_list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

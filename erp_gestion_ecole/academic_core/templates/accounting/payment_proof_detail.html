@@ -1,0 +1,166 @@
+{% extends 'base/base.html' %}
+{% block title %}Preuve de paiement — {{ proof.enrollment.student.full_name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003d82;"><i class="bi bi-receipt"></i></span>
+    Preuve de paiement — {{ proof.enrollment.student.full_name }}
+  </h1>
+  <a href="{% url 'accounting:payment_proof_list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+</div>
+
+<div class="card-section p-4" style="max-width: 800px;">
+  <div class="row g-3 mb-3">
+    <div class="col-md-6">
+      <p class="mb-1"><strong>Étudiant(e) :</strong> {{ proof.enrollment.student.full_name }}</p>
+      <p class="mb-1"><strong>Classe :</strong> {{ proof.enrollment.class_group }}</p>
+      <p class="mb-1"><strong>Moyen de paiement :</strong> {{ proof.get_moyen_paiement_display }}</p>
+      <p class="mb-1"><strong>Référence :</strong> {{ proof.reference_paiement|default:"—" }}</p>
+    </div>
+    <div class="col-md-6">
+      <p class="mb-1"><strong>Montant déclaré par le candidat :</strong> {{ proof.montant_declare }} FCFA</p>
+      <p class="mb-1"><strong>Montant attendu (dossier) :</strong> {{ proof.enrollment.payment_amount|default:"—" }} FCFA</p>
+      {% if montant_mismatch %}
+      <div class="alert alert-warning py-2 px-3 mt-2 mb-0" style="font-size:.85rem;">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+        Le montant déclaré ne correspond pas au montant attendu — vérifiez avant de valider.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- Justificatif — affiché automatiquement, pas uniquement en lien -->
+  <h6 class="fw-bold mb-2" style="color:var(--navy);"><i class="bi bi-file-earmark-image me-1"></i>Justificatif transmis par le candidat</h6>
+  <div class="mb-3 p-2" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+    {% if is_image %}
+    <img src="{{ proof.piece_justificative.url }}" alt="Justificatif de paiement" class="img-fluid" style="max-height:520px;display:block;margin:0 auto;border-radius:6px;">
+    {% elif is_pdf %}
+    <iframe src="{{ proof.piece_justificative.url }}" style="width:100%;height:520px;border:0;border-radius:6px;"></iframe>
+    {% else %}
+    <p class="text-muted mb-0" style="font-size:.85rem;">Aperçu indisponible pour ce type de fichier.</p>
+    {% endif %}
+    <div class="text-end mt-2">
+      <a href="{{ proof.piece_justificative.url }}" target="_blank" style="font-size:.82rem;">
+        Ouvrir dans un nouvel onglet <i class="bi bi-box-arrow-up-right"></i>
+      </a>
+    </div>
+  </div>
+
+  {% if proof.status == 'PENDING' %}
+  <form method="post" id="validate-proof-form">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="validate">
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" id="proof-reviewed-check">
+      <label class="form-check-label fw-semibold" for="proof-reviewed-check" style="font-size:.88rem;">
+        J'ai vérifié le justificatif ci-dessus et je confirme que l'argent a bien été reçu.
+      </label>
+    </div>
+    <button type="button" id="open-validate-confirm" class="btn btn-success" disabled>
+      <i class="bi bi-check-circle me-1"></i>Valider le paiement
+    </button>
+
+    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">
+      <i class="bi bi-x-circle me-1"></i>Rejeter
+    </button>
+  </form>
+
+  <div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="reject">
+          <div class="modal-header"><h5 class="modal-title">Motif du rejet</h5></div>
+          <div class="modal-body">
+            <textarea name="motif_rejet" class="form-control" rows="3" placeholder="Motif (optionnel)"></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-danger">Confirmer le rejet</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmation finale de l'encaissement -->
+  <div class="modal fade" id="confirmValidateProofModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius:14px;border:0;">
+        <div class="modal-header border-0 py-3" style="background:#059669;border-radius:14px 14px 0 0;">
+          <h6 class="modal-title fw-bold text-white mb-0">
+            <i class="bi bi-cash-stack me-2"></i>Confirmer l'encaissement
+          </h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted" style="font-size:.82rem;">
+            Cette action valide définitivement le paiement et rend l'inscription de l'étudiant(e) effective dans la classe.
+          </p>
+          <table class="table table-sm mb-0" style="font-size:.85rem;">
+            <tr><td class="fw-semibold text-muted" style="width:50%;">Étudiant(e)</td><td class="fw-bold">{{ proof.enrollment.student.full_name }}</td></tr>
+            <tr><td class="fw-semibold text-muted">Classe</td><td>{{ proof.enrollment.class_group }}</td></tr>
+            <tr style="background:#f0fdf4;">
+              <td class="fw-bold" style="color:#166534;">Montant déclaré</td>
+              <td class="fw-bold" style="color:#166534;font-size:1.05rem;">{{ proof.montant_declare }} FCFA</td>
+            </tr>
+          </table>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-pencil me-1"></i>Annuler
+          </button>
+          <button type="button" id="confirm-validate-proof-submit" class="btn" style="background:#059669;color:#fff;font-weight:700;">
+            <i class="bi bi-check-circle-fill me-1"></i>Argent reçu — Valider
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <span class="badge {% if proof.status == 'VALIDATED' %}bg-success{% else %}bg-danger{% endif %}">
+    {{ proof.get_status_display }}
+  </span>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const checkbox = document.getElementById('proof-reviewed-check');
+  if (!checkbox) return;
+  const openBtn        = document.getElementById('open-validate-confirm');
+  const form           = document.getElementById('validate-proof-form');
+  const modalEl        = document.getElementById('confirmValidateProofModal');
+  const modal          = new bootstrap.Modal(modalEl);
+  const confirmSubmit  = document.getElementById('confirm-validate-proof-submit');
+
+  checkbox.addEventListener('change', function () {
+    openBtn.disabled = !checkbox.checked;
+  });
+
+  openBtn.addEventListener('click', function () {
+    if (!checkbox.checked) return;
+    modal.show();
+  });
+
+  confirmSubmit.addEventListener('click', function () {
+    const hidden = document.createElement('input');
+    hidden.type  = 'hidden';
+    hidden.name  = 'proof_reviewed';
+    hidden.value = '1';
+    form.appendChild(hidden);
+    confirmSubmit.disabled = true;
+    confirmSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Validation…';
+    form.submit();
+  });
+})();
+</script>
+{% endblock %}

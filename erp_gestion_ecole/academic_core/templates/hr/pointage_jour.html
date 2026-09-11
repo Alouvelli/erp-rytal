@@ -1,0 +1,464 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}Pointage journalier — {{ target_date|date:"d/m/Y" }}{% endblock %}
+
+{% block extra_head %}
+<style>
+.ptable th {
+  background:#0d2244; color:#fff; font-size:.72rem; font-weight:600;
+  letter-spacing:.04em; vertical-align:middle; padding:10px 12px;
+}
+.ptable td { vertical-align:middle; padding:9px 12px; font-size:.84rem; }
+.ptable tbody tr.pointed   { background:#f0fdf4; }
+.ptable tbody tr.unpointed { background:#fff; }
+.ptable tbody tr:hover     { filter:brightness(.97); }
+.ptable .section-sep td {
+  background:#f8fafc; color:#64748b; font-size:.7rem; font-weight:700;
+  letter-spacing:.08em; text-transform:uppercase; padding:5px 12px;
+  border-top:2px solid #e2e8f0;
+}
+
+.av {
+  width:32px; height:32px; border-radius:50%; flex-shrink:0;
+  background:linear-gradient(135deg,#0d2244,#1a3a6b);
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; font-size:.65rem; font-weight:700;
+}
+.av.grey { background:#94a3b8; }
+
+/* Badge statut */
+.s-badge {
+  display:inline-flex; align-items:center; gap:5px; padding:4px 11px;
+  border-radius:999px; font-size:.73rem; font-weight:600; cursor:pointer;
+  border:1.5px solid transparent; transition:all .15s;
+  user-select:none; white-space:nowrap;
+}
+.s-badge.none       { background:#f1f5f9; color:#94a3b8; border-color:#e2e8f0; }
+.s-PRESENT          { background:#dcfce7; color:#15803d; border-color:#86efac; }
+.s-ABSENT           { background:#fee2e2; color:#b91c1c; border-color:#fca5a5; }
+.s-RETARD           { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+.s-CONGE            { background:#e0f2fe; color:#0369a1; border-color:#7dd3fc; }
+.s-DEMI_JOURNEE     { background:#f1f5f9; color:#475569; border-color:#cbd5e1; }
+.s-TELETRAVAIL      { background:#ede9fe; color:#5b21b6; border-color:#c4b5fd; }
+.s-FERIE            { background:#f1f5f9; color:#374151; border-color:#9ca3af; }
+
+/* Picker */
+.s-picker { display:none; flex-wrap:wrap; gap:4px; margin-top:5px; }
+.s-picker.open { display:flex; }
+
+.s-btn {
+  border:1.5px solid transparent; border-radius:7px; padding:3px 9px;
+  font-size:.7rem; font-weight:600; cursor:pointer; transition:all .12s;
+  display:inline-flex; align-items:center; gap:3px;
+  white-space:nowrap; background:none;
+}
+.s-btn:hover { transform:scale(1.05); }
+.s-btn.active { box-shadow:0 0 0 2px currentColor; }
+
+.s-btn.PRESENT      { background:#dcfce7; color:#15803d; border-color:#86efac; }
+.s-btn.ABSENT       { background:#fee2e2; color:#b91c1c; border-color:#fca5a5; }
+.s-btn.RETARD       { background:#fef3c7; color:#92400e; border-color:#fde68a; }
+.s-btn.CONGE        { background:#e0f2fe; color:#0369a1; border-color:#7dd3fc; }
+.s-btn.DEMI_JOURNEE { background:#f1f5f9; color:#475569; border-color:#cbd5e1; }
+.s-btn.TELETRAVAIL  { background:#ede9fe; color:#5b21b6; border-color:#c4b5fd; }
+.s-btn.FERIE        { background:#f1f5f9; color:#374151; border-color:#9ca3af; }
+.s-btn.DEL          { background:#fee2e2; color:#b91c1c; border-color:#fca5a5; }
+
+.s-btn.PRESENT.active      { background:#16a34a; color:#fff; border-color:#16a34a; }
+.s-btn.ABSENT.active       { background:#dc2626; color:#fff; border-color:#dc2626; }
+.s-btn.RETARD.active       { background:#d97706; color:#fff; border-color:#d97706; }
+.s-btn.CONGE.active        { background:#0369a1; color:#fff; border-color:#0369a1; }
+.s-btn.DEMI_JOURNEE.active { background:#64748b; color:#fff; border-color:#64748b; }
+.s-btn.TELETRAVAIL.active  { background:#7c3aed; color:#fff; border-color:#7c3aed; }
+.s-btn.FERIE.active        { background:#4b5563; color:#fff; border-color:#4b5563; }
+
+.t-inp {
+  width:86px; font-size:.78rem; padding:3px 6px;
+  border-radius:6px; border:1.5px solid #e2e8f0;
+}
+.t-inp:focus   { border-color:#93c5fd; outline:none; box-shadow:0 0 0 2px rgba(147,197,253,.3); }
+.t-inp:disabled, .obs-inp:disabled { opacity:.35; cursor:not-allowed; }
+
+.row-saving { opacity:.55; pointer-events:none; }
+.save-tick  { color:#16a34a; font-size:.85rem; opacity:0; transition:opacity .3s; }
+.save-tick.show { opacity:1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'hr:dashboard' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div style="width:42px;height:42px;border-radius:10px;
+                  background:linear-gradient(135deg,#0d2244,#1a3a6b);
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="bi bi-pencil-square" style="color:#0ea5e9;font-size:1.2rem;"></i>
+      </div>
+      <div>
+        <h5 class="mb-0 fw-bold">Pointage journalier — {{ target_date|date:"d/m/Y" }}</h5>
+        <small class="text-muted">
+          Les présences sont enregistrées via le
+          <a href="{% url 'students:controle_scan' %}" class="text-primary fw-semibold">Contrôle Accueil</a>.
+          Cette page permet de corriger ou compléter.
+        </small>
+      </div>
+    </div>
+    <div class="d-flex align-items-center gap-2 no-print flex-wrap">
+      <label class="fw-semibold text-muted" style="font-size:.85rem;">Date :</label>
+      <input type="date" class="form-control form-control-sm" style="width:160px;"
+             value="{{ target_date|date:'Y-m-d' }}"
+             onchange="window.location.href='?date='+this.value">
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i>Imprimer
+      </button>
+      <a href="{% url 'hr:pointage_jour_pdf' %}?date={{ target_date|date:'Y-m-d' }}" class="btn btn-sm" style="background:#dc2626;color:#fff;">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+      </a>
+      <a href="{% url 'hr:pointage_jour_word' %}?date={{ target_date|date:'Y-m-d' }}" class="btn btn-sm" style="background:#1d4ed8;color:#fff;">
+        <i class="bi bi-file-earmark-word me-1"></i>Word
+      </a>
+    </div>
+  </div>
+
+  <!-- Compteurs -->
+  <div class="d-flex flex-wrap gap-3 mb-4 align-items-center">
+    <div class="card border-0 shadow-sm px-4 py-3 d-flex flex-row align-items-center gap-3">
+      <div style="width:36px;height:36px;border-radius:10px;background:#dcfce7;
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="bi bi-check-circle-fill" style="color:#16a34a;"></i>
+      </div>
+      <div>
+        <div class="fw-bold fs-5" id="cnt-pointed">{{ staff_pointed|length }}</div>
+        <div style="font-size:.72rem;color:#64748b;">Pointés</div>
+      </div>
+    </div>
+    <div class="card border-0 shadow-sm px-4 py-3 d-flex flex-row align-items-center gap-3">
+      <div style="width:36px;height:36px;border-radius:10px;background:#fee2e2;
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="bi bi-dash-circle-fill" style="color:#dc2626;"></i>
+      </div>
+      <div>
+        <div class="fw-bold fs-5" id="cnt-unpointed">{{ staff_unpointed|length }}</div>
+        <div style="font-size:.72rem;color:#64748b;">Non pointés</div>
+      </div>
+    </div>
+    <div class="card border-0 shadow-sm px-4 py-3 d-flex flex-row align-items-center gap-3">
+      <div style="width:36px;height:36px;border-radius:10px;background:#e0f2fe;
+                  display:flex;align-items:center;justify-content:center;">
+        <i class="bi bi-people-fill" style="color:#0369a1;"></i>
+      </div>
+      <div>
+        <div class="fw-bold fs-5">{{ staff_total }}</div>
+        <div style="font-size:.72rem;color:#64748b;">Personnel total</div>
+      </div>
+    </div>
+    <div class="ms-auto">
+      <button type="button" class="btn btn-outline-danger fw-semibold"
+              onclick="markAllUnpointed('ABSENT')">
+        <i class="bi bi-x-circle me-2"></i>Marquer absents les non pointés
+      </button>
+    </div>
+  </div>
+
+  <!-- Tableau -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 ptable">
+          <thead>
+            <tr>
+              <th style="width:36px;">#</th>
+              <th>Employé</th>
+              <th>Rôle</th>
+              <th>Statut</th>
+              <th>Arrivée</th>
+              <th>Départ</th>
+              <th>Observation</th>
+              <th style="width:36px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+
+            {% if staff_pointed %}
+            <!-- Section : déjà pointés -->
+            <tr class="section-sep">
+              <td colspan="8">
+                <i class="bi bi-check-circle-fill text-success me-1"></i>
+                Pointés — {{ staff_pointed|length }} employé{{ staff_pointed|length|pluralize }}
+              </td>
+            </tr>
+            {% for emp in staff_pointed %}
+            <tr id="row-{{ emp.pk }}" class="pointed" data-uid="{{ emp.pk }}">
+              <td class="text-muted" style="font-size:.72rem;">{{ forloop.counter }}</td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="av">{{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}</div>
+                  <div>
+                    <div class="fw-semibold" style="font-size:.85rem;">{{ emp.get_full_name }}</div>
+                    <div style="font-size:.7rem;color:#94a3b8;">{{ emp.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="font-size:.76rem;color:#64748b;">{{ emp.role.get_name_display|default:'—' }}</td>
+              <td style="min-width:170px;">
+                <span class="s-badge none" id="badge-{{ emp.pk }}"
+                      onclick="togglePicker({{ emp.pk }})">
+                  <i class="bi bi-dash-circle" id="badge-icon-{{ emp.pk }}"></i>
+                  <span id="badge-label-{{ emp.pk }}">…</span>
+                  <i class="bi bi-chevron-down" style="font-size:.6rem;opacity:.5;"></i>
+                </span>
+                <div class="s-picker" id="picker-{{ emp.pk }}">
+                  {% for code, label in STATUT_CHOICES %}
+                  <button type="button" class="s-btn {{ code }}"
+                          id="sbtn-{{ emp.pk }}-{{ code }}"
+                          onclick="setStatut({{ emp.pk }}, '{{ code }}', '{{ label }}')">{{ label }}</button>
+                  {% endfor %}
+                  <button type="button" class="s-btn DEL"
+                          onclick="deletePresence({{ emp.pk }})">
+                    <i class="bi bi-trash3"></i> Effacer
+                  </button>
+                </div>
+              </td>
+              <td><input type="time" class="t-inp" id="arr-{{ emp.pk }}" value=""
+                         onchange="saveField({{ emp.pk }}, 'heure_arrivee', this.value)"></td>
+              <td><input type="time" class="t-inp" id="dep-{{ emp.pk }}" value=""
+                         onchange="saveField({{ emp.pk }}, 'heure_depart', this.value)"></td>
+              <td><input type="text" class="form-control form-control-sm obs-inp"
+                         style="min-width:120px;font-size:.76rem;"
+                         id="obs-{{ emp.pk }}" placeholder="Observation…" value=""
+                         onchange="saveField({{ emp.pk }}, 'justification', this.value)"></td>
+              <td><span class="save-tick" id="tick-{{ emp.pk }}"><i class="bi bi-check-circle-fill"></i></span></td>
+            </tr>
+            {% endfor %}
+            {% endif %}
+
+            {% if staff_unpointed %}
+            <!-- Section : non encore pointés -->
+            <tr class="section-sep">
+              <td colspan="8">
+                <i class="bi bi-dash-circle text-danger me-1"></i>
+                Non pointés — {{ staff_unpointed|length }} employé{{ staff_unpointed|length|pluralize }}
+              </td>
+            </tr>
+            {% for emp in staff_unpointed %}
+            <tr id="row-{{ emp.pk }}" class="unpointed" data-uid="{{ emp.pk }}">
+              <td class="text-muted" style="font-size:.72rem;">{{ forloop.counter }}</td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="av grey">{{ emp.first_name|first|upper }}{{ emp.last_name|first|upper }}</div>
+                  <div>
+                    <div class="fw-semibold" style="font-size:.85rem;color:#6b7280;">{{ emp.get_full_name }}</div>
+                    <div style="font-size:.7rem;color:#94a3b8;">{{ emp.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td style="font-size:.76rem;color:#94a3b8;">{{ emp.role.get_name_display|default:'—' }}</td>
+              <td style="min-width:170px;">
+                <span class="s-badge none" id="badge-{{ emp.pk }}"
+                      onclick="togglePicker({{ emp.pk }})">
+                  <i class="bi bi-dash-circle" id="badge-icon-{{ emp.pk }}"></i>
+                  <span id="badge-label-{{ emp.pk }}">Non pointé</span>
+                  <i class="bi bi-chevron-down" style="font-size:.6rem;opacity:.5;"></i>
+                </span>
+                <div class="s-picker" id="picker-{{ emp.pk }}">
+                  {% for code, label in STATUT_CHOICES %}
+                  <button type="button" class="s-btn {{ code }}"
+                          id="sbtn-{{ emp.pk }}-{{ code }}"
+                          onclick="setStatut({{ emp.pk }}, '{{ code }}', '{{ label }}')">{{ label }}</button>
+                  {% endfor %}
+                </div>
+              </td>
+              <td><input type="time" class="t-inp" id="arr-{{ emp.pk }}" value="" disabled
+                         onchange="saveField({{ emp.pk }}, 'heure_arrivee', this.value)"></td>
+              <td><input type="time" class="t-inp" id="dep-{{ emp.pk }}" value="" disabled
+                         onchange="saveField({{ emp.pk }}, 'heure_depart', this.value)"></td>
+              <td><input type="text" class="form-control form-control-sm obs-inp"
+                         style="min-width:120px;font-size:.76rem;"
+                         id="obs-{{ emp.pk }}" placeholder="Observation…" value="" disabled
+                         onchange="saveField({{ emp.pk }}, 'justification', this.value)"></td>
+              <td><span class="save-tick" id="tick-{{ emp.pk }}"><i class="bi bi-check-circle-fill"></i></span></td>
+            </tr>
+            {% endfor %}
+            {% endif %}
+
+            {% if not staff_pointed and not staff_unpointed %}
+            <tr>
+              <td colspan="8" class="text-center py-5 text-muted">
+                <i class="bi bi-people" style="font-size:2rem;opacity:.3;"></i>
+                <p class="mt-2 mb-0">Aucun membre du personnel trouvé.</p>
+              </td>
+            </tr>
+            {% endif %}
+
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+'use strict';
+
+const AJAX_URL = "{% url 'hr:ajax_set_presence' %}";
+const CSRF     = "{{ csrf_token }}";
+const DATE_STR = "{{ target_date|date:'Y-m-d' }}";
+const LABELS   = { {% for code, label in STATUT_CHOICES %}'{{ code }}':'{{ label }}',{% endfor %} };
+const ICONS    = {
+  PRESENT:'bi-check-circle-fill', ABSENT:'bi-x-circle-fill',
+  RETARD:'bi-clock-history', CONGE:'bi-calendar-x-fill',
+  DEMI_JOURNEE:'bi-circle-half', TELETRAVAIL:'bi-house-door-fill',
+  FERIE:'bi-flag-fill',
+};
+
+// Données existantes injectées depuis le serveur
+const existing = {
+  {% for uid, p in existing.items %}
+  {{ uid }}: {
+    statut: "{{ p.statut }}",
+    label:  "{{ p.get_statut_display }}",
+    arr:    "{{ p.heure_arrivee|default:'' }}",
+    dep:    "{{ p.heure_depart|default:'' }}",
+    obs:    "{{ p.justification|default:''|escapejs }}"
+  },
+  {% endfor %}
+};
+
+// Initialiser les badges et champs depuis les données existantes
+document.addEventListener('DOMContentLoaded', () => {
+  for (const [uid, d] of Object.entries(existing)) {
+    _applyBadge(parseInt(uid), d.statut, d.label);
+    const arr = document.getElementById(`arr-${uid}`);
+    const dep = document.getElementById(`dep-${uid}`);
+    const obs = document.getElementById(`obs-${uid}`);
+    if (arr) { arr.value = d.arr; arr.disabled = false; }
+    if (dep) { dep.value = d.dep; dep.disabled = false; }
+    if (obs) { obs.value = d.obs; obs.disabled = false; }
+  }
+});
+
+// ── Badge ─────────────────────────────────────────────────────────────────────
+function _applyBadge(uid, code, label) {
+  const badge = document.getElementById(`badge-${uid}`);
+  if (!badge) return;
+  badge.className = `s-badge s-${code}`;
+  document.getElementById(`badge-icon-${uid}`).className = `bi ${ICONS[code] || 'bi-circle'}`;
+  document.getElementById(`badge-label-${uid}`).textContent = label || code;
+  document.querySelectorAll(`#picker-${uid} .s-btn`).forEach(b => {
+    b.classList.toggle('active', b.id === `sbtn-${uid}-${code}`);
+  });
+}
+
+// ── Changer statut ────────────────────────────────────────────────────────────
+async function setStatut(uid, code, label) {
+  closePicker(uid);
+  _applyBadge(uid, code, label);
+
+  const row = document.getElementById(`row-${uid}`);
+  row.classList.remove('unpointed');
+  row.classList.add('pointed');
+
+  ['arr','dep','obs'].forEach(pfx => {
+    const el = document.getElementById(`${pfx}-${uid}`);
+    if (el) el.disabled = false;
+  });
+
+  await _ajax(uid, { statut: code });
+  updateCounters();
+}
+
+// ── Effacer une présence ──────────────────────────────────────────────────────
+async function deletePresence(uid) {
+  if (!confirm('Supprimer la présence de cet employé pour cette journée ?')) return;
+  closePicker(uid);
+
+  const badge = document.getElementById(`badge-${uid}`);
+  badge.className = 's-badge none';
+  document.getElementById(`badge-icon-${uid}`).className = 'bi bi-dash-circle';
+  document.getElementById(`badge-label-${uid}`).textContent = 'Non pointé';
+  document.querySelectorAll(`#picker-${uid} .s-btn`).forEach(b => b.classList.remove('active'));
+
+  ['arr','dep','obs'].forEach(pfx => {
+    const el = document.getElementById(`${pfx}-${uid}`);
+    if (el) { el.value = ''; el.disabled = true; }
+  });
+
+  const row = document.getElementById(`row-${uid}`);
+  row.classList.remove('pointed');
+  row.classList.add('unpointed');
+
+  await _ajax(uid, { statut: 'DELETE' });
+  updateCounters();
+}
+
+// ── Sauvegarder un champ ──────────────────────────────────────────────────────
+async function saveField(uid, field, value) {
+  const active = document.querySelector(`#picker-${uid} .s-btn.active`);
+  if (!active) return;
+  const code = [...active.classList].find(c => LABELS[c]);
+  if (!code) return;
+  await _ajax(uid, { statut: code, [field]: value });
+}
+
+// ── Marquer absents les non-pointés ──────────────────────────────────────────
+async function markAllUnpointed(code) {
+  const label = LABELS[code] || code;
+  const rows  = [...document.querySelectorAll('tr.unpointed[data-uid]')];
+  for (const row of rows) {
+    await setStatut(parseInt(row.dataset.uid), code, label);
+  }
+}
+
+// ── Picker ────────────────────────────────────────────────────────────────────
+function togglePicker(uid) {
+  const picker = document.getElementById(`picker-${uid}`);
+  const isOpen = picker.classList.contains('open');
+  document.querySelectorAll('.s-picker.open').forEach(p => p.classList.remove('open'));
+  if (!isOpen) picker.classList.add('open');
+}
+function closePicker(uid) {
+  const p = document.getElementById(`picker-${uid}`);
+  if (p) p.classList.remove('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.s-badge') && !e.target.closest('.s-picker'))
+    document.querySelectorAll('.s-picker.open').forEach(p => p.classList.remove('open'));
+});
+
+// ── AJAX ──────────────────────────────────────────────────────────────────────
+async function _ajax(uid, extra) {
+  const row  = document.getElementById(`row-${uid}`);
+  const tick = document.getElementById(`tick-${uid}`);
+  row.classList.add('row-saving');
+  try {
+    const resp = await fetch(AJAX_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ user_id: uid, date: DATE_STR, ...extra }),
+    });
+    if (resp.ok && tick) {
+      tick.classList.add('show');
+      setTimeout(() => tick.classList.remove('show'), 1800);
+    }
+  } catch (e) { console.error(e); }
+  finally { row.classList.remove('row-saving'); }
+}
+
+// ── Compteurs ─────────────────────────────────────────────────────────────────
+function updateCounters() {
+  const cp = document.getElementById('cnt-pointed');
+  const cu = document.getElementById('cnt-unpointed');
+  if (cp) cp.textContent = document.querySelectorAll('tr.pointed[data-uid]').length;
+  if (cu) cu.textContent = document.querySelectorAll('tr.unpointed[data-uid]').length;
+}
+</script>
+{% endblock %}

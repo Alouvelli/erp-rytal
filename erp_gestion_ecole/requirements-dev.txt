@@ -1,0 +1,15 @@
+-r requirements.txt
+
+# HTTPS dev server (pour accès caméra sur réseau local)
+pyOpenSSL>=24.0.0
+Werkzeug>=3.0.0
+
+django-debug-toolbar==4.4.6
+factory-boy==3.3.1
+faker==33.1.0
+pytest==8.3.4
+pytest-django==4.9.0
+pytest-cov==6.0.0
+black==24.10.0
+flake8==7.1.1
+isort==5.13.2

@@ -1,0 +1,135 @@
+{% extends 'base/base.html' %}
+{% block title %}Plan de cours — {{ subject.title }}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'attendance:my_modules' %}">Mes modules</a></li>
+<li class="breadcrumb-item active">Plan de cours</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#7c3aed;"><i class="bi bi-journal-text"></i></span>
+    Plan de cours — {{ subject.title }}
+  </h1>
+  <div style="font-size:.85rem;color:#64748b;">{{ class_group.name }} — {{ semester }}</div>
+</div>
+
+{% if progress %}
+<div class="card-section mb-3">
+  <div style="padding:14px 18px;">
+    <div class="row g-3 align-items-center">
+      <div class="col-md-3">
+        <div style="font-size:.75rem;color:#94a3b8;">Séances planifiées</div>
+        <div style="font-size:1.2rem;font-weight:800;color:var(--navy);">{{ progress.total }}</div>
+      </div>
+      <div class="col-md-3">
+        <div style="font-size:.75rem;color:#94a3b8;">Séances faites</div>
+        <div style="font-size:1.2rem;font-weight:800;color:#16a34a;">{{ progress.faites }}</div>
+      </div>
+      <div class="col-md-3">
+        <div style="font-size:.75rem;color:#94a3b8;">Séances restantes</div>
+        <div style="font-size:1.2rem;font-weight:800;color:#d97706;">{{ progress.restantes }}</div>
+      </div>
+      <div class="col-md-3">
+        <div style="font-size:.75rem;color:#94a3b8;">Progression</div>
+        <div style="font-size:1.2rem;font-weight:800;color:var(--navy);">{{ progress.percent }}%</div>
+        <div style="background:#e2e8f0;border-radius:3px;margin-top:4px;">
+          <div style="height:6px;background:linear-gradient(90deg,var(--navy),#7c3aed);border-radius:3px;width:{{ progress.percent }}%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if plan.compliance_checked %}
+<div class="mb-3" style="border-radius:8px;padding:12px 16px;font-size:.83rem;
+     {% if plan.compliance_match_pct < 50 %}background:#fef2f2;border:1px solid #fecaca;color:#991b1b;
+     {% else %}background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;{% endif %}">
+  <i class="bi bi-{% if plan.compliance_match_pct < 50 %}exclamation-triangle-fill{% else %}check-circle-fill{% endif %} me-2"></i>
+  Vérification de conformité au syllabus effectuée sur les 5 premières séances émargées :
+  <strong>{{ plan.compliance_match_pct }}%</strong> des mots-clés du syllabus retrouvés
+  {% if plan.compliance_match_pct < 50 %}(en-dessous du seuil de 50% — une alerte a été envoyée){% endif %}.
+</div>
+{% endif %}
+
+<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:.82rem;color:#1e40af;">
+  <i class="bi bi-info-circle-fill me-2"></i>
+  Définissez ici les séances prévues pour ce module (titre + objectif + contenu attendu). Lors de
+  l'émargement, vous pourrez choisir la séance correspondante et ses informations rempliront
+  automatiquement le cahier de texte (objectifs + contenu). Ce plan de cours permet aussi de
+  suivre la progression du cours et sert de référence pour vérifier que le contenu réellement
+  dispensé respecte bien le syllabus.
+</div>
+
+<form method="post" id="planForm">
+  {% csrf_token %}
+  {{ formset.management_form }}
+
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h6 style="font-weight:800;color:var(--navy);margin:0;">
+      <i class="bi bi-list-ol me-2"></i>Séances du plan de cours
+    </h6>
+    <button type="submit" class="btn btn-primary btn-sm d-none d-md-inline-flex">
+      <i class="bi bi-check-lg me-1"></i>Enregistrer le plan de cours
+    </button>
+  </div>
+
+  <div id="sessionsBody">
+    {% for form in formset %}
+    {% include 'attendance/_course_plan_session_card.html' with form=form %}
+    {% endfor %}
+  </div>
+
+  <button type="button" class="btn btn-outline-secondary" id="addRowBtn">
+    <i class="bi bi-plus-lg me-1"></i>Ajouter une séance
+  </button>
+
+  <div class="d-flex justify-content-end mt-4 pt-3" style="border-top:1px solid #e2e8f0;">
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg me-1"></i>Enregistrer le plan de cours
+    </button>
+  </div>
+</form>
+
+<template id="emptySessionTemplate">
+  {% include 'attendance/_course_plan_session_card.html' with form=formset.empty_form %}
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const totalFormsInput = document.getElementById('id_sessions-TOTAL_FORMS');
+const sessionsBody = document.getElementById('sessionsBody');
+const emptyCardHtml = document.getElementById('emptySessionTemplate').innerHTML;
+
+function nextSuggestedNumero() {
+  const values = [...document.querySelectorAll('#sessionsBody input[name$="-numero"]')]
+    .map(i => parseInt(i.value, 10)).filter(n => !isNaN(n));
+  return values.length ? Math.max(...values) + 1 : 1;
+}
+
+document.getElementById('addRowBtn').addEventListener('click', function() {
+  const idx = parseInt(totalFormsInput.value, 10);
+  const html = emptyCardHtml.replaceAll('__prefix__', idx);
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html.trim();
+  const card = tmp.firstElementChild;
+  sessionsBody.appendChild(card);
+  totalFormsInput.value = idx + 1;
+
+  const numeroInput = card.querySelector('input[name$="-numero"]');
+  if (numeroInput) numeroInput.value = nextSuggestedNumero();
+
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  card.querySelector('input[name$="-titre"]')?.focus();
+});
+
+sessionsBody.addEventListener('change', function(e) {
+  if (e.target.matches('input[type="checkbox"][name$="-DELETE"]')) {
+    const card = e.target.closest('.session-card');
+    if (card) card.style.opacity = e.target.checked ? '.4' : '1';
+  }
+});
+</script>
+{% endblock %}

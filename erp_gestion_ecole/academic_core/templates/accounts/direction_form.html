@@ -1,0 +1,74 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if action == 'edit' %}Modifier{% else %}Nouvelle{% endif %} direction{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounts:users_list' %}">Utilisateurs</a></li>
+<li class="breadcrumb-item"><a href="{% url 'accounts:direction_list' %}">Directions</a></li>
+<li class="breadcrumb-item active">{% if action == 'edit' %}Modifier{% else %}Nouvelle direction{% endif %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:var(--navy);"><i class="bi bi-diagram-3-fill"></i></span>
+    {% if action == 'edit' %}Modifier la direction{% else %}Nouvelle direction{% endif %}
+  </h1>
+</div>
+
+<div class="card-section" style="max-width:600px;">
+  <div class="card-section-header">
+    <h6 class="card-section-title">
+      <span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;">
+        <i class="bi bi-diagram-3"></i>
+      </span>
+      Informations de la direction
+    </h6>
+  </div>
+  <form method="post" style="padding:20px;">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label style="font-size:.78rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;">
+        Nom de la direction <span style="color:#dc2626;">*</span>
+      </label>
+      <input type="text" name="name" required
+             value="{{ direction.name|default:'' }}"
+             placeholder="Ex : Direction des Études"
+             style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 14px;font-size:.88rem;color:#1e293b;outline:none;"
+             onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='#e2e8f0'">
+    </div>
+    <div class="mb-3">
+      <label style="font-size:.78rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Code</label>
+      <input type="text" name="code" maxlength="20"
+             value="{{ direction.code|default:'' }}"
+             placeholder="Ex : DE, DF, DRH…"
+             style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 14px;font-size:.88rem;color:#1e293b;outline:none;"
+             onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='#e2e8f0'">
+    </div>
+    <div class="mb-3">
+      <label style="font-size:.78rem;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Description</label>
+      <textarea name="description" rows="3"
+                placeholder="Description optionnelle…"
+                style="width:100%;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 14px;font-size:.88rem;color:#1e293b;outline:none;resize:vertical;"
+                onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='#e2e8f0'">{{ direction.description|default:'' }}</textarea>
+    </div>
+    {% if action == 'edit' %}
+    <div class="mb-4">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;font-weight:600;color:#374151;">
+        <input type="checkbox" name="is_active" {% if direction.is_active %}checked{% endif %}
+               style="width:16px;height:16px;accent-color:var(--navy);">
+        Direction active
+      </label>
+    </div>
+    {% endif %}
+    <div class="d-flex gap-2 justify-content-end">
+      <a href="{% url 'accounts:direction_list' %}"
+         style="padding:9px 20px;background:#f1f5f9;color:#475569;border-radius:8px;font-size:.84rem;font-weight:600;text-decoration:none;">
+        Annuler
+      </a>
+      <button type="submit"
+              style="padding:9px 24px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:.84rem;font-weight:700;cursor:pointer;">
+        <i class="bi bi-floppy me-1"></i>{% if action == 'edit' %}Enregistrer{% else %}Créer{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

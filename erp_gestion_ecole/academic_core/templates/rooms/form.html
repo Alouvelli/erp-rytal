@@ -1,0 +1,74 @@
+{% extends 'base/base.html' %}
+{% block title %}{% if form.instance.pk %}Modifier la salle{% else %}Nouvelle salle{% endif %}{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'rooms:list' %}">Salles</a></li>
+<li class="breadcrumb-item active">{% if form.instance.pk %}Modifier{% else %}Nouvelle salle{% endif %}</li>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title"><span class="icon" style="background:var(--navy);"><i class="bi bi-door-open"></i></span>{% if form.instance.pk %}Modifier la salle{% else %}Nouvelle salle{% endif %}</h1>
+</div>
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card-section">
+      <div class="card-section-header">
+        <h6 class="card-section-title"><span style="width:26px;height:26px;border-radius:6px;background:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;color:#fff;"><i class="bi bi-pencil"></i></span>Informations de la salle</h6>
+      </div>
+      <div class="p-4">
+        <form method="post">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Code <span class="text-danger">*</span></label>
+              {{ form.code }}
+              {% if form.code.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.code.errors.0 }}</div>{% endif %}
+              <div style="font-size:.72rem;color:#64748b;margin-top:3px;">Ex : S01, AMPHI-A</div>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Nom / Numéro <span class="text-danger">*</span></label>
+              {{ form.name }}
+              {% if form.name.errors %}<div class="text-danger mt-1" style="font-size:.75rem;">{{ form.name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Type</label>
+              {{ form.room_type }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Capacité</label>
+              {{ form.capacity }}
+            </div>
+            <div class="col-md-8">
+              <label class="form-label">Bâtiment</label>
+              {{ form.building }}
+            </div>
+            {% if form.floor %}
+            <div class="col-md-6">
+              <label class="form-label">Étage</label>
+              {{ form.floor }}
+            </div>
+            {% endif %}
+            {% if form.equipment %}
+            <div class="col-12">
+              <label class="form-label">Équipements</label>
+              {{ form.equipment }}
+            </div>
+            {% endif %}
+            {% if form.is_available %}
+            <div class="col-12">
+              <div class="form-check">
+                {{ form.is_available }}
+                <label class="form-check-label">Salle disponible</label>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+          <div class="d-flex gap-2 justify-content-end border-top pt-3 mt-3">
+            <a href="{% url 'rooms:list' %}" class="btn btn-outline-secondary btn-sm">Annuler</a>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

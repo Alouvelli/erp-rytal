@@ -1,0 +1,76 @@
+{% extends 'base/base.html' %}
+{% block title %}Demandes d'accès API{% endblock %}
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'api_gateway:catalog_list' %}">API de Consommation</a></li>
+<li class="breadcrumb-item active">Demandes d'accès</li>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#0f172a;"><i class="bi bi-inbox-fill"></i></span>
+    Demandes d'accès API en attente
+  </h1>
+</div>
+
+<div class="card-section">
+  {% if requests %}
+  <div class="table-responsive">
+    <table class="table" style="margin:0;">
+      <thead style="background:#f8fafc;">
+        <tr>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;padding:10px 16px;">Demandeur</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;">Besoin exprimé</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;">Reçue le</th>
+          <th style="font-size:.75rem;color:#64748b;font-weight:700;text-align:center;width:280px;">Traitement</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for req in requests %}
+        <tr>
+          <td style="padding:10px 16px;font-size:.84rem;">
+            <div style="font-weight:700;color:#1e293b;">{{ req.requested_by.get_full_name }}</div>
+            <div style="font-size:.72rem;color:#94a3b8;">{{ req.requested_by.email }}</div>
+          </td>
+          <td style="font-size:.83rem;color:#475569;max-width:340px;">
+            {{ req.description }}
+            {% if req.suggested_resource %}
+            <div style="font-size:.72rem;color:#7c3aed;margin-top:4px;">
+              <i class="bi bi-lightbulb me-1"></i>Ressource suggérée : {{ req.suggested_resource.name }}
+            </div>
+            {% endif %}
+          </td>
+          <td style="font-size:.78rem;color:#94a3b8;white-space:nowrap;">{{ req.created_at|date:"d/m/Y H:i" }}</td>
+          <td>
+            <form method="post" action="{% url 'api_gateway:access_request_process' req.pk %}" class="d-flex flex-column gap-2">
+              {% csrf_token %}
+              <select name="resource_id" class="form-select form-select-sm">
+                <option value="">— Choisir la ressource à accorder —</option>
+                {% for r in resources %}
+                <option value="{{ r.pk }}" {% if req.suggested_resource_id == r.pk %}selected{% endif %}>{{ r.name }}</option>
+                {% endfor %}
+              </select>
+              <input type="text" name="admin_note" class="form-control form-control-sm" placeholder="Motif de rejet (optionnel)">
+              <div class="d-flex gap-2">
+                <button type="submit" name="action" value="approve" class="btn btn-success btn-sm flex-fill">
+                  <i class="bi bi-check-lg"></i> Approuver
+                </button>
+                <button type="submit" name="action" value="reject" class="btn btn-outline-danger btn-sm flex-fill">
+                  <i class="bi bi-x-lg"></i> Rejeter
+                </button>
+              </div>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-5" style="color:#94a3b8;">
+    <i class="bi bi-check-circle d-block mb-2" style="font-size:3rem;color:#bbf7d0;"></i>
+    <div style="font-weight:600;font-size:.95rem;color:#166534;">Aucune demande en attente</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

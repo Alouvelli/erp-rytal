@@ -1,0 +1,132 @@
+{% extends "base/base.html" %}
+
+{% block title %}Critères qualité{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h5 class="fw-bold mb-0" style="color:var(--navy);"><i class="bi bi-list-check me-2"></i>Critères qualité</h5>
+    <p class="text-muted mb-0" style="font-size:.8rem;">Qualité — Pilotage et Suivi Budgétaire</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'quality:quality_dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+    <button type="button" class="btn btn-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('critModal')).show()"><i class="bi bi-plus-lg me-1"></i>Nouveau critère</button>
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="new bootstrap.Modal(document.getElementById('evalModal')).show()"><i class="bi bi-clipboard-plus me-1"></i>Saisir une évaluation</button>
+  </div>
+</div>
+
+<div class="card-section" style="padding:0;">
+  <div style="overflow-x:auto;">
+    <table class="table table-hover mb-0" style="font-size:.83rem;">
+      <thead>
+        <tr style="background:#f1f5f9;">
+          <th style="padding:10px 16px;">Référentiel</th><th>Code</th><th>Libellé</th><th>Catégorie</th><th class="text-center">Pondération</th><th class="text-center" style="width:120px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in criteres %}
+        <tr>
+          <td style="padding:8px 16px;">{{ c.get_referentiel_display }}</td>
+          <td style="font-weight:700;color:var(--navy);">{{ c.code }}</td>
+          <td>{{ c.libelle }}</td>
+          <td style="font-size:.78rem;">{{ c.categorie|default:"—" }}</td>
+          <td class="text-center">{{ c.ponderation }}</td>
+          <td class="text-center">
+            <div class="d-flex gap-1 justify-content-center">
+              <button type="button" class="btn btn-sm" style="background:#eff6ff;color:#1d4ed8;border-radius:7px;padding:3px 10px;font-size:.72rem;"
+                onclick="editCrit({{ c.pk }}, '{{ c.libelle|escapejs }}', '{{ c.categorie|escapejs }}', '{{ c.description|escapejs }}', {{ c.ponderation }})">Modifier</button>
+              <form method="post" action="{% url 'quality:critere_delete' c.pk %}" onsubmit="return confirm('Supprimer ce critère ?');">
+                {% csrf_token %}<button type="submit" class="btn btn-sm" style="background:#fee2e2;color:#991b1b;border-radius:7px;padding:3px 10px;font-size:.72rem;">Supprimer</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:40px;">Aucun critère défini.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="modal fade" id="critModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0" id="critModalTitle"><i class="bi bi-plus-circle me-2"></i>Nouveau critère</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="critForm" action="{% url 'quality:critere_create' %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3" id="crit_ref_wrap"><label class="form-label fw-semibold" style="font-size:.82rem;">Référentiel <span class="text-danger">*</span></label>
+            <select name="referentiel" class="form-select" required>{% for val, label in REFERENTIEL_CHOICES %}<option value="{{ val }}">{{ label }}</option>{% endfor %}</select></div>
+          <div class="mb-3" id="crit_code_wrap"><label class="form-label fw-semibold" style="font-size:.82rem;">Code <span class="text-danger">*</span></label>
+            <input type="text" name="code" id="crit_code" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Libellé <span class="text-danger">*</span></label>
+            <input type="text" name="libelle" id="crit_libelle" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Catégorie</label>
+            <input type="text" name="categorie" id="crit_categorie" class="form-control"></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Description</label>
+            <textarea name="description" id="crit_description" class="form-control" rows="2"></textarea></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Pondération</label>
+            <input type="number" name="ponderation" id="crit_ponderation" class="form-control" min="1" value="1"></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="evalModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border:none;border-radius:14px;">
+      <div class="modal-header" style="background:var(--navy);color:#fff;border-radius:14px 14px 0 0;padding:16px 20px;">
+        <h6 class="modal-title mb-0"><i class="bi bi-clipboard-plus me-2"></i>Saisir une auto-évaluation</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'quality:evaluation_create' %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Critère <span class="text-danger">*</span></label>
+            <select name="critere" class="form-select" required>
+              <option value="">— Sélectionner —</option>
+              {% for c in criteres %}<option value="{{ c.pk }}">{{ c.get_referentiel_display }} — {{ c.code }} — {{ c.libelle }}</option>{% endfor %}
+            </select></div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Campagne <span class="text-danger">*</span></label>
+            <input type="text" name="campagne" class="form-control" placeholder="Ex : 2025-2026" required></div>
+          <div class="row mb-3">
+            <div class="col-6"><label class="form-label fw-semibold" style="font-size:.82rem;">Note <span class="text-danger">*</span></label>
+              <input type="number" name="note" class="form-control" step="0.01" required></div>
+            <div class="col-6"><label class="form-label fw-semibold" style="font-size:.82rem;">Note maximale</label>
+              <input type="number" name="note_max" class="form-control" step="0.01" value="4"></div>
+          </div>
+          <div class="mb-3"><label class="form-label fw-semibold" style="font-size:.82rem;">Commentaire</label>
+            <textarea name="commentaire" class="form-control" rows="2"></textarea></div>
+        </div>
+        <div class="modal-footer border-0 pt-0 px-4 pb-4">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function editCrit(pk, libelle, categorie, description, ponderation) {
+  document.getElementById('critModalTitle').innerHTML = '<i class="bi bi-pencil me-2"></i>Modifier le critère';
+  document.getElementById('critForm').action = '/qualite/criteres/' + pk + '/modifier/';
+  document.getElementById('crit_ref_wrap').style.display = 'none';
+  document.getElementById('crit_ref_wrap').querySelector('select').required = false;
+  document.getElementById('crit_code_wrap').style.display = 'none';
+  document.getElementById('crit_code').required = false;
+  document.getElementById('crit_libelle').value = libelle;
+  document.getElementById('crit_categorie').value = categorie;
+  document.getElementById('crit_description').value = description;
+  document.getElementById('crit_ponderation').value = ponderation;
+  new bootstrap.Modal(document.getElementById('critModal')).show();
+}
+</script>
+{% endblock %}

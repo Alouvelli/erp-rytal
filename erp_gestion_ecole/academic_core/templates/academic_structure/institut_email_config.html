@@ -1,0 +1,67 @@
+{% extends 'base/base.html' %}
+{% block title %}Configuration email — {{ institut_config.nom }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">
+    <span class="icon" style="background:#003d82;"><i class="bi bi-envelope-gear-fill"></i></span>
+    Emails de notification — {{ institut_config.nom|default:institut_config.sigle }}
+  </h1>
+</div>
+
+<div class="card-section p-4" style="max-width: 700px;">
+  <p class="text-muted small">
+    Ces paramètres contrôlent l'envoi des notifications concernant votre institut
+    (candidatures, inscriptions, paiements…). Sans configuration active, la
+    plateforme utilise sa configuration email par défaut.
+  </p>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="form-check mb-3">
+      <input type="checkbox" name="is_active" value="1" class="form-check-input" id="id_is_active"
+             {% if email_config.is_active %}checked{% endif %}>
+      <label class="form-check-label fw-semibold" for="id_is_active">
+        Utiliser cette configuration pour les notifications de mon institut
+      </label>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">Serveur SMTP</label>
+      <input type="text" name="email_host" class="form-control" value="{{ email_config.email_host }}" placeholder="smtp.gmail.com">
+    </div>
+
+    <div class="row">
+      <div class="col-md-6 mb-3">
+        <label class="form-label small fw-semibold">Port</label>
+        <input type="number" name="email_port" class="form-control" value="{{ email_config.email_port }}">
+      </div>
+      <div class="col-md-6 mb-3 d-flex align-items-end">
+        <div class="form-check">
+          <input type="checkbox" name="email_use_tls" value="1" class="form-check-input" id="id_tls"
+                 {% if email_config.email_use_tls %}checked{% endif %}>
+          <label class="form-check-label small" for="id_tls">Utiliser TLS</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">Utilisateur SMTP</label>
+      <input type="text" name="email_host_user" class="form-control" value="{{ email_config.email_host_user }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">Mot de passe SMTP</label>
+      <input type="password" name="email_host_password" class="form-control" autocomplete="new-password"
+             placeholder="{% if email_config.email_host_password %}•••••••• (laisser vide pour ne pas changer){% else %}Non défini{% endif %}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">Adresse d'expédition</label>
+      <input type="email" name="default_from_email" class="form-control" value="{{ email_config.default_from_email }}" placeholder="noreply@monInstitut.edu">
+    </div>
+
+    <button type="submit" class="btn btn-primary">Enregistrer</button>
+  </form>
+</div>
+{% endblock %}

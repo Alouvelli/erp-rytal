@@ -1,0 +1,104 @@
+{% extends 'base/base.html' %}
+{% block title %}Modifier la clôture{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'accounting:dashboard' %}">Direction Administrative Financière</a></li>
+<li class="breadcrumb-item"><a href="{% url 'accounting:clotures_list' %}">Clôtures</a></li>
+<li class="breadcrumb-item active">Modifier</li>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-4">
+  <a href="{% url 'accounting:clotures_list' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+    <i class="bi bi-arrow-left me-1"></i>Retour
+  </a>
+  <div>
+    <h4 class="mb-0 fw-bold" style="color:var(--navy);">
+      <i class="bi bi-pencil-square me-2" style="color:var(--accent);"></i>Modifier la clôture du {{ closure.closure_date|date:"d/m/Y" }}
+    </h4>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius:12px;max-width:700px;">
+  <div class="card-body p-4">
+    <form method="post">
+      {% csrf_token %}
+      <div class="row g-3">
+
+        <div class="col-md-6">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Date de clôture</label>
+          <input type="date" name="closure_date" class="form-control form-control-sm"
+                 value="{{ closure.closure_date|date:'Y-m-d' }}" required style="border-radius:8px;">
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Année académique</label>
+          <select name="academic_year" class="form-select form-select-sm" style="border-radius:8px;">
+            <option value="">— Aucune —</option>
+            {% for yr in academic_years %}
+            <option value="{{ yr.pk }}" {% if closure.academic_year_id == yr.pk %}selected{% endif %}>{{ yr.label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-12"><hr class="my-1"><p class="text-muted mb-1" style="font-size:.78rem;font-weight:600;">ENCAISSEMENTS</p></div>
+
+        <div class="col-md-4">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Total encaissé (inscriptions)</label>
+          <input type="number" name="total_collected" class="form-control form-control-sm"
+                 value="{{ closure.total_collected }}" min="0" step="1" style="border-radius:8px;">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Mensualités encaissées</label>
+          <input type="number" name="total_installments" class="form-control form-control-sm"
+                 value="{{ closure.total_installments }}" min="0" step="1" style="border-radius:8px;">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Total restant dû</label>
+          <input type="number" name="total_remaining" class="form-control form-control-sm"
+                 value="{{ closure.total_remaining }}" min="0" step="1" style="border-radius:8px;">
+        </div>
+
+        <div class="col-12"><hr class="my-1"><p class="text-muted mb-1" style="font-size:.78rem;font-weight:600;">INSCRIPTIONS</p></div>
+
+        <div class="col-md-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Validées</label>
+          <input type="number" name="nb_validated" class="form-control form-control-sm"
+                 value="{{ closure.nb_validated }}" min="0" style="border-radius:8px;">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">En attente</label>
+          <input type="number" name="nb_pending" class="form-control form-control-sm"
+                 value="{{ closure.nb_pending }}" min="0" style="border-radius:8px;">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Rejetées</label>
+          <input type="number" name="nb_rejected" class="form-control form-control-sm"
+                 value="{{ closure.nb_rejected }}" min="0" style="border-radius:8px;">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Suspendus</label>
+          <input type="number" name="nb_suspended" class="form-control form-control-sm"
+                 value="{{ closure.nb_suspended }}" min="0" style="border-radius:8px;">
+        </div>
+
+        <div class="col-12">
+          <label class="form-label fw-semibold" style="font-size:.82rem;">Observations</label>
+          <textarea name="notes" class="form-control form-control-sm" rows="3"
+                    style="border-radius:8px;">{{ closure.notes }}</textarea>
+        </div>
+
+        <div class="col-12 d-flex gap-2 pt-2">
+          <button type="submit" class="btn btn-sm" style="background:var(--navy);color:#fff;border-radius:8px;padding:6px 20px;">
+            <i class="bi bi-check-lg me-1"></i>Enregistrer
+          </button>
+          <a href="{% url 'accounting:clotures_list' %}" class="btn btn-sm btn-outline-secondary" style="border-radius:8px;">
+            Annuler
+          </a>
+        </div>
+
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
