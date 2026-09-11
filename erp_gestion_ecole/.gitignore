@@ -26,6 +26,21 @@ media/
 staticfiles/
 *.log
 
+# Dumps PostgreSQL par institut (données réelles étudiants/finances) — jamais
+# dans le dépôt ; à transférer sur le serveur par canal sécurisé (voir DEPLOYMENT.md)
+bd/
+
+# Certificats TLS (clés privées) — générés/déployés sur le serveur uniquement
+ssl/
+nginx/ssl/
+
+# Sorties de run capturées
+server_err.txt
+server_out.txt
+
+# Worktrees et artefacts d'outils
+.claude/worktrees/
+
 # Éditeurs / OS
 .vscode/
 .idea/

@@ -1,0 +1,9 @@
+# Dumps PostgreSQL par institut (données réelles) — jamais dans le dépôt.
+# La copie de travail utilisée pour le déploiement est erp_gestion_ecole/bd/,
+# transférée sur le serveur par canal sécurisé (voir erp_gestion_ecole/DEPLOYMENT.md).
+bd/
+
+# Secrets / environnement
+.env
+.env.*
+!.env.example

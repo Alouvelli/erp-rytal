@@ -1,0 +1,39 @@
+# Secrets et environnement — ne jamais embarquer dans l'image
+.env
+.env.*
+!.env.example
+
+# Certificats TLS (montés à l'exécution via ./nginx/ssl, jamais dans l'image)
+ssl/
+nginx/ssl/
+
+# Dumps de bases contenant des données réelles (restaurés côté serveur, pas
+# dans l'image applicative)
+bd/
+
+# Logs et sorties de run
+*.log
+server_err.txt
+server_out.txt
+
+# Contrôle de version et outils
+.git
+.gitignore
+.claude/
+
+# Artefacts Python / build
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# Fichiers générés (recréés dans le conteneur)
+staticfiles/
+academic_core/media/
+
+# Éditeurs / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
