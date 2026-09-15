@@ -17,6 +17,12 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    # IP fixe : l'application joint PostgreSQL par cette adresse (POSTGRES_HOST
+    # dans .env), sans dépendre du DNS interne de Docker — voir la section
+    # networks en bas de fichier.
+    networks:
+      appnet:
+        ipv4_address: 172.29.0.10
 
   redis:
     image: redis:7-alpine
@@ -32,6 +38,10 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+    # IP fixe : broker Celery joint par cette adresse (CELERY_BROKER_URL).
+    networks:
+      appnet:
+        ipv4_address: 172.29.0.11
 
   web:
     build:
@@ -59,6 +69,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # IP fixe : nginx joint gunicorn par cette adresse (voir nginx/conf.d/app.conf).
+    networks:
+      appnet:
+        ipv4_address: 172.29.0.12
 
   celery_worker:
     build:
@@ -77,6 +91,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - appnet
 
   celery_beat:
     build:
@@ -94,6 +110,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - appnet
 
   nginx:
     image: nginx:1.25-alpine
@@ -111,6 +129,19 @@ services:
       - ./nginx/certbot:/var/www/certbot
     depends_on:
       - web
+    networks:
+      - appnet
+
+# Réseau applicatif à sous-réseau fixe. Le DNS interne de Docker étant peu
+# fiable sur certains noyaux, les services se joignent par IP fixe (db, redis,
+# web ci-dessus) plutôt que par nom de service.
+networks:
+  appnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/24
+          gateway: 172.29.0.1
 
 volumes:
   postgres_data:
