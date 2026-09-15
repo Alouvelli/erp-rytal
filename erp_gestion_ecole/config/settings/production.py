@@ -22,6 +22,13 @@ if not config('PLATFORM_MASTER_KEY', default=''):
         "que de l'opérateur du serveur et ne doit jamais être stockée dans le dépôt."
     )
 
+# L'application tourne derrière nginx, qui termine le TLS et relaie en HTTP
+# interne à gunicorn. Sans cette ligne, Django considère chaque requête comme
+# non sécurisée et, avec SECURE_SSL_REDIRECT, la redirige indéfiniment vers
+# HTTPS (boucle « trop de redirections »). nginx transmet l'en-tête
+# X-Forwarded-Proto (voir nginx/conf.d/app.conf) : on lui fait confiance ici.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 SECURE_SSL_REDIRECT = True
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
