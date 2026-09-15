@@ -27,6 +27,12 @@ SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
+# En conteneur, on logue sur la sortie standard (collectée par Docker :
+# `docker compose logs`). Pas de handler fichier — un chemin comme
+# /var/log/django/app.log n'existe pas dans l'image et ferait échouer le
+# démarrage de Django. Pour conserver les logs de façon durable, utiliser
+# un driver de logs Docker (json-file avec rotation, journald…) ou un
+# collecteur externe, plutôt qu'un fichier dans le conteneur.
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -34,14 +40,7 @@ LOGGING = {
         'verbose': {'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}', 'style': '{'},
     },
     'handlers': {
-        'file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': '/var/log/django/app.log',
-            'maxBytes': 1024 * 1024 * 10,
-            'backupCount': 5,
-            'formatter': 'verbose',
-        },
         'console': {'class': 'logging.StreamHandler', 'formatter': 'verbose'},
     },
-    'root': {'handlers': ['file', 'console'], 'level': 'WARNING'},
+    'root': {'handlers': ['console'], 'level': 'WARNING'},
 }
