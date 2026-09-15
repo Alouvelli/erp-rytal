@@ -1,6 +1,22 @@
 from academic_core.apps.academic_structure.models import Department
 
 
+def _user_institut_config(user):
+    """Accès sûr à user.institut_config.
+
+    getattr(user, 'institut_config', None) ne suffit PAS : quand la FK
+    institut_config_id est renseignée mais que la ligne cible est absente de la
+    base courante (cas d'un INST_ADMIN dont la config maître n'existe pas dans
+    la base de session), l'accès lève RelatedObjectDoesNotExist — qui n'est pas
+    un AttributeError, donc le défaut de getattr ne l'intercepte pas et la
+    requête plante en 500. On rattrape ici pour retourner None proprement.
+    """
+    try:
+        return user.institut_config
+    except Exception:
+        return None
+
+
 def _get_institut_config(faculty):
     """Retourne l'InstitutConfig pour une faculté donnée, ou None."""
     if not faculty:
@@ -27,7 +43,7 @@ def department_context(request):
             if direction:
                 faculty = getattr(direction, 'faculty', None)
         if not faculty:
-            user_cfg = getattr(user, 'institut_config', None)
+            user_cfg = _user_institut_config(user)
             if user_cfg:
                 faculty = getattr(user_cfg, 'faculty', None)
     institut_config = _get_institut_config(faculty)
@@ -84,7 +100,7 @@ def department_context(request):
 
             # Pour INST_ADMIN : fallback sur leur institut_config si active_faculty non résolu
             if not faculty and user.is_inst_admin():
-                config = getattr(user, 'institut_config', None)
+                config = _user_institut_config(user)
                 faculty = getattr(config, 'faculty', None) if config else None
 
             if faculty:
